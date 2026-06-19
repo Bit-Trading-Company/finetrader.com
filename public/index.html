@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="shortcut icon" href="./favicon.png" type="image/png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Ordinals trading and exploring" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="FINE TRADING - Bitcoin Trading Platform" />
+    <meta
+      name="description"
+      content="Advanced bitcoin trading and wallet management platform"
+    />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://metatags.io/" />
+    <meta property="og:title" content="FINE TRADING - Bitcoin Trading Dashboard" />
+    <meta
+      property="og:description"
+      content="Advanced bitcoin trading and wallet management platform"
+    />
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://metatags.io/" />
+    <meta property="twitter:title" content="FINE TRADING - Bitcoin Trading Platform" />
+    <meta
+      property="twitter:description"
+      content="Advanced bitcoin trading and wallet management platform"
+    />
+    <!-- Meta Tags Generated with https://metatags.io -->
+    <title>FINE TRADING</title>
+
+    <!-- Inline script to block MetaMask (Bitcoin app only) -->
+    <script>
+      (function () {
+        // Block MetaMask from auto-connecting (this is a Bitcoin-only app)
+        // Suppress MetaMask errors globally
+        const originalError = console.error;
+        console.error = function(...args) {
+          const errorString = args.join(' ');
+          // Suppress MetaMask-specific errors
+          if (errorString.includes('MetaMask') || 
+              errorString.includes('ethereum') ||
+              errorString.includes('chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn')) {
+            return; // Silently ignore MetaMask errors
+          }
+          originalError.apply(console, args);
+        };
+
+        // Prevent unhandled promise rejections from MetaMask
+        window.addEventListener('unhandledrejection', function(event) {
+          if (event.reason && 
+              (event.reason.message?.includes('MetaMask') || 
+               event.reason.message?.includes('ethereum'))) {
+            event.preventDefault(); // Suppress MetaMask errors
+          }
+        });
+      })();
+    </script>
+
+    <!-- Inline script to set the initial theme -->
+    <script>
+      (function () {
+        try {
+          const storedTheme = localStorage.getItem('theme');
+          const prefersDarkScheme = window.matchMedia(
+            '(prefers-color-scheme: dark)'
+          ).matches;
+          let theme;
+
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+          } else {
+            theme = prefersDarkScheme ? 'dark' : 'light';
+          }
+
+          document.documentElement.className = theme;
+        } catch (e) {
+          console.error('Failed to apply theme:', e);
+          document.documentElement.className = 'light'; // Fallback to light theme
+        }
+      })();
+    </script>
+
+    <!-- Tailwind CSS will be included in the main CSS bundle -->
+
+    <!-- Golden Layout CSS -->
+    <link
+      rel="stylesheet"
+      href="https://golden-layout.com/files/latest/css/goldenlayout-base.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css"
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <!-- React scripts are included automatically by the build process -->
+  </body>
+</html>

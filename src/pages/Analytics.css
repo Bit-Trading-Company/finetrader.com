@@ -1,0 +1,1927 @@
+/* Font Declarations */
+@font-face {
+  font-family: 'Mix Doodle';
+  src: url('../assets/fonts/Mix-Doodle.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oliver-Regular';
+  src: url('../assets/fonts/Oliver-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* CRITICAL: Reset body and override ALL index.css styles when analytics is active */
+body:has(.analytics-container) {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  font-family: initial !important;
+}
+
+/* Reset all global styles from index.css when analytics is active */
+body:has(.analytics-container) * {
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif !important;
+}
+
+body:has(.analytics-container) p {
+  color: inherit !important;
+}
+
+/* analytics Container - CRITICAL: Override all global styles */
+.analytics-container {
+  all: initial;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #1a2332 url('../assets/images/png/backgrounds/background_8.PNG') center center / cover no-repeat !important;
+  color: #e2e8f0 !important;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  font-size: 14px !important;
+}
+.analytics-container-content {
+  border-image: url('../assets/images/png/fine-trader-1.png') 50 56 55 64 fill /
+    25px 23px 32px 32px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 15px;
+}
+/* Apply default font to all analytics children and reset index.css styles */
+.analytics-container *,
+.analytics-container *::before,
+.analytics-container *::after {
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+/* Force reset all common elements that might have index.css styles */
+.analytics-container h1,
+.analytics-container h2,
+.analytics-container h3,
+.analytics-container h4,
+.analytics-container h5,
+.analytics-container h6 {
+  font-family: 'Oliver-Regular', serif !important;
+  color: inherit !important;
+}
+
+.analytics-container p,
+.analytics-container span,
+.analytics-container div,
+.analytics-container a,
+.analytics-container button,
+.analytics-container input,
+.analytics-container textarea,
+.analytics-container select,
+.analytics-container label,
+.analytics-container li,
+.analytics-container td,
+.analytics-container th {
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif !important;
+}
+
+.analytics-container button {
+  box-sizing: border-box !important;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif !important;
+  cursor: pointer !important;
+  display: inline-block !important;
+  text-align: center !important;
+  padding: 8px 16px !important;
+  border: 1px solid #4a5568 !important;
+  border-radius: 6px !important;
+  /* background-color: #2d3748 !important; */
+  color: #e2e8f0 !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.analytics-container button:hover:not(:disabled) {
+  background-color: #4a5568 !important;
+  border-color: #ed8936 !important;
+}
+
+.analytics-container button:active:not(:disabled) {
+  transform: translateY(1px) !important;
+}
+
+.analytics-container button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.analytics-container input,
+.analytics-container select,
+.analytics-container textarea {
+  box-sizing: border-box !important;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 8px 12px !important;
+  background-color: #2d3748 !important;
+  border: 1px solid #4a5568 !important;
+  border-radius: 4px !important;
+  color: #e2e8f0 !important;
+  font-size: 12px !important;
+}
+
+.analytics-container input:focus,
+.analytics-container select:focus,
+.analytics-container textarea:focus {
+  outline: none !important;
+  border-color: #ed8936 !important;
+}
+
+.analytics-container input[type='number'],
+.analytics-container input[type='text'],
+.analytics-container input[type='checkbox'] {
+  width: auto !important;
+}
+
+.analytics-container input[type='checkbox'] {
+  width: 16px !important;
+  height: 16px !important;
+  accent-color: #ed8936 !important;
+}
+
+.analytics-container select option {
+  background-color: #1a2332 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Override for specific elements - Headers use Oliver-Regular */
+.analytics-title {
+  font-family: 'Oliver-Regular', serif;
+}
+
+.analytics-dropdown-header,
+.analytics-sidebar .component-header,
+.analytics-content .component-header,
+.component-header {
+  font-family: 'Oliver-Regular', serif;
+}
+
+/* Header */
+.analytics-header {
+  position: relative;
+}
+
+.analytics-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+}
+
+.analytics-title {
+  margin: 0;
+  font-weight: normal;
+  font-family: 'Oliver-Regular', serif;
+  background: linear-gradient(135deg, #ed8936 0%, #f6ad55 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1px;
+  font-size:36px;
+}
+
+.analytics-header-separator {
+  width: 102vw;
+  height: 128px;
+  object-fit: cover;
+  display: block;
+  margin: -42px;
+  filter: invert(64%) sepia(77%) saturate(1823%) hue-rotate(340deg)
+    brightness(98%) contrast(91%);
+}
+
+/* Wallet Section */
+.analytics-wallet-section {
+  position: relative;
+}
+
+.analytics-connect-button {
+  background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-weight: normal;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+  min-width: 140px;
+}
+
+.analytics-connect-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(237, 137, 54, 0.4);
+  background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+}
+
+.analytics-connect-button:active {
+  transform: translateY(0);
+}
+
+/* Dropdown */
+.analytics-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  background: #1a2332;
+  border: 1px solid #4a5568;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  min-width: 320px;
+  z-index: 1000;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.analytics-dropdown-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #4a5568;
+  font-size: 14px;
+  font-family: 'Oliver-Regular', serif;
+  font-weight: normal;
+  color: #f7fafc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Wallet List */
+.analytics-wallet-list {
+  padding: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.analytics-wallet-item {
+  border: 1px solid rgba(255, 153, 0, 0.2);
+  margin: 0 0 1rem 0;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  display: block;
+  border-radius: 0;
+  outline: none;
+  position: relative;
+  z-index: 1;
+}
+
+.analytics-wallet-item:focus {
+  outline: 2px solid #ff9900;
+  outline-offset: 2px;
+}
+
+.analytics-wallet-item:active {
+  transform: translateY(1px);
+}
+
+.analytics-wallet-item:hover {
+  border-color: #ff9900;
+  background-color: rgba(255, 153, 0, 0.05);
+}
+
+.analytics-wallet-item-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.analytics-wallet-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  float: left;
+}
+
+.analytics-wallet-name {
+  text-transform: uppercase;
+  letter-spacing: 0.1875rem;
+  line-height: 1.2;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  margin: 0;
+}
+
+/* Wallet Info */
+.analytics-wallet-info {
+  padding: 16px 20px;
+}
+
+.analytics-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+}
+
+.analytics-info-row:last-child {
+  border-bottom: none;
+}
+
+.analytics-info-label {
+  font-size: 12px;
+  color: #a0aec0;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-weight: normal;
+}
+
+.analytics-info-value {
+  font-size: 12px;
+  color: #e2e8f0;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-weight: normal;
+}
+
+.analytics-network-select {
+  background-color: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.analytics-network-select:focus {
+  outline: none;
+  border-color: #ed8936;
+  box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.1);
+}
+
+.analytics-disconnect-button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px;
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-weight: normal;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.analytics-disconnect-button:hover {
+  background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+/* Error Message */
+.analytics-error-message {
+  padding: 12px 16px;
+  margin: 12px;
+  background: #2d1b1b;
+  border: 1px solid #e53e3e;
+  color: #fed7d7;
+  font-size: 14px;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  line-height: 1.5;
+  border-radius: 6px;
+}
+
+/* Main Content Area */
+.analytics-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Sidebar */
+.analytics-sidebar {
+  width: 380px;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.analytics-sidebar-separator {
+  width: 123vh;
+  height: 100px;
+  object-fit: cover;
+  transform: rotate(90deg);
+  margin: -62vh -60vh -50vh -63vh;
+  filter: invert(64%) sepia(77%) saturate(1823%) hue-rotate(340deg)
+    brightness(98%) contrast(91%);
+}
+
+/* Content Area */
+.analytics-content {
+  flex: 1;
+  padding: 24px;
+  overflow: scroll;
+  height: 82vh;
+}
+
+/* Scrollbar Styling - Override index.css scrollbar styles */
+.analytics-container ::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.analytics-sidebar::-webkit-scrollbar,
+.analytics-content::-webkit-scrollbar,
+.analytics-wallet-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.analytics-container ::-webkit-scrollbar-track {
+  background: #1a202c !important;
+}
+
+.analytics-sidebar::-webkit-scrollbar-track,
+.analytics-content::-webkit-scrollbar-track,
+.analytics-wallet-list::-webkit-scrollbar-track {
+  background: #1a202c;
+}
+
+.analytics-container ::-webkit-scrollbar-thumb {
+  background: #4a5568 !important;
+  border-radius: 4px !important;
+}
+
+.analytics-sidebar::-webkit-scrollbar-thumb,
+.analytics-content::-webkit-scrollbar-thumb,
+.analytics-wallet-list::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+.analytics-container ::-webkit-scrollbar-thumb:hover {
+  background: #ed8936 !important;
+}
+
+.analytics-sidebar::-webkit-scrollbar-thumb:hover,
+.analytics-content::-webkit-scrollbar-thumb:hover,
+.analytics-wallet-list::-webkit-scrollbar-thumb:hover {
+  background: #ed8936;
+}
+
+/* Component Overrides for analytics */
+.analytics-sidebar .wallet-management-container,
+.analytics-content .runes-management-container {
+  background: transparent;
+}
+
+/* Old overrides removed - now using comprehensive component styles above */
+
+.analytics-sidebar .component-header,
+.analytics-content .component-header {
+  color: #f7fafc;
+  font-size: 18px;
+  font-family: 'Oliver-Regular', serif;
+  font-weight: normal;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  /* border-bottom: 2px solid #ed8936; */
+}
+
+/* ===========================================
+   COMPONENT-SPECIFIC STYLES FOR analytics
+   =========================================== */
+
+/* Wallet Management Component Styles */
+.analytics-container .wallet-management-container {
+  height: 100%;
+  padding: 16px;
+  background-color: transparent;
+  color: #e2e8f0;
+  overflow: auto;
+}
+
+.analytics-container .wallet-management-wrapper {
+  margin-bottom: 20px;
+}
+
+.analytics-container .wallet-connection-status-box {
+  padding: 24px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  background-color: #1a2332;
+}
+
+.analytics-container .wallet-connection-status-box.connected {
+  background-color: #1a2332;
+  border: 1px solid #48bb78;
+}
+
+.analytics-container .wallet-connection-status-box.disconnected {
+  background-color: #1a2332;
+  border: 1px solid #e53e3e;
+}
+
+.analytics-container .wallet-connection-status-text {
+  font-size: 12px;
+  margin: 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-container .wallet-connection-status-text.connected {
+  color: #48bb78;
+}
+
+.analytics-container .wallet-connection-status-text.disconnected {
+  color: #e53e3e;
+}
+
+.analytics-container .wallet-connection-status-icon {
+  font-size: 14px;
+}
+
+.analytics-container .wallet-connection-address {
+  font-size: 11px;
+  color: #a0aec0;
+  margin: 4px 0 0 0;
+  font-family: monospace;
+}
+
+.analytics-container .wallet-not-connected-box {
+  padding: 40px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .wallet-not-connected-text {
+  font-size: 14px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+.analytics-container .wallet-connected-info {
+  margin-bottom: 16px;
+}
+
+.analytics-container .wallet-connected-address {
+  font-size: 12px;
+  color: #a0aec0;
+  margin-bottom: 8px;
+}
+
+.analytics-container .wallet-count-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.analytics-container .wallet-count-label {
+  font-size: 12px;
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.analytics-container .wallet-count-input {
+  width: 80px;
+  padding: 6px 8px;
+  background-color: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.analytics-container .wallet-count-input:focus {
+  outline: none;
+  border-color: #ed8936;
+  box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.1);
+}
+
+.analytics-container .wallet-generate-button {
+  background-color: #ed8936;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.analytics-container .wallet-generate-button:hover {
+  background-color: #dd6b20;
+}
+
+.analytics-container .wallet-generate-button:disabled {
+  background-color: #4a5568;
+  cursor: not-allowed;
+}
+
+.analytics-container .wallet-error-box {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background-color: #1a2332;
+}
+
+.analytics-container .wallet-error-box.disconnected {
+  background-color: #2d2419;
+  color: #f6e05e;
+  border: 1px solid #d69e2e;
+}
+
+.analytics-container .wallet-error-box.error {
+  background-color: #2d1b1b;
+  color: #fed7d7;
+  border: 1px solid #e53e3e;
+}
+
+.analytics-container .wallet-generated-list {
+  background-color: #1a2332;
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid #4a5568;
+  position: relative;
+}
+
+.analytics-container .wallet-generated-header {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #f7fafc;
+}
+
+.analytics-container .wallet-generated-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  position: relative;
+}
+
+.analytics-container .wallet-details-tooltip {
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: #1a2332;
+  border: 1px solid #4a5568;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  min-width: 400px;
+  position: fixed;
+  z-index: 10000;
+}
+
+.wallet-details-tooltip {
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: #1a2332;
+  border: 1px solid #4a5568;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  min-width: 400px;
+  position: fixed;
+  z-index: 10000;
+}
+
+.analytics-container .wallet-generated-item {
+  padding: 16px 24px;
+  cursor: pointer;
+  background-color: transparent;
+  transition: background-color 0.2s;
+  width: 100%;
+  border: none;
+  text-align: left;
+  color: inherit;
+}
+
+.analytics-container .wallet-generated-item:not(:last-child) {
+  border-bottom: 1px solid #4a5568;
+}
+
+.analytics-container .wallet-generated-item:hover {
+  background-color: #2d3748;
+}
+
+.analytics-container .wallet-generated-item.selected {
+  background-color: #4a5568;
+}
+
+.analytics-container .wallet-generated-number {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.analytics-container .wallet-generated-address {
+  font-size: 11px;
+  color: #a0aec0;
+  font-family: monospace;
+}
+
+/* Runes Management Component Styles */
+.analytics-container .runes-management-container {
+  height: 100%;
+  padding: 16px;
+  background-color: transparent;
+  color: #e2e8f0;
+  overflow: auto;
+}
+
+.analytics-container .runes-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+  background-color: #1a2332;
+}
+
+.analytics-container .runes-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.analytics-container .runes-form-label {
+  font-size: 12px;
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.analytics-container .runes-form-select,
+.analytics-container .runes-form-input {
+  padding: 6px 8px;
+  background-color: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.analytics-container .runes-form-select:focus,
+.analytics-container .runes-form-input:focus {
+  outline: none;
+  border-color: #ed8936;
+  box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.1);
+}
+
+.analytics-container .runes-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-container .runes-checkbox {
+  width: 32px;
+  height: 32px;
+  accent-color: #ed8936;
+}
+
+.analytics-container .runes-checkbox-label {
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+.analytics-container .runes-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.analytics-container .runes-search-button {
+  background-color: #ed8936;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.analytics-container .runes-search-button:hover {
+  background-color: #dd6b20;
+}
+
+.analytics-container .runes-search-button:disabled {
+  background-color: #4a5568;
+  cursor: not-allowed;
+}
+
+.analytics-container .runes-refresh-button {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.analytics-container .runes-refresh-button:hover {
+  background-color: #3182ce;
+}
+
+.analytics-container .runes-refresh-button:disabled {
+  background-color: #4a5568;
+  cursor: not-allowed;
+}
+
+.analytics-container .runes-error-box {
+  padding: 12px;
+  background-color: #2d1b1b;
+  color: #fed7d7;
+  border: 1px solid #e53e3e;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.analytics-container .runes-list-container {
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+  overflow: hidden;
+}
+
+.analytics-container .runes-list-scroll {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.analytics-container .runes-item {
+  display: flex;
+  gap: 16px;
+  padding: 32px;
+  transition: background-color 0.2s;
+  align-items: flex-start;
+}
+
+.analytics-container .runes-item:not(:last-child) {
+  border-bottom: 1px solid #4a5568;
+}
+
+.analytics-container .runes-item:hover {
+  background-color: #2d3748;
+}
+
+.analytics-container .runes-image-section {
+  flex-shrink: 0;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.analytics-container .runes-image {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .runes-image-placeholder {
+  width: 120px;
+  height: 120px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #a0aec0;
+}
+
+.analytics-container .runes-image-name {
+  font-size: 10px;
+  color: #a0aec0;
+  text-align: center;
+  word-break: break-word;
+  max-width: 160px;
+}
+
+.analytics-container .runes-details-section {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  font-size: 12px;
+}
+
+.analytics-container .runes-detail-label {
+  font-size: 10px;
+  color: #a0aec0;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.analytics-container .runes-detail-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.analytics-container .runes-detail-value.positive {
+  color: #48bb78;
+}
+
+.analytics-container .runes-detail-value.negative {
+  color: #e53e3e;
+}
+
+.analytics-container .runes-detail-value.warning {
+  color: #ed8936;
+}
+
+.analytics-container .runes-detail-subvalue {
+  font-size: 10px;
+  color: #a0aec0;
+  margin-top: 2px;
+}
+
+.analytics-container .runes-etching-section {
+  flex: 0 0 200px;
+  max-width: 200px;
+  margin-left: 16px;
+}
+
+.analytics-container .runes-etching-label {
+  font-size: 10px;
+  color: #a0aec0;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.analytics-container .runes-etching-details {
+  background-color: #1a2332;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 9px;
+  font-family: monospace;
+  color: #a0aec0;
+  max-height: 60px;
+  overflow-y: auto;
+  word-break: break-all;
+}
+
+.analytics-container .runes-no-data {
+  padding: 80px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .runes-no-data-text {
+  font-size: 14px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+.analytics-container .runes-loading {
+  padding: 80px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .runes-loading-text {
+  font-size: 14px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+/* ===========================================
+   COMPONENT-SPECIFIC STYLES (Size/Position Only)
+   =========================================== */
+
+/* Wallet Connect Component Styles */
+.analytics-container .wallet-connect-container {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.analytics-container .wallet-not-connected {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.analytics-container .wallet-list-container {
+  max-height: 20rem;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.analytics-container .wallet-item {
+  margin: 0 0 1rem 0;
+  padding: 1rem;
+  width: 100%;
+  display: block;
+}
+
+.analytics-container .wallet-item-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.analytics-container .wallet-item-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.analytics-container .wallet-connected {
+  padding: 1rem;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.analytics-container .wallet-tabs-container {
+  display: flex;
+  margin-bottom: 16px;
+  gap: 0;
+}
+
+.analytics-container .wallet-tab-button {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+.analytics-container .wallet-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+
+.analytics-container .wallet-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-container .wallet-connection-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.analytics-container .wallet-network-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-container .wallet-info-section {
+  margin-bottom: 16px;
+}
+
+.analytics-container .wallet-address-list {
+  margin-top: 0.5rem;
+}
+
+.analytics-container .disconnect-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Wallet Management Component Styles */
+.analytics-container .wallet-management-container {
+  height: 100%;
+  padding: 0;
+  overflow: auto;
+}
+
+.analytics-container .wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.analytics-container .wallet-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.analytics-container .wallet-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Runes Management Component Styles */
+.analytics-container .runes-management-container {
+  height: 100%;
+  padding: 0;
+  overflow: auto;
+}
+
+.analytics-container .runes-table {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.analytics-container .runes-table th,
+.analytics-container .runes-table td {
+  padding: 8px 12px;
+  text-align: left;
+}
+
+/* General Component Container Overrides */
+.analytics-container .component-container {
+  height: 100%;
+  padding: 0;
+  overflow: auto;
+}
+
+.analytics-container .component-section {
+  margin-bottom: 20px;
+}
+
+.analytics-container .form-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.analytics-container .button-group {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+/* Results Section */
+.analytics-container .results-section {
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.analytics-container .result-item {
+  margin-bottom: 16px;
+}
+
+.analytics-container .result-content {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* Loading States */
+.analytics-container .loading-container {
+  padding: 40px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.analytics-container .empty-state {
+  padding: 40px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .analytics-sidebar {
+    width: 320px;
+  }
+}
+
+@media (max-width: 992px) {
+  .analytics-main {
+    flex-direction: column;
+  }
+
+  .analytics-sidebar {
+    width: 100%;
+    max-height: 400px;
+  }
+
+  .analytics-sidebar-separator {
+    width: 100%;
+    height: 4px;
+    transform: none;
+  }
+
+  .analytics-content {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-header-content {
+    padding: 16px 20px;
+  }
+
+  .analytics-title {
+    font-size: 16px;
+  }
+
+  .analytics-connect-button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  .analytics-dropdown {
+    min-width: 280px;
+    right: -10px;
+  }
+
+  .analytics-sidebar,
+  .analytics-content {
+    padding: 16px;
+  }
+}
+
+/* FineBuyer Component Styles */
+.analytics-container .fine-buyer-container {
+  width: 100%;
+  height: 100%;
+  max-height: 86vh;
+  position: relative;
+}
+
+.analytics-container .fine-buyer-collections-view {
+  width: 100%;
+  height: 100%;
+}
+
+.analytics-container .fine-buyer-details-view {
+  width: 100%;
+  height: 100%;
+}
+
+.analytics-container .fine-buyer-ordinal-view {
+  width: 100%;
+  height: 100%;
+}
+
+.analytics-container .fine-buyer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #4a5568;
+}
+
+.analytics-container .fine-buyer-back-button {
+  background: #4a5568;
+  color: #e2e8f0;
+  border: 1px solid #4a5568;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family:
+    monospace,
+    'Mix Doodle',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analytics-container .fine-buyer-back-button:hover {
+  background: #2d3748;
+  border-color: #ed8936;
+  color: #ed8936;
+}
+
+.analytics-container .fine-buyer-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.analytics-container .fine-buyer-popup {
+  background: #1a2332;
+  border: 1px solid #4a5568;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.analytics-container .fine-buyer-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #4a5568;
+  background: #1a2332;
+}
+
+.analytics-container .fine-buyer-popup-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-family: 'Oliver-Regular', serif;
+  color: #f7fafc;
+  font-weight: normal;
+}
+
+.analytics-container .fine-buyer-popup-close {
+  background: transparent;
+  color: #a0aec0;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.analytics-container .fine-buyer-popup-close:hover {
+  color: #ed8936;
+}
+
+.analytics-container .fine-buyer-popup-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.analytics-container .fine-buyer-popup-content .buy-ordinal-container {
+  max-height: none;
+}
+
+/* ===========================================
+   WALLET ANALYTICS COMPONENT STYLES
+   =========================================== */
+
+.analytics-container .wallet-analytics-container {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  background-color: transparent;
+  color: #e2e8f0;
+  overflow-y: auto;
+}
+
+.analytics-container .wallet-analytics-empty,
+.analytics-container .wallet-analytics-loading,
+.analytics-container .wallet-analytics-error,
+.analytics-container .wallet-analytics-no-data {
+  padding: 80px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #4a5568;
+  margin: 20px 0;
+}
+
+.analytics-container .wallet-analytics-empty-text,
+.analytics-container .wallet-analytics-loading-text,
+.analytics-container .wallet-analytics-error-text {
+  font-size: 14px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+.analytics-container .wallet-analytics-error-text {
+  color: #fed7d7;
+}
+
+.analytics-container .wallet-analytics-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .wallet-analytics-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analytics-container .wallet-analytics-summary-label {
+  font-size: 12px;
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.analytics-container .wallet-analytics-summary-value {
+  font-size: 14px;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.analytics-container .wallet-analytics-section-header {
+  font-size: 18px;
+  font-family: 'Oliver-Regular', serif;
+  color: #f7fafc;
+  font-weight: normal;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #4a5568;
+}
+
+.analytics-container .wallet-analytics-graph-container {
+  margin-bottom: 32px;
+  padding: 24px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .wallet-analytics-transactions-container {
+  padding: 24px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .wallet-analytics-transactions-list {
+  overflow-x: auto;
+}
+
+.analytics-container .wallet-analytics-transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.analytics-container .wallet-analytics-transactions-table thead {
+  background-color: #2d3748;
+}
+
+.analytics-container .wallet-analytics-transactions-table th {
+  padding: 12px;
+  text-align: left;
+  color: #f7fafc;
+  font-weight: 600;
+  border-bottom: 2px solid #4a5568;
+  font-family: 'Oliver-Regular', serif;
+}
+
+.analytics-container .wallet-analytics-transactions-table td {
+  padding: 12px;
+  border-bottom: 1px solid #4a5568;
+  color: #e2e8f0;
+}
+
+.analytics-container .wallet-analytics-transactions-table tbody tr:hover {
+  background-color: #2d3748;
+}
+
+.analytics-container .wallet-analytics-txid {
+  font-family: monospace;
+  color: #a0aec0;
+  cursor: pointer;
+}
+
+.analytics-container .wallet-analytics-txid:hover {
+  color: #ed8936;
+}
+
+.analytics-container .wallet-analytics-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.analytics-container .wallet-analytics-status.confirmed {
+  background-color: #1a3a2e;
+  color: #48bb78;
+  border: 1px solid #48bb78;
+}
+
+.analytics-container .wallet-analytics-status.pending {
+  background-color: #3a2e1a;
+  color: #ed8936;
+  border: 1px solid #ed8936;
+}
+
+.analytics-container .wallet-analytics-positive {
+  color: #48bb78;
+  font-weight: 600;
+}
+
+.analytics-container .wallet-analytics-negative {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+/* Wallet ordinals (Satflow /api/satflow-wallet-contents) */
+.analytics-container .analytics-ordinals-section {
+  margin-top: 28px;
+  padding: 16px 0 32px;
+  width: 100%;
+  color: #e2e8f0;
+}
+
+.analytics-container .analytics-ordinals-subtitle {
+  font-size: 12px;
+  color: #a0aec0;
+  margin: -8px 0 20px;
+  line-height: 1.5;
+}
+
+.analytics-container .analytics-ordinals-code {
+  font-family: monospace;
+  font-size: 11px;
+  color: #ed8936;
+  background: #2d3748;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.analytics-container .analytics-ordinals-empty,
+.analytics-container .analytics-ordinals-loading,
+.analytics-container .analytics-ordinals-error,
+.analytics-container .analytics-ordinals-none {
+  padding: 24px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+  text-align: center;
+  color: #a0aec0;
+  font-size: 14px;
+}
+
+.analytics-container .analytics-ordinals-empty-text {
+  margin: 0;
+}
+
+.analytics-container .analytics-ordinals-wallet-block {
+  margin-bottom: 28px;
+  padding: 20px;
+  background-color: #1a2332;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+}
+
+.analytics-container .analytics-ordinals-wallet-block--selected {
+  border-color: #ed8936;
+  box-shadow: 0 0 0 1px rgba(237, 137, 54, 0.35);
+}
+
+.analytics-container .analytics-ordinals-wallet-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #4a5568;
+}
+
+.analytics-container .analytics-ordinals-wallet-label {
+  font-family: 'Oliver-Regular', serif;
+  font-size: 16px;
+  color: #f7fafc;
+}
+
+.analytics-container .analytics-ordinals-wallet-address {
+  font-family: monospace;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.analytics-container .analytics-ordinals-selected-pill {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(237, 137, 54, 0.2);
+  color: #ed8936;
+  border: 1px solid #ed8936;
+}
+
+.analytics-container .analytics-ordinals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.analytics-container .analytics-ordinals-card {
+  background: #2d3748;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #4a5568;
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-container .analytics-ordinals-card-media {
+  aspect-ratio: 1;
+  background: #1a202c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analytics-container .analytics-ordinals-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.analytics-container .analytics-ordinals-card-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #1a202c;
+}
+
+.analytics-container .analytics-ordinals-card-text {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  resize: none;
+  border: 0;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  background: #1a202c;
+  color: #e2e8f0;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.analytics-container .analytics-ordinals-card-text-loading {
+  padding: 12px;
+  font-size: 11px;
+  color: #a0aec0;
+  text-align: center;
+}
+
+.analytics-container .analytics-ordinals-card-placeholder {
+  font-size: 11px;
+  color: #718096;
+  padding: 12px;
+  text-align: center;
+}
+
+.analytics-container .analytics-ordinals-card-body {
+  padding: 10px 12px 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.analytics-container .analytics-ordinals-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.analytics-container .analytics-ordinals-card-collection {
+  font-size: 11px;
+  color: #ed8936;
+  margin-top: 6px;
+}
+
+.analytics-container .analytics-ordinals-card-meta {
+  font-size: 10px;
+  color: #718096;
+  margin-top: 4px;
+  font-family: monospace;
+}

@@ -1,0 +1,1860 @@
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
+import {
+  useOrdConnect,
+  OrdConnectProvider,
+  Chain,
+  Wallet,
+} from '@ordzaar/ord-connect';
+import { useConnect } from '../hooks/useConnect.ts';
+import { useBitprint, BitprintProvider } from '../modules/bitprint.tsx';
+import WalletManagement from '../components/layout/WalletManagement';
+import Dispatch from '../components/layout/Dispatch';
+import OrdinalsCollections from '../components/layout/OrdinalsCollections';
+import {
+  checkTransactionConfirmed,
+} from '../utils/autoTradingUtils';
+import { processWalletItems } from '../utils/simplifiedAutoTrading';
+import leather_icon from '../assets/images/svg/leather.svg';
+import magic_icon from '../assets/images/svg/magic_icon.svg';
+import okx_icon from '../assets/images/svg/okx.svg';
+import unisat_icon from '../assets/images/svg/unisat.svg';
+import xverse_icon from '../assets/images/svg/xverse-icon.svg';
+import './AutoTrade.css';
+
+// Wallet list configuration
+const CONNECT_WALLET_LIST = [
+  {
+    wallet: Wallet.OKX,
+    icon: okx_icon,
+    order: 1,
+    chains: [Chain.BITCOIN],
+  },
+  {
+    wallet: Wallet.UNISAT,
+    icon: unisat_icon,
+    order: 2,
+    chains: [Chain.BITCOIN, Chain.FRACTAL_BITCOIN],
+  },
+  {
+    wallet: Wallet.XVERSE,
+    icon: xverse_icon,
+    order: 3,
+    chains: [Chain.BITCOIN],
+  },
+  {
+    wallet: Wallet.MAGICEDEN,
+    icon: magic_icon,
+    order: 4,
+    chains: [Chain.BITCOIN],
+  },
+  {
+    wallet: Wallet.LEATHER,
+    icon: leather_icon,
+    order: 5,
+    chains: [Chain.BITCOIN],
+  },
+];
+
+// Step status icons
+const StepStatus = {
+  PENDING: '⏳',
+  COMPLETE: '✓',
+  IN_PROGRESS: '⟳',
+};
+
+// Inner component that uses the hooks
+const AutoTradeInner = () => {
+  // Step states
+  const [currentStep, setCurrentStep] = useState(1);
+  const [stepStatuses, setStepStatuses] = useState({
+    1: null, // Connect Wallet
+    2: null, // Create Wallets
+    3: null, // Dispatch BTC
+    4: null, // Select Collection
+    5: null, // Start Trading
+  });
+
+  // Wallet connection state
+  const {
+    network,
+    disconnectWallet,
+    address: connectedAddress,
+    publicKey: connectedPublicKey,
+    format: connectedFormat,
+    wallet: connectedWallet,
+    chain,
+    updateNetwork,
+  } = useOrdConnect();
+
+  const { globalState: bitprint } = useBitprint();
+  const { connectWallet } = useConnect({
+    onClose: () => {},
+    onError: (err) => {
+      console.error('Connection error:', err);
+    },
+  });
+
+  // Check if wallet is connected
+  const isWalletConnected =
+    connectedAddress &&
+    connectedAddress.ordinals &&
+    !(bitprint && bitprint.isDisconnected);
+
+  // Step 2: Wallet Management
+  const [wallets, setWallets] = useState([]);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletCount, setWalletCount] = useState(10);
+
+  // Check for wallets in localStorage (from WalletManagement)
+  useEffect(() => {
+    const checkForWallets = () => {
+      // WalletManagement stores selected wallet, but we need all wallets
+      // For now, we'll rely on the wallet-selected event to indicate wallets exist
+      // In a full implementation, WalletManagement would emit a 'wallets-generated' event
+    };
+    checkForWallets();
+  }, []);
+
+  // Step 3: Dispatch
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchTxIds, setDispatchTxIds] = useState([]);
+  const [dispatchStatuses, setDispatchStatuses] = useState({});
+
+  // Step 4: Collection Selection
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+
+  // Step 5: Auto Trading
+  const [tradingMode, setTradingMode] = useState('auto-buy-sell'); // Trading mode
+  const [isTrading, setIsTrading] = useState(false);
+  const [timerInterval, setTimerInterval] = useState(60); // seconds
+  const [purchaseAmount, setPurchaseAmount] = useState(1);
+  const [consoleLogs, setConsoleLogs] = useState([]);
+  const tradingIntervalRef = useRef(null);
+  // Removed unused state - simplified logic doesn't need these anymore
+
+  // Create a shared event hub
+  const glEventHub = useMemo(() => {
+    const events = {};
+    return {
+      on: (event, handler) => {
+        if (!events[event]) events[event] = [];
+        events[event].push(handler);
+      },
+      off: (event, handler) => {
+        if (events[event]) {
+          events[event] = events[event].filter((h) => h !== handler);
+        }
+      },
+      emit: (event, data) => {
+        if (events[event]) {
+          events[event].forEach((handler) => handler(data));
+        }
+      },
+    };
+  }, []);
+
+  // Listen for wallet connection changes
+  useEffect(() => {
+    const handleConnectionChange = (newConnectionState) => {
+      if (newConnectionState.isConnected) {
+        setStepStatuses((prev) => ({ ...prev, 1: StepStatus.COMPLETE }));
+        if (currentStep === 1) {
+          setCurrentStep(2);
+        }
+      } else {
+        setStepStatuses((prev) => ({ ...prev, 1: null }));
+      }
+    };
+
+    if (glEventHub) {
+      glEventHub.on('wallet-connection-changed', handleConnectionChange);
+      return () => {
+        glEventHub.off('wallet-connection-changed', handleConnectionChange);
+      };
+    }
+  }, [glEventHub, currentStep]);
+
+  // Listen for wallet generation and selection
+  useEffect(() => {
+    const handleWalletsGenerated = (generatedWallets) => {
+      // Store all generated wallets
+      setWallets(generatedWallets);
+      // Mark step 2 as complete when wallets are generated
+      setStepStatuses((prev) => ({ ...prev, 2: StepStatus.COMPLETE }));
+    };
+
+    const handleWalletSelect = (wallet) => {
+      // When a wallet is selected, it means wallets exist
+      // Mark step 2 as complete if not already
+      if (!stepStatuses[2]) {
+        setStepStatuses((prev) => ({ ...prev, 2: StepStatus.COMPLETE }));
+      }
+    };
+
+    if (glEventHub) {
+      glEventHub.on('wallets-generated', handleWalletsGenerated);
+      glEventHub.on('wallet-selected', handleWalletSelect);
+      return () => {
+        glEventHub.off('wallets-generated', handleWalletsGenerated);
+        glEventHub.off('wallet-selected', handleWalletSelect);
+      };
+    }
+  }, [glEventHub, stepStatuses]);
+
+  // Listen for collection selection
+  useEffect(() => {
+    const handleCollectionSelect = (collection) => {
+      setSelectedCollection(collection);
+      setStepStatuses((prev) => ({ ...prev, 4: StepStatus.COMPLETE }));
+      if (currentStep === 4) {
+        setCurrentStep(5);
+      }
+    };
+
+    if (glEventHub) {
+      glEventHub.on('collection-selected', handleCollectionSelect);
+      return () => {
+        glEventHub.off('collection-selected', handleCollectionSelect);
+      };
+    }
+  }, [glEventHub, currentStep]);
+
+  // Update step 1 status based on wallet connection
+  useEffect(() => {
+    if (isWalletConnected) {
+      setStepStatuses((prev) => ({ ...prev, 1: StepStatus.COMPLETE }));
+    } else {
+      setStepStatuses((prev) => ({ ...prev, 1: null }));
+    }
+  }, [isWalletConnected]);
+
+  // Handle wallet connection
+  const handleConnect = async (wallet) => {
+    try {
+      if (bitprint) {
+        bitprint.isDisconnected = false;
+      }
+      localStorage.removeItem('wallet-disconnected');
+      const result = await Promise.race([
+        connectWallet(wallet),
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)),
+      ]);
+      if (typeof result !== 'string') {
+        console.log('Wallet connected successfully');
+      }
+    } catch (error) {
+      console.error('Wallet connection error:', error);
+    }
+  };
+
+  // Poll transaction status (kept for dispatch, but using utility function for trading)
+  const pollTransactionStatus = useCallback(async (txId, network) => {
+    return await checkTransactionConfirmed(txId, network);
+  }, []);
+
+  // Poll dispatch transactions
+  useEffect(() => {
+    if (dispatchTxIds.length === 0) return;
+
+    const interval = setInterval(async () => {
+      const newStatuses = { ...dispatchStatuses };
+      let allConfirmed = true;
+
+      for (const txId of dispatchTxIds) {
+        if (!newStatuses[txId] || !newStatuses[txId].confirmed) {
+          const confirmed = await pollTransactionStatus(txId, network);
+          newStatuses[txId] = { confirmed, txId };
+          if (!confirmed) {
+            allConfirmed = false;
+          }
+        }
+      }
+
+      setDispatchStatuses(newStatuses);
+
+      if (allConfirmed && dispatchTxIds.length > 0) {
+        setStepStatuses((prev) => ({ ...prev, 3: StepStatus.COMPLETE }));
+        if (currentStep === 3) {
+          setCurrentStep(4);
+        }
+      } else if (dispatchTxIds.length > 0) {
+        setStepStatuses((prev) => ({ ...prev, 3: StepStatus.IN_PROGRESS }));
+      }
+    }, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [dispatchTxIds, network, currentStep, pollTransactionStatus]);
+
+  // Add console log (moved before other callbacks that use it)
+  const addConsoleLog = useCallback((message, link = null) => {
+    setConsoleLogs((prev) => {
+      const newLogs = [
+        ...prev,
+        { message, link, timestamp: new Date().toLocaleTimeString() },
+      ];
+      // Keep only last 1000 logs to prevent memory issues
+      return newLogs.slice(-1000);
+    });
+  }, []);
+
+  // Auto-scroll console to bottom when new logs are added
+  const consoleRef = useRef(null);
+  useEffect(() => {
+    if (consoleRef.current) {
+      consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+    }
+  }, [consoleLogs]);
+
+  // =============================================================================
+  // TRADING LOGIC - Uses simplified processWalletItems() from simplifiedAutoTrading.js
+  // =============================================================================
+
+  // Start/Stop trading (SIMPLIFIED VERSION)
+  const handleStartTrading = async () => {
+    if (isTrading) {
+      // Stop trading
+      if (tradingIntervalRef.current) {
+        clearInterval(tradingIntervalRef.current);
+        tradingIntervalRef.current = null;
+      }
+      setIsTrading(false);
+      addConsoleLog('Auto-trading stopped');
+    } else {
+      // Start trading
+      setIsTrading(true);
+      addConsoleLog('Auto-trading started');
+
+      // Validate
+      if (!selectedCollection || wallets.length === 0) {
+        addConsoleLog('✗ Cannot start trading: Missing collection or wallets');
+        setIsTrading(false);
+        return;
+      }
+
+      // Process items immediately on start
+      await processWalletItems({
+        wallets,
+        selectedCollection,
+        network,
+        addConsoleLog,
+      });
+
+      // Set up interval to process items every X seconds
+      tradingIntervalRef.current = setInterval(async () => {
+        await processWalletItems({
+          wallets,
+          selectedCollection,
+          network,
+          addConsoleLog,
+        });
+      }, timerInterval * 1000);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (tradingIntervalRef.current) {
+        clearInterval(tradingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Step handlers - allow clicking on any step at any time
+  const handleStepClick = (step) => {
+    setCurrentStep(step);
+  };
+
+  return (
+    <div className="auto-trade-container">
+      <div className="auto-trade-content">
+        <h1 className="auto-trade-title">Auto-Trade</h1>
+
+        {/* Step 1: Connect Wallet */}
+        <div className="auto-trade-step">
+
+    // Combine: our listed items first (for internal trading), then market items (only on first round)
+    const availableItems = [
+      ...ourListedItemsFromStore.sort(
+        (a, b) => (a.listedPrice || 0) - (b.listedPrice || 0)
+      ),
+      ...marketItems.sort(
+        (a, b) => (a.listedPrice || 0) - (b.listedPrice || 0)
+      ),
+    ];
+
+    if (availableItems.length === 0) {
+      // No items available to buy - this is expected when waiting for confirmations
+      return;
+    }
+
+    // Fetch wallet balances
+    const balances = {};
+    for (const wallet of wallets) {
+      const balance = await fetchWalletBalance(wallet.address, network);
+      balances[wallet.index] = balance;
+    }
+    setWalletBalances(balances);
+
+    // Estimate network fee (~0.000025-0.0001 BTC per item)
+    const estimatedFee = 0.0001 * 100000000; // 0.0001 BTC in sats
+
+    // Count how many items are currently being purchased (not yet confirmed)
+    const pendingPurchases = Array.from(purchasedItems.values()).filter(
+      (p) => !p.confirmed
+    ).length;
+
+    // Only buy if we haven't reached the total items to trade limit
+    const remainingPurchaseSlots = Math.max(
+      0,
+      totalItemsToTrade - pendingPurchases
+    );
+
+    if (remainingPurchaseSlots === 0) {
+      addConsoleLog(
+        `Purchase limit reached (${totalItemsToTrade} total items to trade, ${pendingPurchases} pending). Waiting for confirmations...`
+      );
+      return;
+    }
+
+    // Buy items with available wallets
+    // Strategy: For each item, find a wallet that can afford it, but don't buy from the listing wallet
+    let itemsBought = 0;
+
+    for (
+      let i = 0;
+      i < remainingPurchaseSlots && i < availableItems.length;
+      i++
+    ) {
+      const item = availableItems[i];
+      const itemPrice = item.listedPrice || 0;
+      const totalCost = itemPrice + estimatedFee;
+      const tokenId = getTokenId(item);
+
+      // Skip if already purchased or being purchased (use refs for latest state)
+      if (
+        currentPurchasedItems.has(tokenId) ||
+        currentItemsBeingPurchased.has(tokenId)
+      ) {
+        continue;
+      }
+
+      // Find which wallet listed this item (if any)
+      const listingWalletIndex = listedByWallet.get(tokenId);
+
+      // Find wallet with sufficient balance
+      // Start from wallet after the listing wallet, or from lastBuyWalletIndex if no listing wallet
+      let startIndex;
+      if (listingWalletIndex !== undefined) {
+        // Start from wallet after the listing wallet
+        startIndex = (listingWalletIndex + 1) % wallets.length;
+      } else {
+        // For market items, start from lastBuyWalletIndex
+        startIndex = lastBuyWalletIndex;
+      }
+
+      let availableWallet = null;
+      let attempts = 0;
+
+      // Try wallets starting from the one after the listing wallet
+      while (attempts < wallets.length && !availableWallet) {
+        const wallet = wallets[(startIndex + attempts) % wallets.length];
+        const balance = balances[wallet.index] || 0;
+
+        // Don't buy from the listing wallet
+        if (wallet.index !== listingWalletIndex && balance >= totalCost) {
+          availableWallet = wallet;
+        }
+        attempts++;
+      }
+
+      // If no wallet after listing wallet can afford, try from wallet 1 (cycle back)
+      if (!availableWallet && listingWalletIndex !== undefined) {
+        for (let j = 0; j < listingWalletIndex && j < wallets.length; j++) {
+          const wallet = wallets[j];
+          const balance = balances[wallet.index] || 0;
+          if (balance >= totalCost) {
+            availableWallet = wallet;
+            break;
+          }
+        }
+      }
+
+      if (!availableWallet) {
+        addConsoleLog(
+          `Insufficient balance across all wallets for item #${item.inscriptionNumber || i + 1} (${(itemPrice / 100000000).toFixed(8)} BTC)`
+        );
+        // If purchaseAmount is 0, we must buy our listed items, so continue trying
+        // Otherwise, break if we can't afford
+        if (purchaseAmount > 0) {
+          break;
+        }
+        continue;
+      }
+
+      // Mark as being purchased to prevent duplicate purchases (update both state and ref)
+      setItemsBeingPurchased((prev) => {
+        const newSet = new Set([...prev, tokenId]);
+        itemsBeingPurchasedRef.current = newSet;
+        return newSet;
+      });
+
+      // Perform purchase
+      try {
+        addConsoleLog(
+          `Wallet #${availableWallet.index + 1} buying item #${item.inscriptionNumber || 'Unknown'} (${(itemPrice / 100000000).toFixed(8)} BTC)...`
+        );
+
+        const buyResult = await buyOrdinalWithProxyWallet(
+          item,
+          availableWallet,
+          network,
+          connectedWallet
+        );
+
+        if (buyResult.success && buyResult.txid) {
+          // Track purchased item (update both state and ref)
+          setPurchasedItems((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tokenId, {
+              txid: buyResult.txid,
+              walletIndex: availableWallet.index,
+              confirmed: false,
+              inscriptionNumber: item.inscriptionNumber,
+            });
+            purchasedItemsRef.current = newMap;
+            return newMap;
+          });
+
+          const mempoolLink = `https://mempool.space/${network === 'mainnet' ? '' : network + '/'}tx/${buyResult.txid}`;
+          addConsoleLog(
+            `✓ Purchase successful! Transaction: ${buyResult.txid}`,
+            mempoolLink
+          );
+          itemsBought++;
+          // Update last buy wallet index for next purchase
+          setLastBuyWalletIndex((availableWallet.index + 1) % wallets.length);
+        } else {
+          // Remove from being purchased if failed (update both state and ref)
+          setItemsBeingPurchased((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(tokenId);
+            itemsBeingPurchasedRef.current = newSet;
+            return newSet;
+          });
+          addConsoleLog(
+            `✗ Purchase failed: ${buyResult.error || 'Unknown error'}`
+          );
+        }
+      } catch (err) {
+        // Remove from being purchased if error (update both state and ref)
+        setItemsBeingPurchased((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(tokenId);
+          itemsBeingPurchasedRef.current = newSet;
+          return newSet;
+        });
+        addConsoleLog(`✗ Error purchasing item: ${err.message}`);
+      }
+    }
+
+    // Mark first buy round as complete after attempting purchases
+    if (isFirstBuyRound && itemsBought > 0) {
+      setIsFirstBuyRound(false);
+    }
+
+    if (itemsBought > 0) {
+      addConsoleLog(`Successfully initiated ${itemsBought} purchase(s)`);
+    } else if (itemsBought === 0 && availableItems.length > 0) {
+      if (purchaseAmount === 0) {
+        addConsoleLog(
+          `Could not purchase any items. All proxy wallets have insufficient funds.`
+        );
+      } else {
+        addConsoleLog(
+          `Could not purchase any items. Insufficient balance or all items already purchased.`
+        );
+      }
+    }
+  }, [
+    selectedCollection,
+    wallets,
+    purchaseAmount,
+    initialOwnedItemsCount,
+    network,
+    connectedWallet,
+    lastBuyWalletIndex,
+    purchasedItems,
+    listedByWallet,
+    listedItemsData,
+    itemsBeingPurchased,
+    isFirstBuyRound,
+    getTokenId,
+    addConsoleLog,
+  ]);
+
+  /**
+   * Helper function to buy a specific item immediately after listing
+   * Uses the item's listedPrice from the item object (most up-to-date)
+   * @param {Object} item - The item object with listedPrice property
+   * @param {number} listingWalletIndex - Index of the wallet that listed the item
+   * @param {number} fallbackPrice - Fallback price if item.listedPrice is not available
+   * @returns {Promise<boolean>} True if purchase was successful
+   */
+  const buyListedItemImmediately = useCallback(
+    async (item, listingWalletIndex, fallbackPrice) => {
+      if (!selectedCollection || wallets.length === 0) return false;
+
+      const tokenId = getTokenId(item);
+      if (!tokenId) {
+        addConsoleLog('✗ Cannot buy item: No token ID found');
+        return false;
+      }
+
+      // Skip if currently being purchased (use refs for latest state)
+      if (itemsBeingPurchasedRef.current.has(tokenId)) {
+        addConsoleLog(
+          `⏭ Skipping purchase of item #${item.inscriptionNumber || 'Unknown'}: Purchase already in progress`
+        );
+        return false;
+      }
+
+      // Check if item was previously purchased and is pending confirmation
+      const previousPurchase = purchasedItemsRef.current.get(tokenId);
+      if (previousPurchase && !previousPurchase.confirmed) {
+        // Item is being purchased but not yet confirmed - skip
+        addConsoleLog(
+          `⏭ Skipping purchase of item #${item.inscriptionNumber || 'Unknown'}: Purchase pending confirmation`
+        );
+        return false;
+      }
+
+      // Use the item's listedPrice (most up-to-date from wallet ordinals API)
+      // Fall back to fallbackPrice if listedPrice is not available
+      const itemPrice = item.listedPrice || fallbackPrice || 0;
+      if (!itemPrice || itemPrice === 0) {
+        addConsoleLog(
+          `✗ Cannot buy item #${item.inscriptionNumber || 'Unknown'}: No valid price found`
+        );
+        return false;
+      }
+
+      // Fetch wallet balances (no caching needed - balance is real-time)
+      const balances = {};
+      for (const wallet of wallets) {
+        const balance = await fetchWalletBalance(wallet.address, network);
+        balances[wallet.index] = balance;
+      }
+
+      // Estimate network fee
+      const estimatedFee = 0.0001 * 100000000; // 0.0001 BTC in sats
+      const totalCost = itemPrice + estimatedFee;
+
+      // Find wallet with sufficient balance (starting from wallet after listing wallet)
+      const startIndex = (listingWalletIndex + 1) % wallets.length;
+      let availableWallet = null;
+      let attempts = 0;
+
+      // Try wallets starting from the one after the listing wallet
+      while (attempts < wallets.length && !availableWallet) {
+        const wallet = wallets[(startIndex + attempts) % wallets.length];
+        const balance = balances[wallet.index] || 0;
+
+        // Don't buy from the listing wallet
+        if (wallet.index !== listingWalletIndex && balance >= totalCost) {
+          availableWallet = wallet;
+        }
+        attempts++;
+      }
+
+      // If no wallet after listing wallet can afford, try from wallet 1 (cycle back)
+      if (!availableWallet) {
+        for (let j = 0; j < listingWalletIndex && j < wallets.length; j++) {
+          const wallet = wallets[j];
+          const balance = balances[wallet.index] || 0;
+          if (balance >= totalCost) {
+            availableWallet = wallet;
+            break;
+          }
+        }
+      }
+
+      if (!availableWallet) {
+        addConsoleLog(
+          `Insufficient balance across all wallets to buy item #${item.inscriptionNumber || 'Unknown'} (${(itemPrice / 100000000).toFixed(8)} BTC)`
+        );
+        return false;
+      }
+
+      // Log the actual price being used for purchase (for debugging)
+      if (item.listedPrice && item.listedPrice !== fallbackPrice) {
+        addConsoleLog(
+          `Using fresh price from API: ${(item.listedPrice / 100000000).toFixed(8)} BTC for item #${item.inscriptionNumber || 'Unknown'}`
+        );
+      }
+
+      // Mark as being purchased (update both state and ref)
+      setItemsBeingPurchased((prev) => {
+        const newSet = new Set([...prev, tokenId]);
+        itemsBeingPurchasedRef.current = newSet;
+        return newSet;
+      });
+
+      // Perform purchase
+      try {
+        addConsoleLog(
+          `Wallet #${availableWallet.index + 1} buying item #${item.inscriptionNumber || 'Unknown'} (${(itemPrice / 100000000).toFixed(8)} BTC) from wallet #${listingWalletIndex + 1}...`
+        );
+
+        const buyResult = await buyOrdinalWithProxyWallet(
+          item,
+          availableWallet,
+          network,
+          connectedWallet
+        );
+
+        if (buyResult.success && buyResult.txid) {
+          // Track purchased item (update both state and ref)
+          setPurchasedItems((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(tokenId, {
+              txid: buyResult.txid,
+              walletIndex: availableWallet.index,
+              confirmed: false,
+              inscriptionNumber: item.inscriptionNumber,
+            });
+            purchasedItemsRef.current = newMap;
+            return newMap;
+          });
+
+          const mempoolLink = `https://mempool.space/${network === 'mainnet' ? '' : network + '/'}tx/${buyResult.txid}`;
+          addConsoleLog(
+            `✓ Purchase successful! Transaction: ${buyResult.txid}`,
+            mempoolLink
+          );
+          return true;
+        } else {
+          // Remove from being purchased if failed (update both state and ref)
+          setItemsBeingPurchased((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(tokenId);
+            itemsBeingPurchasedRef.current = newSet;
+            return newSet;
+          });
+          addConsoleLog(
+            `✗ Purchase failed: ${buyResult.error || 'Unknown error'}`
+          );
+          return false;
+        }
+      } catch (err) {
+        // Remove from being purchased if error (update both state and ref)
+        setItemsBeingPurchased((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(tokenId);
+          itemsBeingPurchasedRef.current = newSet;
+          return newSet;
+        });
+        addConsoleLog(`✗ Error purchasing item: ${err.message}`);
+        return false;
+      }
+    },
+    [
+      selectedCollection,
+      wallets,
+      network,
+      connectedWallet,
+      purchasedItems,
+      itemsBeingPurchased,
+      getTokenId,
+      addConsoleLog,
+    ]
+  );
+
+  /**
+   * List all unlisted items on start and count owned items
+   *
+   * This function:
+   * 1. Fetches fresh collection items and wallet ordinals (bypass cache)
+   * 2. Lists unlisted items owned by proxy wallets
+   * 3. Processes already-listed items and adds them to trading cycle
+   * 4. Updates stored item data with fresh prices from APIs
+   * 5. Immediately attempts to buy items after listing (for purchaseAmount = 0)
+   *
+   * IMPORTANT: All API calls bypass cache to ensure fresh prices are used
+   */
+  const listAllUnlistedItems = useCallback(async () => {
+    if (!selectedCollection || wallets.length === 0) {
+      addConsoleLog('Missing collection or wallets for listing');
+      return 0;
+    }
+
+    const collectionSymbol =
+      selectedCollection.collectionSymbol ||
+      selectedCollection.symbol ||
+      selectedCollection.collectionId;
+
+    if (!collectionSymbol) {
+      addConsoleLog('Collection symbol not found');
+      return 0;
+    }
+
+    // Get floor price (bypass cache to get fresh data)
+    const floorPrice = await getFloorPrice(collectionSymbol, true);
+    if (!floorPrice) {
+      addConsoleLog('Could not determine floor price. Skipping listing.');
+      return 0;
+    }
+
+    addConsoleLog(
+      `Floor price: ${(floorPrice / 100000000).toFixed(8)} BTC. Listing all unlisted items and processing already-listed items...`
+    );
+
+    let itemsListed = 0;
+    let itemsAlreadyListed = 0;
+    let totalOwnedItems = 0;
+
+    // Fetch collection items to get listing prices for already-listed items
+    // Bypass cache to get fresh prices (important for accurate trading)
+    const collectionItems = await fetchCollectionItems(collectionSymbol, true);
+    const collectionItemsMap = new Map();
+    collectionItems.forEach((item) => {
+      const tokenId = getTokenId(item);
+      if (tokenId) {
+        collectionItemsMap.set(tokenId, item);
+        // Update listedItemsData with fresh prices from API
+        if (listedItemsData.has(tokenId) && item.listedPrice) {
+          setListedItemsData((prev) => {
+            const newMap = new Map(prev);
+            const existingItem = newMap.get(tokenId);
+            if (existingItem) {
+              newMap.set(tokenId, {
+                ...existingItem,
+                listedPrice: item.listedPrice, // Update with fresh price
+              });
+            }
+            return newMap;
+          });
+        }
+      }
+    });
+
+    // Check each wallet for owned items in the collection
+    for (const wallet of wallets) {
+      try {
+        // Bypass cache to get fresh listing prices for wallet-owned items
+        // This ensures we get the most up-to-date prices from the wallet ordinals API
+        const ownedItems = await fetchWalletOrdinals(
+          wallet.address,
+          collectionSymbol,
+          true
+        );
+
+        // Update listedItemsData with fresh prices from wallet ordinals API
+        // This ensures stored items have current prices
+        ownedItems.forEach((item) => {
+          const tokenId = getTokenId(item);
+          if (
+            tokenId &&
+            item.listed &&
+            item.listedPrice &&
+            listedItemsData.has(tokenId)
+          ) {
+            setListedItemsData((prev) => {
+              const newMap = new Map(prev);
+              const existingItem = newMap.get(tokenId);
+              if (existingItem) {
+                newMap.set(tokenId, {
+                  ...existingItem,
+                  listedPrice: item.listedPrice, // Update with fresh price from wallet API
+                });
+              }
+              return newMap;
+            });
+          }
+        });
+
+        // Count all owned items (listed and unlisted)
+        totalOwnedItems += ownedItems.length;
+
+        // Separate unlisted and already-listed items
+        // When restarting, we want to process items even if they're already tracked
+        // (they should be in the trading cycle)
+        const unlistedItems = ownedItems.filter(
+          (item) => !item.listed && !listedItems.has(getTokenId(item))
+        );
+
+        // For already-listed items: always include them if they're listed and owned by this wallet
+        // This ensures items continue trading even after restart
+        const alreadyListedItems = ownedItems.filter((item) => {
+          const tokenId = getTokenId(item);
+          if (!item.listed) return false;
+
+          // Always include listed items owned by this wallet
+          // They should be available for purchase by other wallets
+          return true;
+        });
+
+        // Process unlisted items - list them
+        for (const item of unlistedItems) {
+          const tokenId = getTokenId(item);
+          if (!tokenId) continue;
+
+          try {
+            addConsoleLog(
+              `Wallet #${wallet.index + 1} listing item #${item.inscriptionNumber || 'Unknown'} at ${(floorPrice / 100000000).toFixed(8)} BTC...`
+            );
+
+            const listResult = await listOrdinalWithProxyWallet(
+              item,
+              floorPrice,
+              wallet,
+              network
+            );
+
+            if (listResult.success) {
+              // Create item object with listing info for immediate purchase
+              const listedItemData = {
+                ...item,
+                listed: true,
+                listedPrice: floorPrice,
+              };
+
+              // Mark as listed and track which wallet listed it and store item data
+              setListedItems((prev) => new Set([...prev, tokenId]));
+              setListedByWallet((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(tokenId, wallet.index);
+                return newMap;
+              });
+              setListedItemsData((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(tokenId, listedItemData);
+                return newMap;
+              });
+              itemsListed++;
+
+              const inscriptionId = getInscriptionId(item);
+              const magicEdenLink = inscriptionId
+                ? `https://magiceden.us/ordinals/item-details/${inscriptionId}`
+                : null;
+
+              addConsoleLog(
+                `✓ Wallet #${wallet.index + 1} listed item #${item.inscriptionNumber || 'Unknown'} at ${(floorPrice / 100000000).toFixed(8)} BTC`,
+                magicEdenLink
+              );
+
+              // Immediately try to buy this item from another wallet
+              // Always try to buy immediately after listing (for purchaseAmount = 0, this is required)
+              // For purchaseAmount > 0, this helps start the trading cycle
+              await new Promise((resolve) => setTimeout(resolve, 1000)); // Small delay for listing to process
+              await buyListedItemImmediately(
+                listedItemData,
+                wallet.index,
+                floorPrice
+              );
+            } else {
+              addConsoleLog(
+                `✗ Wallet #${wallet.index + 1} failed to list item #${item.inscriptionNumber || 'Unknown'}: ${listResult.error || 'Unknown error'}`
+              );
+            }
+          } catch (err) {
+            addConsoleLog(
+              `✗ Error listing item from wallet #${wallet.index + 1}: ${err.message}`
+            );
+          }
+        }
+
+        // Process already-listed items - add them to trading cycle
+        for (const item of alreadyListedItems) {
+          const tokenId = getTokenId(item);
+          if (!tokenId) continue;
+
+          try {
+            // Check if item changed hands (different wallet now owns it)
+            const currentListingWallet = listedByWallet.get(tokenId);
+            const itemChangedHands =
+              currentListingWallet !== undefined &&
+              currentListingWallet !== wallet.index;
+
+            // Prefer the price from fetchWalletOrdinals (item.listedPrice) as it's more up-to-date
+            // Fall back to collection items API, then floor price
+            // The wallet ordinals API should have the most current listing price for items owned by the wallet
+            const listingPrice =
+              item.listedPrice ||
+              collectionItemsMap.get(tokenId)?.listedPrice ||
+              floorPrice;
+
+            // Create item object with listing info
+            const listedItemData = {
+              ...item,
+              listed: true,
+              listedPrice: listingPrice,
+            };
+
+            // Update tracking to reflect current owner
+            setListedItems((prev) => new Set([...prev, tokenId]));
+            setListedByWallet((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(tokenId, wallet.index);
+              return newMap;
+            });
+            setListedItemsData((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(tokenId, listedItemData);
+              return newMap;
+            });
+
+            // Always clear item from purchasedItems if it's listed (it's available for re-purchase)
+            // This allows the trading cycle to continue
+            if (purchasedItemsRef.current.has(tokenId)) {
+              const newPurchasedMap = new Map(purchasedItemsRef.current);
+              newPurchasedMap.delete(tokenId);
+              purchasedItemsRef.current = newPurchasedMap;
+              setPurchasedItems(newPurchasedMap);
+            }
+
+            // Always try to buy if item is listed and owned by this wallet
+            // This ensures continuous trading even after restart
+            const isNewAddition = !listedItems.has(tokenId);
+            if (isNewAddition || itemChangedHands) {
+              itemsAlreadyListed++;
+
+              const inscriptionId = getInscriptionId(item);
+              const magicEdenLink = inscriptionId
+                ? `https://magiceden.us/ordinals/item-details/${inscriptionId}`
+                : null;
+
+              addConsoleLog(
+                `✓ Wallet #${wallet.index + 1} owns already-listed item #${item.inscriptionNumber || 'Unknown'} at ${(listingPrice / 100000000).toFixed(8)} BTC. Adding to trading cycle...`,
+                magicEdenLink
+              );
+            } else {
+              // Item is already tracked but we should still try to buy it
+              // (it might have been listed by this wallet and is available for purchase)
+              addConsoleLog(
+                `Wallet #${wallet.index + 1} owns listed item #${item.inscriptionNumber || 'Unknown'}. Attempting purchase from other wallet...`
+              );
+            }
+
+            // Always try to buy this item from another wallet if it's listed
+            // This ensures the trading cycle continues
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // Small delay
+            await buyListedItemImmediately(
+              listedItemData,
+              wallet.index,
+              listingPrice
+            );
+          } catch (err) {
+            addConsoleLog(
+              `✗ Error processing already-listed item from wallet #${wallet.index + 1}: ${err.message}`
+            );
+          }
+        }
+      } catch (err) {
+        addConsoleLog(
+          `✗ Error checking wallet #${wallet.index + 1} for items: ${err.message}`
+        );
+      }
+    }
+
+    if (itemsListed > 0 || itemsAlreadyListed > 0) {
+      if (itemsListed > 0) {
+        addConsoleLog(`Successfully listed ${itemsListed} item(s)`);
+      }
+      if (itemsAlreadyListed > 0) {
+        addConsoleLog(
+          `Added ${itemsAlreadyListed} already-listed item(s) to trading cycle`
+        );
+      }
+    } else {
+      addConsoleLog('No items found to list or trade');
+    }
+
+    return totalOwnedItems;
+  }, [
+    selectedCollection,
+    wallets,
+    network,
+    listedItems,
+    listedItemsData,
+    listedByWallet,
+    getTokenId,
+    buyListedItemImmediately,
+    addConsoleLog,
+  ]);
+
+  /**
+   * Auto-sell logic: Check for new items to list and confirm purchases
+   *
+   * This function:
+   * 1. Checks for confirmed purchases and lists them
+   * 2. Only fetches floor price when actually listing items
+   * 3. Immediately attempts to buy items after listing
+   *
+   * IMPORTANT: Uses token ownership check for reliable confirmation detection
+   * CRITICAL: Uses refs to get latest state (avoids stale closures in interval callbacks)
+   */
+  const performAutoSell = useCallback(async () => {
+    if (!selectedCollection || wallets.length === 0) return 0;
+
+    const collectionSymbol =
+      selectedCollection.collectionSymbol ||
+      selectedCollection.symbol ||
+      selectedCollection.collectionId;
+
+    if (!collectionSymbol) return 0;
+
+    let newItemsListed = 0;
+    let floorPrice = null; // Only fetch when needed for listing
+
+    // Check purchased items for confirmation and list them
+    // CRITICAL: Use refs to get latest state (avoid stale closures in interval callbacks)
+    const currentPurchasedItems = purchasedItemsRef.current;
+    const currentListedItems = listedItemsRef.current;
+    const currentListedItemsData = listedItemsDataRef.current;
+
+    // Log pending purchases status
+    if (currentPurchasedItems.size > 0) {
+      const pendingPurchases = Array.from(currentPurchasedItems.entries())
+        .filter(([_, p]) => !p.confirmed)
+        .map(([tokenId, p]) => ({
+          inscriptionNumber: p.inscriptionNumber,
+          txid: p.txid,
+          walletIndex: p.walletIndex,
+        }));
+
+      if (pendingPurchases.length > 0) {
+        addConsoleLog(
+          `⏳ Checking ${pendingPurchases.length} pending purchase(s) for ownership change...`
+        );
+      }
+    }
+
+    // Use Array.from to avoid iteration issues when modifying the map
+    const purchasedItemsArray = Array.from(currentPurchasedItems.entries());
+    for (const [tokenId, purchaseInfo] of purchasedItemsArray) {
+      // Use a mutable variable for purchaseInfo (may be updated after confirmation)
+      let currentPurchaseInfo = purchaseInfo;
+      // Skip if already listed (use ref for latest state)
+      if (currentListedItems.has(tokenId)) {
+        continue;
+      }
+
+      // If purchase has a txid but isn't confirmed yet, check for confirmation
+      if (currentPurchaseInfo.txid && !currentPurchaseInfo.confirmed) {
+        // Find the wallet that made the purchase to check ownership
+        const buyerWallet = wallets.find(
+          (w) => w.index === currentPurchaseInfo.walletIndex
+        );
+
+        if (buyerWallet) {
+          // Check if purchase is confirmed by verifying ownership changed
+          // Use fetchTokenById to get current owner
+          const token = await fetchTokenById(tokenId);
+
+          // Debug logging (only if ownership hasn't changed yet)
+          if (!token) {
+            addConsoleLog(
+              `⚠ Unable to fetch token data for item #${currentPurchaseInfo.inscriptionNumber || 'Unknown'}`
+            );
+          } else if (token.owner !== buyerWallet.address) {
+            addConsoleLog(
+              `⏱ Item #${currentPurchaseInfo.inscriptionNumber || 'Unknown'} still owned by previous wallet, waiting for ownership change...`
+            );
+          }
+
+          const confirmed = token && token.owner === buyerWallet.address;
+
+          if (confirmed) {
+            // Mark as confirmed and update ref immediately
+            currentPurchaseInfo = { ...currentPurchaseInfo, confirmed: true };
+            setPurchasedItems((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(tokenId, currentPurchaseInfo);
+              purchasedItemsRef.current = newMap; // Update ref immediately
+              return newMap;
+            });
+
+            addConsoleLog(
+              `✓ Purchase confirmed! Item #${currentPurchaseInfo.inscriptionNumber || 'Unknown'} now owned by wallet #${currentPurchaseInfo.walletIndex + 1}`,
+              `https://mempool.space/${network === 'mainnet' ? '' : network + '/'}tx/${currentPurchaseInfo.txid}`
+            );
+            // Proceed to listing logic below (don't continue)
+          } else {
+            // Purchase is broadcast but ownership hasn't changed yet
+            continue;
+          }
+        } else {
+          // Buyer wallet not found, skip
+          continue;
+        }
+      }
+
+      // If purchase is confirmed, find the wallet and list the item
+      // Use currentPurchaseInfo which may have been updated above
+      if (currentPurchaseInfo.confirmed && currentPurchaseInfo.txid) {
+        // Find the wallet that made the purchase
+        const sellerWallet = wallets.find(
+          (w) => w.index === currentPurchaseInfo.walletIndex
+        );
+
+        if (sellerWallet) {
+          // Fetch the specific token to get fresh item data (more efficient than fetching all wallet items)
+          const purchasedItem = await fetchTokenById(tokenId);
+
+          // Verify item is owned by the correct wallet and not listed
+          if (
+            purchasedItem &&
+            purchasedItem.owner === sellerWallet.address &&
+            !purchasedItem.listed &&
+            !currentListedItems.has(tokenId)
+          ) {
+            // Fetch floor price now (only when we need to list)
+            if (!floorPrice) {
+              floorPrice = await getFloorPrice(collectionSymbol, true);
+              if (!floorPrice) {
+                addConsoleLog('Could not determine floor price for listing');
+                continue;
+              }
+            }
+
+            // List the item
+            try {
+              addConsoleLog(
+                `Wallet #${sellerWallet.index + 1} listing purchased item #${purchasedItem.inscriptionNumber || 'Unknown'} at ${(floorPrice / 100000000).toFixed(8)} BTC...`
+              );
+
+              const listResult = await listOrdinalWithProxyWallet(
+                purchasedItem,
+                floorPrice,
+                sellerWallet,
+                network
+              );
+
+              if (listResult.success) {
+                // Create item object with listing info for immediate purchase
+                const listedItemData = {
+                  ...purchasedItem,
+                  listed: true,
+                  listedPrice: floorPrice,
+                };
+
+                setListedItems((prev) => new Set([...prev, tokenId]));
+                setListedByWallet((prev) => {
+                  const newMap = new Map(prev);
+                  newMap.set(tokenId, sellerWallet.index);
+                  return newMap;
+                });
+                setListedItemsData((prev) => {
+                  const newMap = new Map(prev);
+                  newMap.set(tokenId, listedItemData);
+                  return newMap;
+                });
+
+                // Remove from items being purchased since it's now listed
+                // Update ref immediately for synchronous access
+                itemsBeingPurchasedRef.current = new Set(
+                  Array.from(itemsBeingPurchasedRef.current).filter(
+                    (id) => id !== tokenId
+                  )
+                );
+                setItemsBeingPurchased((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.delete(tokenId);
+                  return newSet;
+                });
+
+                // Remove from purchasedItems since it's now listed and available for re-purchase
+                // Update ref immediately for synchronous access
+                const newPurchasedMap = new Map(purchasedItemsRef.current);
+                newPurchasedMap.delete(tokenId);
+                purchasedItemsRef.current = newPurchasedMap;
+                setPurchasedItems(newPurchasedMap);
+
+                // Double-check that item is cleared from tracking before attempting purchase
+                // This ensures the purchase can proceed
+                if (
+                  purchasedItemsRef.current.has(tokenId) ||
+                  itemsBeingPurchasedRef.current.has(tokenId)
+                ) {
+                  addConsoleLog(
+                    `⚠ Warning: Item #${purchasedItem.inscriptionNumber || 'Unknown'} still in tracking after listing. Clearing...`
+                  );
+                  // Force clear if still present
+                  purchasedItemsRef.current.delete(tokenId);
+                  itemsBeingPurchasedRef.current.delete(tokenId);
+                }
+
+                const inscriptionId = getInscriptionId(purchasedItem);
+                const magicEdenLink = inscriptionId
+                  ? `https://magiceden.us/ordinals/item-details/${inscriptionId}`
+                  : null;
+
+                addConsoleLog(
+                  `✓ Wallet #${sellerWallet.index + 1} listed purchased item #${purchasedItem.inscriptionNumber || 'Unknown'} at ${(floorPrice / 100000000).toFixed(8)} BTC`,
+                  magicEdenLink
+                );
+                newItemsListed++;
+
+                // Immediately try to buy this item from another wallet
+                await new Promise((resolve) => setTimeout(resolve, 1000)); // Small delay for listing to process
+                await buyListedItemImmediately(
+                  listedItemData,
+                  sellerWallet.index,
+                  floorPrice
+                );
+              } else {
+                addConsoleLog(
+                  `✗ Failed to list purchased item: ${listResult.error || 'Unknown error'}`
+                );
+              }
+            } catch (err) {
+              addConsoleLog(`✗ Error listing purchased item: ${err.message}`);
+            }
+          }
+        }
+      }
+    }
+
+    // Check each wallet for new unlisted items
+    // Only check for items that are confirmed purchases (not items we just listed)
+    for (const wallet of wallets) {
+      try {
+        // Bypass cache to get fresh data for auto-trading
+        const ownedItems = await fetchWalletOrdinals(
+          wallet.address,
+          collectionSymbol,
+          true
+        );
+
+        // Filter unlisted items that haven't been listed yet
+        // Also check that this item isn't already in our listedItemsData (to prevent re-listing)
+        // Use refs for latest state to avoid stale closures
+        const unlistedItems = ownedItems.filter((item) => {
+          const tokenId = getTokenId(item);
+          return (
+            !item.listed &&
+            !currentListedItems.has(tokenId) &&
+            !currentListedItemsData.has(tokenId)
+          );
+        });
+
+        if (unlistedItems.length > 0) {
+          // Fetch floor price now (only when we need to list)
+          if (!floorPrice) {
+            floorPrice = await getFloorPrice(collectionSymbol, true);
+            if (!floorPrice) {
+              addConsoleLog('Could not determine floor price for listing');
+              continue;
+            }
+          }
+
+          // List the first unlisted item at floor price
+          const itemToSell = unlistedItems[0];
+          const tokenId = getTokenId(itemToSell);
+
+          try {
+            addConsoleLog(
+              `Wallet #${wallet.index + 1} listing item #${itemToSell.inscriptionNumber || 'Unknown'} at ${(floorPrice / 100000000).toFixed(8)} BTC...`
+            );
+
+            const listResult = await listOrdinalWithProxyWallet(
+              itemToSell,
+              floorPrice,
+              wallet,
+              network
+            );
+
+            if (listResult.success) {
+              // Create item object with listing info for immediate purchase
+              const listedItemData = {
+                ...itemToSell,
+                listed: true,
+                listedPrice: floorPrice,
+              };
+
+              setListedItems((prev) => new Set([...prev, tokenId]));
+              setListedByWallet((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(tokenId, wallet.index);
+                return newMap;
+              });
+              setListedItemsData((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(tokenId, listedItemData);
+                return newMap;
+              });
+
+              const inscriptionId = getInscriptionId(itemToSell);
+              const magicEdenLink = inscriptionId
+                ? `https://magiceden.us/ordinals/item-details/${inscriptionId}`
+                : null;
+
+              addConsoleLog(
+                `✓ Wallet #${wallet.index + 1} listed item #${itemToSell.inscriptionNumber || 'Unknown'} at ${(floorPrice / 100000000).toFixed(8)} BTC`,
+                magicEdenLink
+              );
+              newItemsListed++;
+
+              // Immediately try to buy this item from another wallet
+              await new Promise((resolve) => setTimeout(resolve, 1000)); // Small delay for listing to process
+              await buyListedItemImmediately(
+                listedItemData,
+                wallet.index,
+                floorPrice
+              );
+            } else {
+              addConsoleLog(
+                `✗ Wallet #${wallet.index + 1} failed to list item: ${listResult.error || 'Unknown error'}`
+              );
+            }
+          } catch (err) {
+            addConsoleLog(
+              `✗ Error listing item from wallet #${wallet.index + 1}: ${err.message}`
+            );
+          }
+        }
+      } catch (err) {
+        addConsoleLog(
+          `✗ Error checking wallet #${wallet.index + 1}: ${err.message}`
+        );
+      }
+    }
+  }, [
+    selectedCollection,
+    wallets,
+    network,
+    purchasedItems,
+    listedItems,
+    listedItemsData,
+    getTokenId,
+    buyListedItemImmediately,
+    addConsoleLog,
+  ]);
+
+  // Start/Stop trading (SIMPLIFIED VERSION)
+  const handleStartTrading = async () => {
+    if (isTrading) {
+      // Stop trading
+      if (tradingIntervalRef.current) {
+        clearInterval(tradingIntervalRef.current);
+        tradingIntervalRef.current = null;
+      }
+      setIsTrading(false);
+      addConsoleLog('Auto-trading stopped');
+    } else {
+      // Start trading
+      setIsTrading(true);
+      addConsoleLog('Auto-trading started');
+
+      // Validate
+      if (!selectedCollection || wallets.length === 0) {
+        addConsoleLog('✗ Cannot start trading: Missing collection or wallets');
+        setIsTrading(false);
+        return;
+      }
+
+      // Process items immediately on start
+      await processWalletItems({
+        wallets,
+        selectedCollection,
+        network,
+        addConsoleLog,
+      });
+
+      // Set up interval to process items every X seconds
+      tradingIntervalRef.current = setInterval(async () => {
+        await processWalletItems({
+          wallets,
+          selectedCollection,
+          network,
+          addConsoleLog,
+        });
+      }, timerInterval * 1000);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (tradingIntervalRef.current) {
+        clearInterval(tradingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Step handlers - allow clicking on any step at any time
+  const handleStepClick = (step) => {
+    setCurrentStep(step);
+  };
+
+  return (
+    <div className="auto-trade-container">
+      <div className="auto-trade-content">
+        <h1 className="auto-trade-title">Auto-Trade</h1>
+
+        {/* Step 1: Connect Wallet */}
+        <div className="auto-trade-step">
+          <div
+            className={`auto-trade-step-header ${
+              currentStep === 1 ? 'active' : ''
+            }`}
+            onClick={() => handleStepClick(1)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="auto-trade-step-number">1</div>
+            <div className="auto-trade-step-title">Connect Wallet</div>
+            <div className="auto-trade-step-status">
+              {stepStatuses[1] || '○'}
+            </div>
+          </div>
+          <div
+            className={`auto-trade-step-content ${
+              currentStep === 1 ? 'active' : 'hidden'
+            }`}
+          >
+            {!isWalletConnected ? (
+              <div className="auto-trade-wallet-list">
+                {CONNECT_WALLET_LIST.map((walletItem, i) => (
+                  <button
+                    key={i}
+                    className="auto-trade-wallet-item"
+                    onClick={() => handleConnect(walletItem.wallet)}
+                  >
+                    <img
+                      src={walletItem.icon}
+                      alt={`${walletItem.wallet} icon`}
+                      className="auto-trade-wallet-icon"
+                    />
+                    <span>{walletItem.wallet}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="auto-trade-step-complete">
+                <p>
+                  Wallet connected: {connectedAddress?.ordinals?.slice(0, 8)}
+                  ...
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Step 2: Create Fine Trading Wallets */}
+        <div className="auto-trade-step">
+          <div
+            className={`auto-trade-step-header ${
+              currentStep === 2 ? 'active' : ''
+            }`}
+            onClick={() => handleStepClick(2)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="auto-trade-step-number">2</div>
+            <div className="auto-trade-step-title">
+              Create Fine Trading Wallets
+            </div>
+            <div className="auto-trade-step-status">
+              {stepStatuses[2] || '○'}
+            </div>
+          </div>
+          <div
+            className={`auto-trade-step-content ${
+              currentStep === 2 ? 'active' : 'hidden'
+            }`}
+          >
+            <WalletManagement glEventHub={glEventHub} />
+            {stepStatuses[2] === StepStatus.COMPLETE && (
+              <button
+                onClick={() => setCurrentStep(3)}
+                className="auto-trade-button"
+                style={{ marginTop: '16px' }}
+              >
+                Continue to Step 3
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Step 3: Dispatch BTC */}
+        <div className="auto-trade-step">
+          <div
+            className={`auto-trade-step-header ${
+              currentStep === 3 ? 'active' : ''
+            }`}
+            onClick={() => handleStepClick(3)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="auto-trade-step-number">3</div>
+            <div className="auto-trade-step-title">Dispatch BTC</div>
+            <div className="auto-trade-step-status">
+              {stepStatuses[3] || '○'}
+            </div>
+          </div>
+          <div
+            className={`auto-trade-step-content ${
+              currentStep === 3 ? 'active' : 'hidden'
+            }`}
+          >
+            <p style={{ color: '#a0aec0', marginBottom: '16px' }}>
+              Dispatch BTC to your proxy wallets. Transactions will be monitored
+              for confirmation.
+            </p>
+            <button
+              onClick={() => setShowDispatchModal(true)}
+              className="auto-trade-button"
+            >
+              Open Dispatch Modal
+            </button>
+            {stepStatuses[3] === StepStatus.IN_PROGRESS && (
+              <div style={{ marginTop: '16px', color: '#ed8936' }}>
+                ⏳ Waiting for transaction confirmation...
+              </div>
+            )}
+            {stepStatuses[3] === StepStatus.COMPLETE && (
+              <div style={{ marginTop: '16px', color: '#48bb78' }}>
+                ✓ Dispatch transactions confirmed!
+              </div>
+            )}
+            <Dispatch
+              isOpen={showDispatchModal}
+              onClose={() => setShowDispatchModal(false)}
+              proxyWallets={wallets}
+            />
+          </div>
+        </div>
+
+        {/* Step 4: Select Collection */}
+        <div className="auto-trade-step">
+          <div
+            className={`auto-trade-step-header ${
+              currentStep === 4 ? 'active' : ''
+            }`}
+            onClick={() => handleStepClick(4)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="auto-trade-step-number">4</div>
+            <div className="auto-trade-step-title">
+              Select Collection to Trade
+            </div>
+            <div className="auto-trade-step-status">
+              {stepStatuses[4] || '○'}
+            </div>
+          </div>
+          <div
+            className={`auto-trade-step-content ${
+              currentStep === 4 ? 'active' : 'hidden'
+            }`}
+          >
+            <OrdinalsCollections glEventHub={glEventHub} />
+            {selectedCollection && (
+              <div className="auto-trade-selected-collection">
+                <h3>Selected Collection:</h3>
+                <p>
+                  {selectedCollection.name ||
+                    selectedCollection.collectionSymbol}
+                </p>
+                {selectedCollection.image && (
+                  <img
+                    src={selectedCollection.image}
+                    alt={selectedCollection.name}
+                    className="auto-trade-collection-image"
+                  />
+                )}
+                <button
+                  onClick={() => setCurrentStep(5)}
+                  className="auto-trade-button"
+                  style={{ marginTop: '16px' }}
+                >
+                  Continue to Step 5
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Step 5: Start Auto-Trading */}
+        <div className="auto-trade-step">
+          <div
+            className={`auto-trade-step-header ${
+              currentStep === 5 ? 'active' : ''
+            }`}
+            onClick={() => handleStepClick(5)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="auto-trade-step-number">5</div>
+            <div className="auto-trade-step-title">Start Auto Trading</div>
+            <div className="auto-trade-step-status">
+              {stepStatuses[5] || '○'}
+            </div>
+          </div>
+          <div
+            className={`auto-trade-step-content ${
+              currentStep === 5 ? 'active' : 'hidden'
+            }`}
+          >
+            {/* Trading Mode Selection */}
+            <div className="auto-trade-controls">
+              <div className="auto-trade-control-group">
+                <label>Trading Mode:</label>
+                <div className="auto-trade-radio-group">
+                  <label className="auto-trade-radio-label">
+                    <input
+                      type="radio"
+                      name="tradingMode"
+                      value="auto-buy-sell"
+                      checked={tradingMode === 'auto-buy-sell'}
+                      onChange={(e) => setTradingMode(e.target.value)}
+                      disabled={isTrading}
+                    />
+                    <span>Auto Buy and Sell</span>
+                  </label>
+                  <label className="auto-trade-radio-label disabled">
+                    <input
+                      type="radio"
+                      name="tradingMode"
+                      value="buy-x-each"
+                      checked={tradingMode === 'buy-x-each'}
+                      onChange={(e) => setTradingMode(e.target.value)}
+                      disabled={true}
+                    />
+                    <span>Buy X from each wallet</span>
+                  </label>
+                  <label className="auto-trade-radio-label disabled">
+                    <input
+                      type="radio"
+                      name="tradingMode"
+                      value="sell-x-each"
+                      checked={tradingMode === 'sell-x-each'}
+                      onChange={(e) => setTradingMode(e.target.value)}
+                      disabled={true}
+                    />
+                    <span>Sell X from each wallet</span>
+                  </label>
+                  <label className="auto-trade-radio-label disabled">
+                    <input
+                      type="radio"
+                      name="tradingMode"
+                      value="delta-neutral"
+                      checked={tradingMode === 'delta-neutral'}
+                      onChange={(e) => setTradingMode(e.target.value)}
+                      disabled={true}
+                    />
+                    <span>Delta neutral trading</span>
+                  </label>
+                  <label className="auto-trade-radio-label disabled">
+                    <input
+                      type="radio"
+                      name="tradingMode"
+                      value="auto-fill"
+                      checked={tradingMode === 'auto-fill'}
+                      onChange={(e) => setTradingMode(e.target.value)}
+                      disabled={true}
+                    />
+                    <span>Auto fill order-book</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="auto-trade-control-group">
+                <label>Timer (seconds):</label>
+                <input
+                  type="number"
+                  value={timerInterval}
+                  onChange={(e) =>
+                    setTimerInterval(parseInt(e.target.value) || 60)
+                  }
+                  disabled={isTrading}
+                  min="10"
+                />
+              </div>
+              <div className="auto-trade-control-group">
+                <label>Purchase Amount:</label>
+                <input
+                  type="number"
+                  value={purchaseAmount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    setPurchaseAmount(isNaN(value) ? 0 : Math.max(0, value));
+                  }}
+                  disabled={isTrading}
+                  min="0"
+                />
+                <p
+                  style={{
+                    fontSize: '0.85rem',
+                    color: '#a0aec0',
+                    marginTop: '4px',
+                  }}
+                >
+                  {purchaseAmount === 0
+                    ? 'Set to 0 to only trade items already owned by proxy wallets'
+                    : `Total items to trade: ${purchaseAmount} + owned items`}
+                </p>
+              </div>
+              <button
+                onClick={handleStartTrading}
+                className={`auto-trade-button ${isTrading ? 'stop' : 'start'}`}
+                disabled={!selectedCollection || wallets.length === 0}
+              >
+                {isTrading ? 'Stop Trading' : 'Start Trading'}
+              </button>
+            </div>
+
+            <div className="auto-trade-console">
+              <h3>Console Output</h3>
+              <div className="auto-trade-console-logs" ref={consoleRef}>
+                {consoleLogs.length === 0 ? (
+                  <p className="auto-trade-console-empty">No logs yet...</p>
+                ) : (
+                  consoleLogs.map((log, index) => (
+                    <div key={index} className="auto-trade-console-log">
+                      <span className="auto-trade-console-time">
+                        {log.timestamp}
+                      </span>
+                      <span className="auto-trade-console-message">
+                        {log.message}
+                      </span>
+                      {log.link && (
+                        <a
+                          href={log.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="auto-trade-console-link"
+                        >
+                          {log.link.includes('magiceden.us')
+                            ? 'View Item'
+                            : 'View Transaction'}
+                        </a>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main component with providers
+const AutoTrade = () => {
+  return (
+    <BitprintProvider>
+      <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
+        <AutoTradeInner />
+      </OrdConnectProvider>
+    </BitprintProvider>
+  );
+};
+
+export default AutoTrade;

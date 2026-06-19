@@ -1,0 +1,54 @@
+runtime: nodejs20
+service: default
+env: standard
+
+# Environment variables for frontend (will be set during deployment)
+env_variables:
+  NODE_ENV: production
+
+# Static file handlers for React build
+handlers:
+  # Static assets (CSS, JS, images, etc.) with long cache
+  - url: /static/(.*)
+    static_files: build/static/\1
+    upload: build/static/(.*)
+    secure: always
+    http_headers:
+      Cache-Control: 'public, max-age=31536000, immutable'
+
+  # Media files (images, fonts, etc.) with medium cache
+  - url: /(.*\.(png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot|otf))
+    static_files: build/\1
+    upload: build/(.*\.(png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot|otf))
+    secure: always
+    http_headers:
+      Cache-Control: 'public, max-age=86400'
+
+  # CSS and JS files with medium cache
+  - url: /(.*\.(css|js))
+    static_files: build/\1
+    upload: build/(.*\.(css|js))
+    secure: always
+    http_headers:
+      Cache-Control: 'public, max-age=86400'
+
+  # Favicon, manifest, and other root files
+  - url: /(favicon\.png|manifest\.json|logo192\.png|asset-manifest\.json)
+    static_files: build/\1
+    upload: build/(favicon\.png|manifest\.json|logo192\.png|asset-manifest\.json)
+    secure: always
+    http_headers:
+      Cache-Control: 'public, max-age=86400'
+
+  # All other routes serve index.html for client-side routing (React Router)
+  - url: /.*
+    static_files: build/index.html
+    upload: build/index.html
+    secure: always
+    http_headers:
+      Cache-Control: 'no-cache, no-store, must-revalidate'
+
+# Resource allocation
+automatic_scaling:
+  min_instances: 0
+  max_instances: 10

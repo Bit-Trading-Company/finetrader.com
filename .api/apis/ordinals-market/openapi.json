@@ -1,0 +1,5121 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "version": "1.1.2-prod",
+    "title": "Satflow Marketplace API",
+    "description": "## Satflow Marketplace API\n\nThe Satflow Marketplace API is a RESTful API that allows you to interact with the Satflow Marketplace. The API allows you to:\n\n- **Item and collection Details**: Get information about items and collections on Satflow.\n- **Listing Items for Sale**: Create and manage listings for selling items on Satflow.\n- **Bidding Items for Purchase**: Create and manage bids for buying items on Satflow.\n- **Listing Data**: Retrieve current listing information.\n- **Bid Data**: Retrieve current bid information.\n- **Sales Data**: Retrieve historical sales information.\n\n**A great open source example on how to use the Satflow endpoints can be found in [Satflow Market Maker](https://github.com/SwapLabsInc/satflow-mm)**\n\n### Authentication:\nThis API requires API keys for authentication. You can obtain an API key by contacting support on [Discord](https://discord.gg/satflow).\n",
+    "contact": {
+      "name": "Satflow Discord",
+      "url": "https://discord.gg/satflow"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.satflow.com/v1",
+      "description": "Production server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "For error reasons, review the response data."
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The success message",
+            "example": "Successfully requested"
+          }
+        }
+      },
+      "ActivityQueryParams": {
+        "type": "object",
+        "properties": {
+          "collectionSlug": {
+            "type": "string",
+            "description": "Filter by collection slug",
+            "example": "bitcoin-puppets"
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "collection",
+              "time"
+            ],
+            "description": "Group results by collection or time",
+            "example": "collection"
+          },
+          "active": {
+            "type": "boolean",
+            "default": true,
+            "description": "Filter for active items only",
+            "example": true
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "description": "Page number for pagination",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "default": 100,
+            "description": "Number of items per page",
+            "example": 50
+          },
+          "external": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include external marketplace data",
+            "example": false
+          },
+          "timeRange": {
+            "type": "string",
+            "enum": [
+              "24h",
+              "7d",
+              "30d"
+            ],
+            "description": "Time range filter",
+            "example": "24h"
+          },
+          "includeOnlyCollectionItems": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include only items from collections",
+            "example": false
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "fillCompletedAt",
+              "fillPendingAt",
+              "price",
+              "unitPrice"
+            ],
+            "description": "Field to sort by",
+            "example": "createdAt"
+          },
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc",
+            "description": "Sort direction",
+            "example": "desc"
+          }
+        }
+      },
+      "ActivityResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "description": "Array of activity items",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "_id": {
+                      "type": "string",
+                      "description": "Activity item ID",
+                      "example": "507f1f77bcf86cd799439011"
+                    },
+                    "inscriptionId": {
+                      "type": "string",
+                      "description": "Inscription ID",
+                      "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                    },
+                    "price": {
+                      "type": "number",
+                      "description": "Price in satoshis",
+                      "example": 1000000
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Activity timestamp",
+                      "example": "2023-12-01T10:00:00Z"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "Activity type",
+                      "example": "sale"
+                    },
+                    "collectionSlug": {
+                      "type": "string",
+                      "description": "Collection identifier",
+                      "example": "bitcoin-puppets"
+                    }
+                  }
+                }
+              },
+              "pagination": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "pageSize": {
+                    "type": "integer",
+                    "example": 100
+                  },
+                  "total": {
+                    "type": "integer",
+                    "example": 1500
+                  },
+                  "totalPages": {
+                    "type": "integer",
+                    "example": 15
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/activity/bids": {
+      "get": {
+        "tags": [
+          "Get activity"
+        ],
+        "summary": "Get bid activity data",
+        "description": "Returns bid activity data with optional filtering and pagination",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collectionSlug",
+            "schema": {
+              "type": "string",
+              "description": "Filter by collection slug",
+              "example": "bitcoin-puppets"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "collection",
+                "time"
+              ],
+              "description": "Group results by collection or time",
+              "example": "collection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active",
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "description": "Filter for active items only",
+              "example": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "description": "Page number for pagination",
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "description": "Number of items per page",
+              "example": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "external",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include external marketplace data",
+              "example": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeRange",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "24h",
+                "7d",
+                "30d"
+              ],
+              "description": "Time range filter",
+              "example": "24h"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeOnlyCollectionItems",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include only items from collections",
+              "example": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "fillCompletedAt",
+                "fillPendingAt",
+                "price",
+                "unitPrice"
+              ],
+              "description": "Field to sort by",
+              "example": "createdAt"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortDirection",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction",
+              "example": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bid activity data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "description": "Array of activity items",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "description": "Activity item ID",
+                                "example": "507f1f77bcf86cd799439011"
+                              },
+                              "inscriptionId": {
+                                "type": "string",
+                                "description": "Inscription ID",
+                                "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                              },
+                              "price": {
+                                "type": "number",
+                                "description": "Price in satoshis",
+                                "example": 1000000
+                              },
+                              "timestamp": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Activity timestamp",
+                                "example": "2023-12-01T10:00:00Z"
+                              },
+                              "type": {
+                                "type": "string",
+                                "description": "Activity type",
+                                "example": "sale"
+                              },
+                              "collectionSlug": {
+                                "type": "string",
+                                "description": "Collection identifier",
+                                "example": "bitcoin-puppets"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "pageSize": {
+                              "type": "integer",
+                              "example": 100
+                            },
+                            "total": {
+                              "type": "integer",
+                              "example": 1500
+                            },
+                            "totalPages": {
+                              "type": "integer",
+                              "example": 15
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activity/sales": {
+      "get": {
+        "tags": [
+          "Get activity"
+        ],
+        "summary": "Get sales activity data",
+        "description": "Returns sales activity data with optional filtering and pagination",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collectionSlug",
+            "schema": {
+              "type": "string",
+              "description": "Filter by collection slug",
+              "example": "bitcoin-puppets"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "collection",
+                "time"
+              ],
+              "description": "Group results by collection or time",
+              "example": "collection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active",
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "description": "Filter for active items only",
+              "example": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "description": "Page number for pagination",
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "description": "Number of items per page",
+              "example": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "external",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include external marketplace data",
+              "example": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeRange",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "24h",
+                "7d",
+                "30d"
+              ],
+              "description": "Time range filter",
+              "example": "24h"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeOnlyCollectionItems",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include only items from collections",
+              "example": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "fillCompletedAt",
+                "fillPendingAt",
+                "price",
+                "unitPrice"
+              ],
+              "description": "Field to sort by",
+              "example": "createdAt"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortDirection",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction",
+              "example": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales activity data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "description": "Array of activity items",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "description": "Activity item ID",
+                                "example": "507f1f77bcf86cd799439011"
+                              },
+                              "inscriptionId": {
+                                "type": "string",
+                                "description": "Inscription ID",
+                                "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                              },
+                              "price": {
+                                "type": "number",
+                                "description": "Price in satoshis",
+                                "example": 1000000
+                              },
+                              "timestamp": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Activity timestamp",
+                                "example": "2023-12-01T10:00:00Z"
+                              },
+                              "type": {
+                                "type": "string",
+                                "description": "Activity type",
+                                "example": "sale"
+                              },
+                              "collectionSlug": {
+                                "type": "string",
+                                "description": "Collection identifier",
+                                "example": "bitcoin-puppets"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "pageSize": {
+                              "type": "integer",
+                              "example": 100
+                            },
+                            "total": {
+                              "type": "integer",
+                              "example": 1500
+                            },
+                            "totalPages": {
+                              "type": "integer",
+                              "example": 15
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activity/listings": {
+      "get": {
+        "tags": [
+          "Get activity"
+        ],
+        "summary": "Get listings activity data",
+        "description": "Returns listings activity data with optional filtering and pagination",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collectionSlug",
+            "schema": {
+              "type": "string",
+              "description": "Filter by collection slug",
+              "example": "bitcoin-puppets"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "collection",
+                "time"
+              ],
+              "description": "Group results by collection or time",
+              "example": "collection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active",
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "description": "Filter for active items only",
+              "example": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "description": "Page number for pagination",
+              "example": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "description": "Number of items per page",
+              "example": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "external",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include external marketplace data",
+              "example": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeRange",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "24h",
+                "7d",
+                "30d"
+              ],
+              "description": "Time range filter",
+              "example": "24h"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeOnlyCollectionItems",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include only items from collections",
+              "example": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "fillCompletedAt",
+                "fillPendingAt",
+                "price",
+                "unitPrice"
+              ],
+              "description": "Field to sort by",
+              "example": "createdAt"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortDirection",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction",
+              "example": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listings activity data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "description": "Array of activity items",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "description": "Activity item ID",
+                                "example": "507f1f77bcf86cd799439011"
+                              },
+                              "inscriptionId": {
+                                "type": "string",
+                                "description": "Inscription ID",
+                                "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                              },
+                              "price": {
+                                "type": "number",
+                                "description": "Price in satoshis",
+                                "example": 1000000
+                              },
+                              "timestamp": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Activity timestamp",
+                                "example": "2023-12-01T10:00:00Z"
+                              },
+                              "type": {
+                                "type": "string",
+                                "description": "Activity type",
+                                "example": "sale"
+                              },
+                              "collectionSlug": {
+                                "type": "string",
+                                "description": "Collection identifier",
+                                "example": "bitcoin-puppets"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "pageSize": {
+                              "type": "integer",
+                              "example": 100
+                            },
+                            "total": {
+                              "type": "integer",
+                              "example": 1500
+                            },
+                            "totalPages": {
+                              "type": "integer",
+                              "example": 15
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address/bids": {
+      "get": {
+        "tags": [
+          "Get bidding"
+        ],
+        "summary": "Get active bids for an address",
+        "description": "Returns an array of active bids placed by the specified address",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The wallet address to get bids for",
+            "example": "bc1p..."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active bids retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "description": "Array of active bids",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string",
+                            "description": "Bid ID",
+                            "example": "507f1f77bcf86cd799439011"
+                          },
+                          "inscriptionId": {
+                            "type": "string",
+                            "description": "Inscription ID being bid on",
+                            "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                          },
+                          "price": {
+                            "type": "number",
+                            "description": "Bid price in satoshis",
+                            "example": 1000000
+                          },
+                          "bidderAddress": {
+                            "type": "string",
+                            "description": "Bidder's address",
+                            "example": "bc1p..."
+                          },
+                          "bidderTokenReceiveAddress": {
+                            "type": "string",
+                            "description": "Address to receive the token if bid is accepted",
+                            "example": "bc1p..."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the bid was created",
+                            "example": "2023-12-01T10:00:00Z"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the bid expires",
+                            "example": "2023-12-08T10:00:00Z"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "Current bid status",
+                            "example": "active"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Address not found or no bids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address/bidding-wallet": {
+      "get": {
+        "tags": [
+          "Get bidding"
+        ],
+        "summary": "Get bidding wallet information",
+        "description": "Returns the multiSig wallet information for bidding based on provided addresses and public key",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ordinalsAddress",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ordinals address",
+            "example": "bc1p..."
+          },
+          {
+            "in": "query",
+            "name": "paymentAddress",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The payment address",
+            "example": "bc1q..."
+          },
+          {
+            "in": "query",
+            "name": "paymentPubkey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The payment public key",
+            "example": "02..."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bidding wallet information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "address": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "The multiSig wallet address",
+                          "example": "bc1p..."
+                        },
+                        "userPaymentAddress": {
+                          "type": "string",
+                          "description": "The user's payment address for the bidding wallet",
+                          "example": "bc1q..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address/wallet-contents": {
+      "get": {
+        "tags": [
+          "Get wallet"
+        ],
+        "summary": "Get wallet contents",
+        "description": "Returns the contents of a wallet including ordinals and runes with optional filtering and pagination",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The wallet address to get contents for",
+            "example": "bc1p..."
+          },
+          {
+            "in": "query",
+            "name": "itemType",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "inscription",
+                "rune",
+                "all"
+              ]
+            },
+            "description": "Filter by item type",
+            "example": "all"
+          },
+          {
+            "in": "query",
+            "name": "collection",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by collection slug",
+            "example": "bitcoin-frogs"
+          },
+          {
+            "in": "query",
+            "name": "listedOnly",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Only return listed items",
+            "example": false
+          },
+          {
+            "in": "query",
+            "name": "bidsOnly",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Only return items with bids",
+            "example": false
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Pagination cursor",
+            "example": 0
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of items to return (default 100)",
+            "example": 100
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet contents retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "results": {
+                          "type": "object",
+                          "properties": {
+                            "ordinals": {
+                              "type": "array",
+                              "description": "Array of ordinal/inscription items",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "collection": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "Collection information"
+                                  },
+                                  "token": {
+                                    "type": "object",
+                                    "description": "Token details",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "inscription_id": {
+                                        "type": "string"
+                                      },
+                                      "inscription_number": {
+                                        "type": "integer"
+                                      },
+                                      "image_url": {
+                                        "type": "string"
+                                      },
+                                      "content_type": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    }
+                                  },
+                                  "listing": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "Listing information if item is listed",
+                                    "properties": {
+                                      "price": {
+                                        "type": "number"
+                                      },
+                                      "secureListing": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  },
+                                  "market": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "Market data including bids and floor prices"
+                                  }
+                                }
+                              }
+                            },
+                            "runes": {
+                              "type": "array",
+                              "description": "Array of rune items",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "collection": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "Rune collection information"
+                                  },
+                                  "token": {
+                                    "type": "object",
+                                    "description": "Rune token details",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "rune_utxo_id": {
+                                        "type": "string"
+                                      },
+                                      "rune_amount": {
+                                        "type": "string"
+                                      },
+                                      "rune_symbol": {
+                                        "type": "string"
+                                      },
+                                      "rune_amount_formatted": {
+                                        "type": "number"
+                                      },
+                                      "rune_divisibility": {
+                                        "type": "integer"
+                                      },
+                                      "output": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  "listing": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "Listing information if rune is listed",
+                                    "properties": {
+                                      "price": {
+                                        "type": "number"
+                                      },
+                                      "price_per_rune_sats": {
+                                        "type": "number"
+                                      }
+                                    }
+                                  },
+                                  "market": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "Market data for the rune"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "pending_orders": {
+                          "type": "array",
+                          "description": "Array of pending orders",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "nextCursor": {
+                          "type": "integer",
+                          "nullable": true,
+                          "description": "Cursor for next page of results",
+                          "example": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asset-settings/{type}/{ticker}": {
+      "get": {
+        "tags": [
+          "Asset Settings"
+        ],
+        "summary": "Get asset settings by type and ticker",
+        "description": "Retrieves the settings for a given asset. If no settings exist, it creates and returns default settings.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ordinals",
+                "runes",
+                "brc20"
+              ]
+            },
+            "description": "The type of the asset."
+          },
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ticker symbol of the asset."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved or created asset settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Unique identifier for the asset settings",
+                      "example": "507f1f77bcf86cd799439011"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "ordinals",
+                        "runes",
+                        "brc20"
+                      ],
+                      "description": "The type of the asset",
+                      "example": "ordinals"
+                    },
+                    "ticker": {
+                      "type": "string",
+                      "description": "The ticker symbol of the asset",
+                      "example": "PEPE",
+                      "nullable": true
+                    },
+                    "washTrading": {
+                      "type": "boolean",
+                      "description": "Whether wash trading is enabled for this asset",
+                      "example": false,
+                      "default": false
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the asset settings were created",
+                      "example": "2023-01-01T00:00:00.000Z"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the asset settings were last updated",
+                      "example": "2023-01-01T00:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid asset type provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bid/fill": {
+      "post": {
+        "tags": [
+          "Sell listing"
+        ],
+        "summary": "Fill/accept a bid",
+        "description": "Submit signed PSBT to fill/accept either an inscription bid or collection bid and broadcast the item sale. The endpoint automatically detects the bid type based on the provided parameters.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "title": "Inscription Bid",
+                    "required": [
+                      "price",
+                      "inscriptionId",
+                      "sellerOrdAddress",
+                      "sellerReceiveAddress",
+                      "sellerPublicKey",
+                      "signedAcceptedBidPSBT"
+                    ],
+                    "properties": {
+                      "price": {
+                        "type": "number",
+                        "description": "Bid price in satoshis",
+                        "example": 100000
+                      },
+                      "inscriptionId": {
+                        "type": "string",
+                        "description": "Inscription ID for the bid",
+                        "example": "abc123def456..."
+                      },
+                      "sellerOrdAddress": {
+                        "type": "string",
+                        "description": "Seller's ordinal address",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "sellerReceiveAddress": {
+                        "type": "string",
+                        "description": "Address to receive payment",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "sellerPublicKey": {
+                        "type": "string",
+                        "description": "Seller's public key",
+                        "example": "abc123def456..."
+                      },
+                      "signedAcceptedBidPSBT": {
+                        "type": "string",
+                        "description": "Signed accept bid PSBT in base64 format",
+                        "example": "cHNidP8BAH0CAAAAAe..."
+                      },
+                      "unsignedAcceptBidPSBT": {
+                        "type": "string",
+                        "description": "Unsigned accept bid PSBT in base64 format (optional)",
+                        "example": "cHNidP8BAH0CAAAAAe..."
+                      },
+                      "referralAddress": {
+                        "type": "string",
+                        "description": "Referral address for commission (optional)",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "skipBroadcast": {
+                        "type": "boolean",
+                        "description": "Whether to skip broadcasting the transaction",
+                        "default": false
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "title": "Collection Bid",
+                    "required": [
+                      "metaType",
+                      "bids",
+                      "signedAcceptCollectionBidPSBT",
+                      "unsignedAcceptCollectionBidPSBT"
+                    ],
+                    "properties": {
+                      "metaType": {
+                        "type": "string",
+                        "enum": [
+                          "runes",
+                          "ordinals"
+                        ],
+                        "description": "Type of assets being traded",
+                        "example": "ordinals"
+                      },
+                      "bids": {
+                        "type": "array",
+                        "description": "Array of collection bids to fill",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "_id",
+                            "seller",
+                            "bidder"
+                          ],
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "description": "Bid ID"
+                            },
+                            "seller": {
+                              "type": "object",
+                              "properties": {
+                                "collectionSlug": {
+                                  "type": "string"
+                                },
+                                "sellerOrdAddress": {
+                                  "type": "string"
+                                },
+                                "sellerPaymentAddress": {
+                                  "type": "string"
+                                },
+                                "sellerPaymentAddressPublicKey": {
+                                  "type": "string"
+                                },
+                                "sellerOrdinalsAddressPublicKey": {
+                                  "type": "string"
+                                },
+                                "inscriptionIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "runeOutputs": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "fillQuantity": {
+                                  "type": "number"
+                                }
+                              }
+                            },
+                            "bidder": {
+                              "type": "object",
+                              "properties": {
+                                "collectionSlug": {
+                                  "type": "string"
+                                },
+                                "bidderAddress": {
+                                  "type": "string"
+                                },
+                                "bidderTokenReceiveAddress": {
+                                  "type": "string"
+                                },
+                                "unitPrice": {
+                                  "type": "number"
+                                },
+                                "quantity": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "feeInfo": {
+                        "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "fastestFee",
+                              "halfHourFee",
+                              "hourFee",
+                              "minimumFee"
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0.01
+                          }
+                        ],
+                        "default": "fastestFee",
+                        "example": "fastestFee"
+                      },
+                      "signedAcceptCollectionBidPSBT": {
+                        "type": "string",
+                        "description": "Signed accept collection bid PSBT in base64 format",
+                        "example": "cHNidP8BAH0CAAAAAe..."
+                      },
+                      "unsignedAcceptCollectionBidPSBT": {
+                        "type": "string",
+                        "description": "Unsigned accept collection bid PSBT in base64 format",
+                        "example": "cHNidP8BAH0CAAAAAe..."
+                      },
+                      "referralAddress": {
+                        "type": "string",
+                        "description": "Referral address for commission (optional)",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "skipBroadcast": {
+                        "type": "boolean",
+                        "description": "Whether to skip broadcasting the transaction",
+                        "default": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bid filled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "txid": {
+                          "type": "string",
+                          "description": "Transaction ID of the broadcast transaction"
+                        },
+                        "success": {
+                          "type": "boolean",
+                          "description": "Whether the bid was successfully filled"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bid/place": {
+      "post": {
+        "tags": [
+          "Place bid"
+        ],
+        "summary": "Place a bid on an inscription or collection",
+        "description": "Submit a signed PSBT to place a bid on either a specific inscription or a collection. The endpoint automatically detects the bid type based on the provided parameters.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "title": "Inscription Bid",
+                    "required": [
+                      "price",
+                      "inscriptionId",
+                      "bidderAddress",
+                      "bidderTokenReceiveAddress",
+                      "signedBiddingPSBT"
+                    ],
+                    "properties": {
+                      "price": {
+                        "type": "number",
+                        "description": "Bid price in satoshis",
+                        "example": 100000
+                      },
+                      "inscriptionId": {
+                        "type": "string",
+                        "description": "Inscription ID to bid on",
+                        "example": "abc123def456..."
+                      },
+                      "bidderAddress": {
+                        "type": "string",
+                        "description": "Bidder's payment address",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "bidderTokenReceiveAddress": {
+                        "type": "string",
+                        "description": "Address to receive the token if bid is accepted",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "signedBiddingPSBT": {
+                        "type": "string",
+                        "description": "Signed bidding PSBT in base64 format",
+                        "example": "cHNidP8BAH0CAAAAAe..."
+                      },
+                      "unsignedBiddingPSBT": {
+                        "type": "string",
+                        "description": "Unsigned bidding PSBT in base64 format (optional)",
+                        "example": "cHNidP8BAH0CAAAAAe..."
+                      },
+                      "feeRate": {
+                        "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "fastestFee",
+                              "halfHourFee",
+                              "hourFee",
+                              "minimumFee"
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0.01
+                          }
+                        ],
+                        "default": "fastestFee",
+                        "example": "fastestFee"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "title": "Collection Bid",
+                    "required": [
+                      "price",
+                      "collectionSlug",
+                      "bidderAddress",
+                      "bidderTokenReceiveAddress",
+                      "bidderAddressPublicKey",
+                      "quantity",
+                      "metaType",
+                      "signedBiddingMessage",
+                      "timestamp",
+                      "bidExpiry"
+                    ],
+                    "properties": {
+                      "price": {
+                        "type": "number",
+                        "description": "Unit bid price in satoshis",
+                        "example": 100000
+                      },
+                      "collectionSlug": {
+                        "type": "string",
+                        "description": "Collection slug to bid on",
+                        "example": "bitcoin-puppets"
+                      },
+                      "bidderAddress": {
+                        "type": "string",
+                        "description": "Bidder's payment address",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "bidderTokenReceiveAddress": {
+                        "type": "string",
+                        "description": "Address to receive the tokens if bid is accepted",
+                        "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                      },
+                      "bidderAddressPublicKey": {
+                        "type": "string",
+                        "description": "Bidder's public key",
+                        "example": "02abc123def456..."
+                      },
+                      "quantity": {
+                        "type": "number",
+                        "description": "Quantity of items to bid on",
+                        "example": 5
+                      },
+                      "metaType": {
+                        "type": "string",
+                        "enum": [
+                          "runes",
+                          "ordinals"
+                        ],
+                        "description": "Type of assets being bid on",
+                        "example": "ordinals"
+                      },
+                      "signedBiddingMessage": {
+                        "type": "string",
+                        "description": "Signed bidding message for verification",
+                        "example": "H1234567890abcdef..."
+                      },
+                      "timestamp": {
+                        "type": "number",
+                        "description": "Timestamp when the bid was created",
+                        "example": 1640995200000
+                      },
+                      "bidExpiry": {
+                        "type": "number",
+                        "description": "Timestamp when the bid expires",
+                        "example": 1641081600000
+                      },
+                      "feeRate": {
+                        "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "fastestFee",
+                              "halfHourFee",
+                              "hourFee",
+                              "minimumFee"
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "minimum": 0.01
+                          }
+                        ],
+                        "default": "fastestFee",
+                        "example": "fastestFee"
+                      },
+                      "skipBroadcast": {
+                        "type": "boolean",
+                        "description": "Whether to skip broadcasting the transaction",
+                        "default": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bid placed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "description": "Success message",
+                          "example": "Successfully bid!"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cancel": {
+      "post": {
+        "tags": [
+          "Cancel listing"
+        ],
+        "summary": "Cancel a bid or ask order",
+        "description": "Cancels a bid or ask order with signature verification",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "makerAddress",
+                  "orderType",
+                  "signature"
+                ],
+                "properties": {
+                  "makerAddress": {
+                    "type": "string",
+                    "description": "Address of the order maker",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "orderType": {
+                    "type": "string",
+                    "enum": [
+                      "ask",
+                      "bid"
+                    ],
+                    "description": "Type of order to cancel",
+                    "example": "bid"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "Signed challenge for verification",
+                    "example": "H1234567890abcdef..."
+                  },
+                  "_id": {
+                    "type": "string",
+                    "description": "Single order ID to cancel",
+                    "example": "507f1f77bcf86cd799439011"
+                  },
+                  "_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Multiple order IDs to cancel",
+                    "example": [
+                      "507f1f77bcf86cd799439011",
+                      "507f1f77bcf86cd799439012"
+                    ]
+                  },
+                  "inscriptionId": {
+                    "type": "string",
+                    "description": "Inscription ID for the order",
+                    "example": "abc123def456..."
+                  },
+                  "runesOutput": {
+                    "type": "string",
+                    "description": "Runes output for the order",
+                    "example": "txid:vout"
+                  },
+                  "txid": {
+                    "type": "string",
+                    "description": "Transaction ID",
+                    "example": "abc123def456..."
+                  },
+                  "vin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Input indices",
+                    "example": [
+                      0,
+                      1
+                    ]
+                  },
+                  "spentLocations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Spent locations",
+                    "example": [
+                      "txid:vout"
+                    ]
+                  },
+                  "cause": {
+                    "type": "string",
+                    "description": "Reason for cancellation",
+                    "example": "User requested cancellation"
+                  },
+                  "output": {
+                    "type": "string",
+                    "description": "Output reference",
+                    "example": "txid:vout"
+                  },
+                  "multiple": {
+                    "type": "boolean",
+                    "description": "Whether to cancel multiple orders",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "description": "Whether the cancellation was successful",
+                          "example": true
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "ID of the cancelled order"
+                            },
+                            "success": {
+                              "type": "boolean",
+                              "description": "Whether the specific order was cancelled"
+                            }
+                          }
+                        },
+                        "successCount": {
+                          "type": "number",
+                          "description": "Number of successfully cancelled orders",
+                          "example": 1
+                        },
+                        "failedCount": {
+                          "type": "number",
+                          "description": "Number of failed cancellations",
+                          "example": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid signature or unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/challenge": {
+      "get": {
+        "tags": [
+          "Satflow Challenge"
+        ],
+        "summary": "Get challenge message for wallet verification",
+        "description": "Returns a challenge message that needs to be signed by the wallet",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Bitcoin wallet address",
+            "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Challenge generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "challenge": {
+                          "type": "string",
+                          "description": "Message to be signed by the wallet",
+                          "example": "Welcome to Satflow!\n\nThis request will not trigger a blockchain transaction or cost any gas fees, and is used to verify your wallet address.\n\n[abc123...]"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/challenge/verify": {
+      "get": {
+        "tags": [
+          "Satflow Challenge"
+        ],
+        "summary": "Verify signed challenge",
+        "description": "Verifies that the provided signature is valid for the challenge",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Bitcoin wallet address",
+            "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+          },
+          {
+            "in": "query",
+            "name": "signature",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed challenge message",
+            "example": "H1234567890abcdef..."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signature verification result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "validity": {
+                          "type": "boolean",
+                          "description": "Whether the signature is valid",
+                          "example": true
+                        },
+                        "publicKey": {
+                          "type": "string",
+                          "description": "Public key extracted from signature",
+                          "example": "02abc123..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collection-stats": {
+      "get": {
+        "tags": [
+          "Get collection"
+        ],
+        "summary": "Get collection statistics",
+        "description": "Returns collection statistics including floor price, listed count, and metadata",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collectionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Collection identifier or slug",
+            "example": "bitcoin-puppets"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "floor": {
+                          "type": "number",
+                          "description": "Current floor price in satoshis",
+                          "example": 4726300
+                        },
+                        "listedCount": {
+                          "type": "number",
+                          "description": "Number of items currently listed",
+                          "example": 102
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "inscription_range_start": {
+                              "type": "number",
+                              "description": "Starting inscription number for the collection",
+                              "example": 83522
+                            },
+                            "inscription_range_end": {
+                              "type": "number",
+                              "description": "Ending inscription number for the collection",
+                              "example": 111319
+                            },
+                            "supply": {
+                              "type": "number",
+                              "description": "Total supply of the collection",
+                              "example": 10000
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid collection ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collection-stats/floors": {
+      "get": {
+        "tags": [
+          "Get collection"
+        ],
+        "summary": "Get collection floor prices",
+        "description": "Returns floor prices for multiple collections by type (ordinals or runes)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ordinals",
+                "runes"
+              ]
+            },
+            "description": "Type of collections to get floors for",
+            "example": "ordinals"
+          },
+          {
+            "in": "query",
+            "name": "slugs",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated list of collection slugs",
+            "example": "bitcoin-puppets,omb"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection floor prices retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "description": "Collection slug identifier",
+                            "example": "bitcoin-puppets"
+                          },
+                          "floor": {
+                            "type": "number",
+                            "description": "Current floor price in satoshis",
+                            "example": 4726300
+                          },
+                          "listedCount": {
+                            "type": "number",
+                            "description": "Number of items currently listed",
+                            "example": 102
+                          },
+                          "ownerCount": {
+                            "type": "number",
+                            "description": "Number of owners of this collection",
+                            "example": 256
+                          },
+                          "oneDayChange": {
+                            "type": "number",
+                            "description": "Percentage change in floor price over the last 24 hours",
+                            "example": 2.5
+                          },
+                          "sevenDayChange": {
+                            "type": "number",
+                            "description": "Percentage change in floor price over the last 7 days",
+                            "example": -1.2
+                          },
+                          "timestamp": {
+                            "type": "string",
+                            "description": "Time of the floor price data point",
+                            "example": "2023-10-01T12:00:00Z"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Type and slugs parameters are required"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "BAD_REQUEST"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collections not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collection": {
+      "get": {
+        "tags": [
+          "Get collection"
+        ],
+        "summary": "Get details for collection",
+        "description": "Returns collection metadata and optionally category attributes based on query parameters",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Collection identifier",
+            "example": "bitcoin-puppets"
+          },
+          {
+            "in": "query",
+            "name": "categoryAttributes",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Include category attributes for this collection in the response",
+            "example": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "collection": {
+                          "type": "array",
+                          "description": "Array containing collection data",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Collection ID",
+                                "example": "bitcoin-punks"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Collection name",
+                                "example": "Bitcoin Punks"
+                              },
+                              "description": {
+                                "type": "string",
+                                "description": "Collection description",
+                                "example": "A collection of unique Bitcoin Punks"
+                              },
+                              "inscription_min": {
+                                "type": "number",
+                                "description": "Minimum inscription number in the collection",
+                                "example": 10000
+                              },
+                              "inscription_max": {
+                                "type": "number",
+                                "description": "Maximum inscription number in the collection",
+                                "example": 100000
+                              },
+                              "total_items": {
+                                "type": "number",
+                                "description": "Total number of items in the collection",
+                                "example": 10000
+                              },
+                              "image_url": {
+                                "type": "string",
+                                "description": "Collection image URI",
+                                "example": "https://example.com/collection-image.png"
+                              },
+                              "image_url_content_type": {
+                                "type": "string",
+                                "description": "Content type of the collection image",
+                                "example": "image/png"
+                              },
+                              "external_url": {
+                                "type": "string",
+                                "description": "e.g. Collection website URI",
+                                "example": "https://bitcoinpunks.com"
+                              },
+                              "twitter_username": {
+                                "type": "string",
+                                "description": "Collection Twitter URI",
+                                "example": "https://twitter.com/bitcoin_punks_"
+                              },
+                              "discord_url": {
+                                "type": "string",
+                                "description": "Collection Discord URI",
+                                "example": "https://discord.gg/bitcoinpunks"
+                              },
+                              "creator_tips_address": {
+                                "type": "string",
+                                "description": "Creator tips address",
+                                "example": "bc1qxyz1234567890abcdefg"
+                              },
+                              "category_attributes": {
+                                "type": "array",
+                                "description": "Array of category attributes for the collection",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    },
+                                    "values": {
+                                      "type": "array",
+                                      "description": "Array of attribute values",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "value": {
+                                            "type": "string",
+                                            "description": "Attribute value",
+                                            "example": "Rare"
+                                          },
+                                          "count": {
+                                            "type": "number",
+                                            "description": "Count of this attribute value in the collection",
+                                            "example": 100
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "collection_id parameter is required"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "BAD_REQUEST"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Collection not found"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "NOT_FOUND"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intent/withdraw": {
+      "post": {
+        "tags": [
+          "Get bidding"
+        ],
+        "summary": "Create withdraw intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for multisig withdraw that needs to be signed by the user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userAddress",
+                  "amount"
+                ],
+                "properties": {
+                  "userAddress": {
+                    "type": "string",
+                    "description": "User's Bitcoin address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "Amount to withdraw in satoshis",
+                    "example": 100000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Withdraw intent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "unsignedPSBTBase64": {
+                          "type": "string",
+                          "description": "Unsigned PSBT in base64 format"
+                        },
+                        "unsignedPSBTHex": {
+                          "type": "string",
+                          "description": "Unsigned PSBT in hex format"
+                        },
+                        "paymentUtxoCount": {
+                          "type": "number",
+                          "description": "Number of payment UTXOs used"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intent/sell": {
+      "post": {
+        "tags": [
+          "Create listing"
+        ],
+        "summary": "Create Satflow listing intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for a single listing that needs to be signed by the user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "price",
+                  "sellerOrdAddress",
+                  "sellerReceiveAddress"
+                ],
+                "properties": {
+                  "price": {
+                    "type": "number",
+                    "description": "Listing price in satoshis",
+                    "example": 100000
+                  },
+                  "inscriptionId": {
+                    "type": "string",
+                    "description": "Inscription ID to list",
+                    "example": "abc123def456..."
+                  },
+                  "runesOutput": {
+                    "type": "string",
+                    "description": "Runes output to list",
+                    "example": "txid:vout"
+                  },
+                  "sellerOrdAddress": {
+                    "type": "string",
+                    "description": "Seller's ordinal address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "sellerReceiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive payment",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "externalOrderId": {
+                    "type": "string",
+                    "description": "External order ID (optional)"
+                  },
+                  "tapInternalKey": {
+                    "type": "string",
+                    "description": "Taproot internal key (optional)"
+                  },
+                  "newLocation": {
+                    "type": "string",
+                    "description": "New location (optional)"
+                  },
+                  "runesData": {
+                    "type": "object",
+                    "description": "Runes data (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sell intent created successfully"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          }
+        }
+      }
+    },
+    "/intent/bulk-sell": {
+      "post": {
+        "tags": [
+          "Create listing"
+        ],
+        "summary": "Create Satflow bulk listing intent (unsigned PSBTs)",
+        "description": "Creates unsigned PSBTs for multiple listings that need to be signed by the user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "listings"
+                ],
+                "properties": {
+                  "listings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "price",
+                        "sellerOrdAddress",
+                        "sellerReceiveAddress"
+                      ],
+                      "properties": {
+                        "price": {
+                          "type": "number",
+                          "description": "Listing price in satoshis"
+                        },
+                        "inscriptionId": {
+                          "type": "string",
+                          "description": "Inscription ID to list"
+                        },
+                        "runesOutput": {
+                          "type": "string",
+                          "description": "Runes output to list"
+                        },
+                        "sellerOrdAddress": {
+                          "type": "string",
+                          "description": "Seller's ordinal address"
+                        },
+                        "sellerReceiveAddress": {
+                          "type": "string",
+                          "description": "Address to receive payment"
+                        },
+                        "externalOrderId": {
+                          "type": "string",
+                          "description": "External order ID (optional)"
+                        },
+                        "tapInternalKey": {
+                          "type": "string",
+                          "description": "Taproot internal key (optional)"
+                        },
+                        "newLocation": {
+                          "type": "string",
+                          "description": "New location (optional)"
+                        },
+                        "runesData": {
+                          "type": "object",
+                          "description": "Runes data (optional)"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk sell intents created successfully"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          }
+        }
+      }
+    },
+    "/intent/accept": {
+      "post": {
+        "tags": [
+          "Sell listing"
+        ],
+        "summary": "Create accept bid intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for accepting an inscription bid that needs to be signed by the seller",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "inscriptionId"
+                ],
+                "properties": {
+                  "inscriptionId": {
+                    "type": "string",
+                    "description": "Inscription ID for the bid to accept",
+                    "example": "abc123def456..."
+                  },
+                  "sellerTapInternalKey": {
+                    "type": "string",
+                    "description": "Seller's taproot internal key (optional)",
+                    "example": "abc123def456..."
+                  },
+                  "referralAddress": {
+                    "type": "string",
+                    "description": "Referral address for commission (optional)",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accept bid intent created successfully"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          }
+        }
+      }
+    },
+    "/intent/accept-collection-bid": {
+      "post": {
+        "tags": [
+          "Get bidding"
+        ],
+        "summary": "Create accept collection bid intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for accepting collection bids that needs to be signed by the seller",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "metaType",
+                  "bids"
+                ],
+                "properties": {
+                  "metaType": {
+                    "type": "string",
+                    "enum": [
+                      "runes",
+                      "ordinals"
+                    ],
+                    "description": "Type of assets being traded",
+                    "example": "ordinals"
+                  },
+                  "bids": {
+                    "type": "array",
+                    "description": "Array of collection bids to accept",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "_id",
+                        "seller",
+                        "bidder"
+                      ],
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "description": "Bid ID"
+                        },
+                        "seller": {
+                          "type": "object",
+                          "properties": {
+                            "collectionSlug": {
+                              "type": "string"
+                            },
+                            "sellerOrdAddress": {
+                              "type": "string"
+                            },
+                            "sellerPaymentAddress": {
+                              "type": "string"
+                            },
+                            "sellerPaymentAddressPublicKey": {
+                              "type": "string"
+                            },
+                            "sellerOrdinalsAddressPublicKey": {
+                              "type": "string"
+                            },
+                            "inscriptionIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "runeOutputs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "fillQuantity": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "bidder": {
+                          "type": "object",
+                          "properties": {
+                            "collectionSlug": {
+                              "type": "string"
+                            },
+                            "bidderAddress": {
+                              "type": "string"
+                            },
+                            "bidderTokenReceiveAddress": {
+                              "type": "string"
+                            },
+                            "unitPrice": {
+                              "type": "number"
+                            },
+                            "quantity": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "feeInfo": {
+                    "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "default": "fastestFee",
+                    "example": "fastestFee"
+                  },
+                  "referralAddress": {
+                    "type": "string",
+                    "description": "Referral address for commission (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accept collection bid intent created successfully"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          }
+        }
+      }
+    },
+    "/intent/secure-purchase": {
+      "post": {
+        "tags": [
+          "Make a purchase"
+        ],
+        "summary": "Create secure purchase intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for secure purchases that needs to be signed by the buyer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "buyerAddress",
+                  "buyerTokenReceiveAddress",
+                  "buyerPublicKey"
+                ],
+                "properties": {
+                  "inscriptionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of inscription IDs to purchase",
+                    "example": [
+                      "abc123def456...",
+                      "def456ghi789..."
+                    ]
+                  },
+                  "runesOutputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of runes outputs to purchase",
+                    "example": [
+                      "txid:vout",
+                      "txid2:vout2"
+                    ]
+                  },
+                  "buyerAddress": {
+                    "type": "string",
+                    "description": "Buyer's Bitcoin address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerTokenReceiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive purchased tokens",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerPublicKey": {
+                    "type": "string",
+                    "description": "Buyer's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "feeRate": {
+                    "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "splitQuantity": {
+                    "type": "number",
+                    "description": "Number of output splits (optional)",
+                    "example": 10
+                  },
+                  "signedPaymentPrepPSBT": {
+                    "type": "string",
+                    "description": "Signed payment preparation PSBT (optional)"
+                  },
+                  "signedPurchasePSBTs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of signed purchase PSBTs (optional)"
+                  },
+                  "referralAddress": {
+                    "type": "string",
+                    "description": "Referral address for commission (optional)",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Secure purchase intent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "Secure purchase PSBT data"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intent/external-sell": {
+      "post": {
+        "tags": [
+          "Create listing"
+        ],
+        "summary": "Create external marketplace listing intent (unsigned PSBTs)",
+        "description": "Creates an unsigned PSBT for listing on external marketplaces that needs to be signed by the seller",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "listings",
+                  "sellerOrdAddress",
+                  "receiveAddress",
+                  "sellerPublicKey",
+                  "marketplace"
+                ],
+                "properties": {
+                  "listings": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "Array of listings to create for external marketplace",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "price"
+                      ],
+                      "properties": {
+                        "price": {
+                          "type": "number",
+                          "description": "Listing price in satoshis (must be positive)",
+                          "example": 100000
+                        },
+                        "tokenId": {
+                          "type": "string",
+                          "description": "Token ID (inscription ID) to list (optional)",
+                          "example": "abc123def456..."
+                        },
+                        "runesOutput": {
+                          "type": "string",
+                          "description": "Runes output to list (optional)",
+                          "example": "txid:vout"
+                        }
+                      }
+                    }
+                  },
+                  "sellerOrdAddress": {
+                    "type": "string",
+                    "description": "Seller's ordinal address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "receiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive payment",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "sellerPublicKey": {
+                    "type": "string",
+                    "description": "Seller's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "marketplace": {
+                    "type": "string",
+                    "enum": [
+                      "magiceden"
+                    ],
+                    "description": "External marketplace name",
+                    "example": "magiceden"
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "description": "Session ID from previous requests (optional)",
+                    "example": "session_abc123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External sell intent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "MagicEden listing intent response",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "ordinals",
+                            "runes"
+                          ],
+                          "description": "Type of assets being listed"
+                        },
+                        "results": {
+                          "type": "array",
+                          "description": "Array of listing results",
+                          "items": {
+                            "type": "object",
+                            "description": "Listing result (structure varies by type)",
+                            "properties": {
+                              "unsignedCombinedPSBTBase64": {
+                                "type": "string",
+                                "description": "Unsigned combined PSBT in base64 format (ordinals only)"
+                              },
+                              "unsignedListingPSBTBase64": {
+                                "type": "string",
+                                "description": "Unsigned listing PSBT in base64 format (ordinals only)"
+                              },
+                              "tokenId": {
+                                "type": "string",
+                                "description": "Token/Inscription ID (ordinals only)"
+                              },
+                              "price": {
+                                "type": "number",
+                                "description": "Listing price in satoshis"
+                              },
+                              "sellerReceiveAddress": {
+                                "type": "string",
+                                "description": "Seller's receive address (ordinals only)"
+                              },
+                              "runeName": {
+                                "type": "string",
+                                "description": "Name of the rune (runes only)"
+                              },
+                              "orderPsbtBase64": {
+                                "type": "string",
+                                "description": "Order PSBT in base64 format (runes only)"
+                              },
+                              "unsignedRBFProtectedPsbts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Array of unsigned RBF-protected PSBTs (runes only)"
+                              },
+                              "makerReceiveAddress": {
+                                "type": "string",
+                                "description": "Maker's receive address (runes only)"
+                              },
+                              "makerRunesAddress": {
+                                "type": "string",
+                                "description": "Maker's runes address (runes only)"
+                              }
+                            }
+                          }
+                        },
+                        "messageToSign": {
+                          "type": "string",
+                          "description": "Message that needs to be signed using BIP-322 and included in the submit request"
+                        },
+                        "externalAuthToken": {
+                          "type": "string",
+                          "description": "A token which can be supplied in subsequent requests via X-External-Auth header to maintain authentication"
+                        },
+                        "externalAuthAddress": {
+                          "type": "string",
+                          "description": "The address which `externalAuthToken` is tied to, and which must sign the `messageToSign`"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intent/external-purchase": {
+      "post": {
+        "tags": [
+          "Make a purchase"
+        ],
+        "summary": "Create external purchase intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for external marketplace purchases that needs to be signed by the buyer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "marketplace",
+                  "buyerAddress",
+                  "buyerPublicKey",
+                  "buyerTokenReceiveAddress",
+                  "buyerTokenReceivePublicKey"
+                ],
+                "properties": {
+                  "marketplace": {
+                    "type": "string",
+                    "enum": [
+                      "magiceden",
+                      "dotswap"
+                    ],
+                    "description": "External marketplace name",
+                    "example": "magiceden"
+                  },
+                  "buyerAddress": {
+                    "type": "string",
+                    "description": "Buyer's Bitcoin address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerPublicKey": {
+                    "type": "string",
+                    "description": "Buyer's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "buyerTokenReceiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive purchased tokens",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerTokenReceivePublicKey": {
+                    "type": "string",
+                    "description": "Public key for token receive address",
+                    "example": "02def456ghi789..."
+                  },
+                  "listings": {
+                    "type": "array",
+                    "description": "Array of listings to purchase (optional)"
+                  },
+                  "feeRate": {
+                    "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "dotswapPayload": {
+                    "type": "object",
+                    "description": "Dotswap-specific payload (required for dotswap marketplace)"
+                  },
+                  "securePurchase": {
+                    "type": "boolean",
+                    "description": "Whether to use secure purchase mode",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External purchase intent created successfully"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          }
+        }
+      }
+    },
+    "/intent/satflow-purchase": {
+      "post": {
+        "tags": [
+          "Make a purchase"
+        ],
+        "summary": "Create Satflow purchase intent (unsigned PSBT)",
+        "description": "Creates an unsigned PSBT for Satflow marketplace purchases that needs to be signed by the buyer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "buyerAddress",
+                  "buyerTokenReceiveAddress",
+                  "buyerPublicKey",
+                  "feeRate",
+                  "extractionFeeRate"
+                ],
+                "properties": {
+                  "inscriptionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of inscription IDs to purchase",
+                    "example": [
+                      "abc123def456...",
+                      "def456ghi789..."
+                    ]
+                  },
+                  "runesOutputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of runes outputs to purchase",
+                    "example": [
+                      "txid:vout",
+                      "txid2:vout2"
+                    ]
+                  },
+                  "buyerAddress": {
+                    "type": "string",
+                    "description": "Buyer's Bitcoin address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerTokenReceiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive purchased tokens",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerTokenReceivePublicKey": {
+                    "type": "string",
+                    "description": "Public key for token receive address",
+                    "example": "02def456ghi789..."
+                  },
+                  "buyerPublicKey": {
+                    "type": "string",
+                    "description": "Buyer's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "feeRate": {
+                    "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "extractionFeeRate": {
+                    "description": "Extraction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "minimalOutputs": {
+                    "type": "boolean",
+                    "description": "Use minimal outputs optimization"
+                  },
+                  "lightspeed": {
+                    "type": "boolean",
+                    "description": "Use lightspeed mode"
+                  },
+                  "splitQuantity": {
+                    "type": "number",
+                    "description": "Number of output splits (optional)",
+                    "example": 10
+                  },
+                  "referralAddress": {
+                    "type": "string",
+                    "description": "Referral address for commission (optional)",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Satflow purchase intent created successfully"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          }
+        }
+      }
+    },
+    "/item": {
+      "get": {
+        "tags": [
+          "Get item"
+        ],
+        "summary": "Get details for item",
+        "description": "Returns ordinal inscription data, metadata for token and collection, listing data, and bid data based on query parameters",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "inscriptionId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ordinal inscription id",
+            "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+          },
+          {
+            "in": "query",
+            "name": "inscriptionNumber",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Ordinal inscription number",
+            "example": "12345"
+          },
+          {
+            "in": "query",
+            "name": "metadata",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Include metadata for this item in the response",
+            "example": true
+          },
+          {
+            "in": "query",
+            "name": "bid",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Include bid information for this item in the response",
+            "example": true
+          },
+          {
+            "in": "query",
+            "name": "listing",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Include listing information for this item in the response",
+            "example": true
+          },
+          {
+            "in": "query",
+            "name": "exclude_ord",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Exclude ordinals data from the response",
+            "example": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inscription data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Inscription ID",
+                          "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                        },
+                        "inscriptionNumber": {
+                          "type": "string",
+                          "description": "Inscription number",
+                          "example": "12345"
+                        },
+                        "contentType": {
+                          "type": "string",
+                          "description": "Content type of the inscription",
+                          "example": "image/png"
+                        },
+                        "contentURI": {
+                          "type": "string",
+                          "description": "URI to access the inscription content",
+                          "example": "https://ord.satflow.com/content/6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                        },
+                        "contentPreviewURI": {
+                          "type": "string",
+                          "description": "URI to access the inscription preview",
+                          "example": "https://ord.satflow.com/preview/6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0"
+                        },
+                        "genesisTransaction": {
+                          "type": "string",
+                          "description": "Genesis transaction ID",
+                          "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799"
+                        },
+                        "owner": {
+                          "type": "string",
+                          "description": "Current owner address",
+                          "example": "bc1p..."
+                        },
+                        "location": {
+                          "type": "string",
+                          "description": "Current location of the inscription",
+                          "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799:0:0"
+                        },
+                        "output": {
+                          "type": "string",
+                          "description": "Output reference",
+                          "example": "6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799:0"
+                        },
+                        "outputValue": {
+                          "type": "number",
+                          "description": "Output value in satoshis",
+                          "example": 546
+                        },
+                        "listed": {
+                          "type": "boolean",
+                          "description": "Whether the inscription is currently listed (only included if listing=true)",
+                          "example": true
+                        },
+                        "listing": {
+                          "type": "object",
+                          "description": "Listing data (only included if listing=true and item is listed)",
+                          "nullable": true,
+                          "properties": {
+                            "price": {
+                              "type": "number",
+                              "description": "Listing price in satoshis",
+                              "example": 1000000
+                            },
+                            "sellerAddress": {
+                              "type": "string",
+                              "description": "Seller's ordinal address",
+                              "example": "bc1p..."
+                            }
+                          }
+                        },
+                        "hasBid": {
+                          "type": "boolean",
+                          "description": "Whether the inscription has bids (only included if bid=true)",
+                          "example": true
+                        },
+                        "topBid": {
+                          "type": "object",
+                          "description": "Top bid data (only included if bid=true and item has bids)",
+                          "nullable": true,
+                          "properties": {
+                            "price": {
+                              "type": "number",
+                              "description": "Bid price in satoshis",
+                              "example": 800000
+                            },
+                            "bidderAddress": {
+                              "type": "string",
+                              "description": "Bidder's address",
+                              "example": "bc1q..."
+                            }
+                          }
+                        },
+                        "bids": {
+                          "type": "array",
+                          "description": "Array of all bids (only included if bid=true)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "price": {
+                                "type": "number",
+                                "description": "Bid price in satoshis",
+                                "example": 800000
+                              },
+                              "bidderAddress": {
+                                "type": "string",
+                                "description": "Bidder's address",
+                                "example": "bc1q..."
+                              }
+                            }
+                          }
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "description": "Token and collection metadata (only included if metadata=true)",
+                          "properties": {
+                            "token": {
+                              "type": "object",
+                              "description": "Token metadata"
+                            },
+                            "collection": {
+                              "type": "object",
+                              "description": "Collection metadata"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inscription not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list": {
+      "post": {
+        "tags": [
+          "Create listing"
+        ],
+        "summary": "Submit signed Satflow listing PSBTs",
+        "description": "Submit signed listing PSBTs to create active listings on the marketplace",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "listings",
+                  "signedListingPSBT",
+                  "signedSecureListingPSBTs"
+                ],
+                "properties": {
+                  "listings": {
+                    "type": "array",
+                    "description": "Array of listing objects",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "price",
+                        "sellerOrdAddress",
+                        "sellerReceiveAddress"
+                      ],
+                      "properties": {
+                        "price": {
+                          "type": "number",
+                          "description": "Listing price in satoshis",
+                          "example": 100000
+                        },
+                        "inscriptionId": {
+                          "type": "string",
+                          "description": "Inscription ID to list",
+                          "example": "abc123def456..."
+                        },
+                        "runesOutput": {
+                          "type": "string",
+                          "description": "Runes output to list",
+                          "example": "txid:vout"
+                        },
+                        "sellerOrdAddress": {
+                          "type": "string",
+                          "description": "Seller's ordinal address",
+                          "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                        },
+                        "sellerReceiveAddress": {
+                          "type": "string",
+                          "description": "Address to receive payment",
+                          "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                        },
+                        "externalOrderId": {
+                          "type": "string",
+                          "description": "External order ID (optional)"
+                        },
+                        "tapInternalKey": {
+                          "type": "string",
+                          "description": "Taproot internal key (optional)"
+                        },
+                        "newLocation": {
+                          "type": "string",
+                          "description": "New location (optional)"
+                        },
+                        "runesData": {
+                          "type": "object",
+                          "description": "Runes data (optional)"
+                        }
+                      }
+                    }
+                  },
+                  "signedListingPSBT": {
+                    "type": "string",
+                    "description": "Signed listing PSBT in base64 format",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "unsignedListingPSBT": {
+                    "type": "string",
+                    "description": "Unsigned listing PSBT in base64 format (optional)",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "signedSecureListingPSBTs": {
+                    "type": "array",
+                    "description": "Array of signed secure listing PSBTs",
+                    "items": {
+                      "type": "string",
+                      "description": "Signed secure listing PSBT in base64 format",
+                      "example": "cHNidP8BAH0CAAAAAe..."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Listings created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "txid": {
+                          "type": "string",
+                          "description": "Transaction ID of the broadcast listing"
+                        },
+                        "listings": {
+                          "type": "array",
+                          "description": "Created listing objects",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "description": "Listing ID"
+                              },
+                              "price": {
+                                "type": "number",
+                                "description": "Listing price"
+                              },
+                              "inscriptionId": {
+                                "type": "string",
+                                "description": "Inscription ID"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Listing status"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list/external": {
+      "post": {
+        "tags": [
+          "Create listing"
+        ],
+        "summary": "Submit signed external marketplace listing PSBTs",
+        "description": "Submit signed listing PSBTs to create active listings on MagicEden marketplace",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "listings",
+                  "signedCombinedPSBT",
+                  "sellerPublicKey",
+                  "sellerOrdAddress",
+                  "receiveAddress",
+                  "type",
+                  "marketplace",
+                  "signedMessage",
+                  "unsignedMessage"
+                ],
+                "properties": {
+                  "listings": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "title": "Runes Listings",
+                        "description": "Runes listings mapped by rune name. All properties from /intent/external-sell `results` array for this listing must be included.",
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "orderPsbtBase64": {
+                              "type": "string",
+                              "description": "Order PSBT in base64 format"
+                            },
+                            "signedRBFProtectedPsbts": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Array of signed RBF-protected PSBTs"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "array",
+                        "title": "Ordinals Listings",
+                        "description": "Array of listings, taken from mpState and combined with signed PSBTs",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "description": "Ordinal listing object with signed PSBTs. All properties from /intent/external-sell `results` array for this listing must be included.",
+                          "properties": {
+                            "inscriptionId": {
+                              "type": "string",
+                              "description": "Inscription ID being listed"
+                            },
+                            "price": {
+                              "type": "number",
+                              "description": "Listing price in satoshis"
+                            },
+                            "sellerReceiveAddress": {
+                              "type": "string",
+                              "description": "Seller's receive address"
+                            },
+                            "signedRBFProtectedListingPSBT": {
+                              "type": "string",
+                              "description": "Signed RBF-protected listing PSBT in base64 or hex format"
+                            },
+                            "signedRBFProtectedListingTransientPSBT": {
+                              "type": "string",
+                              "description": "Signed RBF-protected transient listing PSBT in base64 or hex format"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "signedCombinedPSBT": {
+                    "type": "string",
+                    "description": "Signed combined PSBT in base64 or hex format",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "sellerPublicKey": {
+                    "type": "string",
+                    "description": "Seller's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "sellerOrdAddress": {
+                    "type": "string",
+                    "description": "Seller's ordinal address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "receiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive payment",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "runes",
+                      "ordinals"
+                    ],
+                    "description": "Type of assets being listed",
+                    "example": "ordinals"
+                  },
+                  "marketplace": {
+                    "type": "string",
+                    "enum": [
+                      "magiceden"
+                    ],
+                    "description": "External marketplace name",
+                    "example": "magiceden"
+                  },
+                  "signedMessage": {
+                    "type": "string",
+                    "description": "Signed authentication message"
+                  },
+                  "unsignedMessage": {
+                    "type": "string",
+                    "description": "Unsigned authentication message"
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "description": "Session ID to maintain state across requests",
+                    "example": "12345"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External listings created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "External listing submission response",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "externalAuthToken": {
+                          "type": "string",
+                          "description": "External authentication token. Can be supplied as X-External-Auth header in future requests to prevent re-authentication"
+                        },
+                        "externalAuthAddress": {
+                          "type": "string",
+                          "description": "Address which `externalAuthToken` is tied to"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/floor": {
+      "get": {
+        "tags": [
+          "Listings"
+        ],
+        "summary": "Get floor listings for collections",
+        "description": "Retrieve the floor listings for one or more collections by their IDs.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collectionIds",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "An array of collection IDs to fetch floor listings for."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Floor listings retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "collection": {
+                        "type": "string",
+                        "description": "The collection ID."
+                      },
+                      "floor": {
+                        "type": "object",
+                        "description": "The floor listing details."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters, collectionIds is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchase/broadcast": {
+      "post": {
+        "tags": [
+          "Make a purchase"
+        ],
+        "summary": "Broadcast purchase transaction (signed PSBT)",
+        "description": "Broadcasts a signed purchase PSBT to complete the transaction. Used for both secure and non-secure purchases.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "buyerAddress",
+                  "buyerTokenReceiveAddress",
+                  "buyerTokenReceivePublicKey",
+                  "buyerPublicKey",
+                  "feeRate"
+                ],
+                "properties": {
+                  "inscriptionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of inscription IDs being purchased",
+                    "example": [
+                      "abc123def456...",
+                      "def456ghi789..."
+                    ]
+                  },
+                  "runesOutputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of runes outputs being purchased",
+                    "example": [
+                      "txid:vout",
+                      "txid2:vout2"
+                    ]
+                  },
+                  "signedBulkBuyingPSBT": {
+                    "type": "string",
+                    "description": "Signed bulk buying PSBT in base64 format",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "signedSecurePaymentPrepPSBT": {
+                    "type": "string",
+                    "description": "Signed secure payment preparation PSBT (for secure purchases)"
+                  },
+                  "signedSecurePurchasePSBTs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of signed secure purchase PSBTs"
+                  },
+                  "signedSecureTransferPSBT": {
+                    "type": "string",
+                    "description": "Signed secure transfer PSBT"
+                  },
+                  "unsignedBulkBuyingPSBT": {
+                    "type": "string",
+                    "description": "Unsigned bulk buying PSBT in base64 format"
+                  },
+                  "unsignedExtractionPSBT": {
+                    "type": "string",
+                    "description": "Unsigned extraction PSBT in base64 format"
+                  },
+                  "signedExtractionPSBT": {
+                    "type": "string",
+                    "description": "Signed extraction PSBT in base64 format"
+                  },
+                  "securePurchase": {
+                    "type": "boolean",
+                    "description": "Whether this is a secure purchase",
+                    "default": false
+                  },
+                  "buyerAddress": {
+                    "type": "string",
+                    "description": "Buyer's Bitcoin address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerTokenReceiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive purchased tokens",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerTokenReceivePublicKey": {
+                    "type": "string",
+                    "description": "Public key for token receive address",
+                    "example": "02def456ghi789..."
+                  },
+                  "buyerPublicKey": {
+                    "type": "string",
+                    "description": "Buyer's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "feeRate": {
+                    "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "extractionFeeRate": {
+                    "description": "Extraction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "minimalOutputs": {
+                    "type": "boolean",
+                    "description": "Use minimal outputs optimization"
+                  },
+                  "lightspeed": {
+                    "type": "boolean",
+                    "description": "Use lightspeed mode"
+                  },
+                  "isExtracted": {
+                    "type": "boolean",
+                    "description": "Whether tokens have been extracted"
+                  },
+                  "splitQuantity": {
+                    "type": "number",
+                    "description": "Number of output splits",
+                    "example": 10
+                  },
+                  "referralAddress": {
+                    "type": "string",
+                    "description": "Referral address for commission",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "skipBroadcast": {
+                    "type": "boolean",
+                    "description": "Whether to skip broadcasting the transaction",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase transaction broadcasted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "fillTx": {
+                          "type": "string",
+                          "description": "Transaction ID of the broadcast purchase"
+                        },
+                        "unsignedExtractionPSBTBase64": {
+                          "type": "string",
+                          "description": "Unsigned extraction PSBT if extraction is needed"
+                        },
+                        "unsignedExtractionPSBTHex": {
+                          "type": "string",
+                          "description": "Unsigned extraction PSBT in hex format"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchase/external": {
+      "post": {
+        "tags": [
+          "Make a purchase"
+        ],
+        "summary": "Submit external purchase transaction (signed PSBT)",
+        "description": "Submits a signed external marketplace purchase PSBT to complete the transaction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "buyerAddress",
+                  "buyerPublicKey",
+                  "buyerTokenReceiveAddress",
+                  "signedBuyingPSBT",
+                  "marketplace",
+                  "feeRate",
+                  "mpState"
+                ],
+                "properties": {
+                  "listings": {
+                    "type": "array",
+                    "description": "Array of listings being purchased (optional)"
+                  },
+                  "buyerAddress": {
+                    "type": "string",
+                    "description": "Buyer's Bitcoin address",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "buyerPublicKey": {
+                    "type": "string",
+                    "description": "Buyer's public key",
+                    "example": "02abc123def456..."
+                  },
+                  "buyerTokenReceiveAddress": {
+                    "type": "string",
+                    "description": "Address to receive purchased tokens",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "signedBuyingPSBT": {
+                    "type": "string",
+                    "description": "Signed buying PSBT in base64 format",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "marketplace": {
+                    "type": "string",
+                    "description": "External marketplace name",
+                    "example": "magiceden"
+                  },
+                  "feeRate": {
+                    "description": "Transaction fee rate option. Can be one of the predefined options (`fastestFee`, `halfHourFee`, `hourFee`, `minimumFee`) or a custom number sat/vB.\n",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fastestFee",
+                          "halfHourFee",
+                          "hourFee",
+                          "minimumFee"
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "minimum": 0.01
+                      }
+                    ],
+                    "example": "fastestFee"
+                  },
+                  "securePurchase": {
+                    "type": "boolean",
+                    "description": "Whether this is a secure purchase",
+                    "default": false
+                  },
+                  "mpState": {
+                    "type": "object",
+                    "description": "Marketplace state object containing transaction details (provided by the intent endpoint)",
+                    "additionalProperties": true,
+                    "example": {
+                      "orderId": "order123",
+                      "listingId": "listing456"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External purchase transaction submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "fillTx": {
+                          "type": "string",
+                          "description": "Transaction ID of the submitted purchase"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Success message"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/withdraw": {
+      "post": {
+        "tags": [
+          "Get bidding"
+        ],
+        "summary": "Submit signed withdraw PSBT",
+        "description": "Submit a signed multisig withdraw PSBT and broadcast it to the Bitcoin network",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "signedWithdrawPSBT"
+                ],
+                "properties": {
+                  "signedWithdrawPSBT": {
+                    "type": "string",
+                    "description": "Signed withdraw PSBT in base64 or hex format",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "unsignedWithdrawPSBT": {
+                    "type": "string",
+                    "description": "Original unsigned PSBT for verification (optional)",
+                    "example": "cHNidP8BAH0CAAAAAe..."
+                  },
+                  "bidderPaymentAddress": {
+                    "type": "string",
+                    "description": "Bidder payment address (optional)",
+                    "example": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+                  },
+                  "skipBroadcast": {
+                    "type": "boolean",
+                    "description": "Skip broadcasting to network (for testing)",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Withdraw broadcasted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "txid": {
+                          "type": "string",
+                          "description": "Transaction ID of the broadcasted transaction",
+                          "example": "abc123def456..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters or PSBT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "For error reasons, review the response data."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

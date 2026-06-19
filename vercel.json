@@ -1,0 +1,75 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "rewrites": [
+    {
+      "source": "/api/satflow-top-collections",
+      "destination": "/api/satflow?op=top-collections"
+    },
+    {
+      "source": "/api/satflow-search",
+      "destination": "/api/satflow?op=search"
+    },
+    {
+      "source": "/api/satflow-collection-floors",
+      "destination": "/api/satflow?op=collection-floors"
+    },
+    {
+      "source": "/api/satflow-collection-stats",
+      "destination": "/api/satflow?op=collection-stats"
+    },
+    {
+      "source": "/api/satflow-wallet-contents",
+      "destination": "/api/satflow?op=wallet-contents"
+    },
+    {
+      "source": "/api/satflow-activity-listings",
+      "destination": "/api/satflow?op=activity-listings"
+    },
+    {
+      "source": "/api/satflow-activity-bids",
+      "destination": "/api/satflow?op=activity-bids"
+    },
+    {
+      "source": "/api/satflow-create-psbt-non-custodial-bid-deposit",
+      "destination": "/api/satflow?op=create-psbt-non-custodial-bid-deposit"
+    },
+    {
+      "source": "/api/satflow-bid-place",
+      "destination": "/api/satflow?op=bid-place"
+    },
+    {
+      "source": "/api/satflow-item",
+      "destination": "/api/satflow?op=item"
+    },
+    {
+      "source": "/api/satflow-setup-utxos",
+      "destination": "/api/satflow?op=setup-utxos"
+    },
+    {
+      "source": "/api/satflow-intent-secure-purchase",
+      "destination": "/api/satflow?op=intent-secure-purchase"
+    },
+    {
+      "source": "/api/satflow-intent-satflow-purchase",
+      "destination": "/api/satflow?op=intent-satflow-purchase"
+    },
+    {
+      "source": "/api/satflow-list",
+      "destination": "/api/satflow?op=list"
+    },
+    {
+      "source": "/api/satflow-intent-sell",
+      "destination": "/api/satflow?op=intent-sell"
+    },
+    {
+      "source": "/api/satflow-purchase-broadcast",
+      "destination": "/api/satflow?op=purchase-broadcast"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
+}
