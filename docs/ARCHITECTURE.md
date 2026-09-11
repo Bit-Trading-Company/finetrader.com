@@ -132,8 +132,11 @@ carry no inscriptions, and fails closed when it cannot check.
 - `server/satflow.js` maps operations to Satflow v1 endpoints and the Satflow
   tRPC backend. `server/unisat.js` and `server/ordnet.js` are validated
   pass-through proxies (`safeSubpath` rejects path traversal).
-- `server/lib/http.js` holds shared CORS, method checks, body parsing and
-  response relaying. `server/routes.test.js` keeps the route table, `api/` and
+- `server/lib/http.js` holds the shared origin check, CORS, method checks, body
+  parsing and response relaying. Every handler calls `handlePreflight` first,
+  which answers 403 unless the request comes from the site's own origin or from
+  `ALLOWED_ORIGINS`, so other websites cannot spend the API keys through their
+  visitors' browsers. `server/routes.test.js` keeps the route table, `api/` and
   `vercel.json` in sync.
 
 ## Legacy workspace (`/home`)
@@ -150,9 +153,19 @@ layout.
 All CSS is plain global CSS bundled into one stylesheet, because every page is
 imported statically by `App.jsx`. Page CSS is co-located with its page but
 applies app-wide, so class names are prefixed per page (`auto-trade-*`,
-`consolidator-*`, `dashboard-*`). Colors come from `src/styles/tokens.css`
-(`var(--color-*)`); fonts from `src/styles/fonts.css`. Some rules still leak
-across pages (see KNOWN_ISSUES.md).
+`consolidator-*`, `dashboard-*`).
+
+- `src/styles/tokens.css` — colors (`var(--color-*)`) and font stacks
+  (`--font-family-app`, `--font-family-display`).
+- `src/styles/fonts.css` — the `@font-face` declarations.
+- `src/styles/global.css` — one `body` rule with the page defaults, shared
+  component styles, and the legacy typography rules that put the app font on
+  every element (fonts therefore do not inherit) and paint `<p>` white.
+
+New UI should render inside an element with `class="ds-root"`: the legacy
+typography rules skip that subtree, so fonts and colors inherit normally there.
+Prefer CSS Modules (`*.module.css`) for new components so their class names
+cannot collide with the legacy global ones. See KNOWN_ISSUES.md.
 
 ## Testing and checks
 

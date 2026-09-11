@@ -6,18 +6,21 @@ are in the git history.
 
 ## Security and deployment
 
-- **Rotate API keys.** Magic Eden, Satflow and Hiro keys were hardcoded before
-  the refactor and remain in git history. Rotate the Satflow and Hiro keys;
-  revoke the Magic Eden key.
+- **Old API keys in git history.** Keys were hardcoded before the refactor. The
+  Satflow key only ever lived in server-side code (the old `src/setupProxy.js`)
+  in this private repository, and it cannot be replaced, so keep the repository
+  private and scrub the history before ever making it public. The Magic Eden
+  and Hiro keys did ship in the public browser bundle: revoke both (neither is
+  used any more).
 - **Environment variables are required.** There are no hardcoded fallbacks:
   set `SATFLOW_API_KEY` and `UNISAT_API_KEY` in Vercel and in a local `.env`.
   Without `SATFLOW_API_KEY`, Satflow answers 403 and the collection lists show
   "HTTP error! status: 502".
-- **Open API relay.** `/api/*` responds with `Access-Control-Allow-Origin: *`
-  and has no origin check or rate limit, so anyone can spend the Satflow and
-  UniSat quotas through it.
-- **Hiro key is public.** `REACT_APP_HIRO_API_KEY` is embedded in the browser
-  bundle.
+- **API rate limiting.** `/api/*` now answers only requests from the site's own
+  origin (or `ALLOWED_ORIGINS`), which stops other websites from spending the
+  Satflow and UniSat quotas through their visitors' browsers. Scripts can still
+  forge those headers, so add a rate-limit rule for `/api/*` in the Vercel
+  firewall — the Satflow key cannot be replaced if it gets abused.
 - **Deployment not yet verified.** The new `server/` + `api/` layout passes
   local builds and route tests but has not been deployed to Vercel yet.
 
@@ -32,14 +35,10 @@ are in the git history.
   `connectedAddress.payment` (the field is `payments`) and signs with the
   ordinals address. Fixing it needs payment-input signing and testing with
   real wallets.
-- **Empty wallet subset.** With "custom wallet subset" enabled and no wallet
-  ticked, `OrdinalExtractor` scans every proxy wallet (read-only), and
-  AutoTrade's `getActiveWallets` also falls back to all wallets (its Start
-  button is disabled in that state). The Consolidator now selects none.
-- **Unused prep helpers.** `waitForPrepsToConfirm`, `getPendingPrep` and
-  `addPendingPrep` in `satflowPurchase.js` belong to an older purchase flow.
-  Only `removePendingPrep` is still called, so the pending-preps localStorage
-  entry is cleaned up but never written.
+- **Pending-prep storage is never written.** `satflowPurchase.js` still clears
+  `fine-trading-pending-secure-preps` (`removePendingPrep`), but nothing writes
+  it since the older "broadcast the prep, wait, then complete" flow was
+  dropped.
 
 ## Trading and marketplaces
 
@@ -51,8 +50,6 @@ are in the git history.
   notice.
 - **Manual flows bypass adapters.** Dashboard buy/sell and bids
   (`src/features/marketplace/`) call Satflow directly.
-- **Exchange selector is hardcoded.** AutoTrade renders two radio buttons and
-  has a few ord.net-specific checks (`TRADING_EXCHANGES.ORDNET`).
 - **AutoTrade step 3 never auto-completes.** The dispatch confirmation polling
   in `AutoTrade.jsx` watches `dispatchTxIds`, which is never set because the
   Dispatch modal does not report transaction ids back. A no-op
@@ -78,12 +75,14 @@ are in the git history.
 
 ## Styles
 
-- **CSS leaks across pages.** All CSS is bundled globally, so page rules apply
-  on every route: `body` is redefined by `Splash.css` (margin 0, overflow
-  hidden), `WalletConsolidator.css` and `AutoTrade.css` (overflow auto), and
-  whichever loads last wins; `Splash.css` sets `h1 { font-size: 4vw }`;
-  `Dashboard.css` and `Analytics.css` both override `.component-header`. Fix
-  with page-scoped class names or CSS Modules during the redesign.
+- **Legacy typography still forces fonts.** `global.css` sets the app font on
+  every element (so fonts do not inherit) and paints `<p>` white. Those rules
+  now skip anything inside an element with `class="ds-root"`, so redesigned UI
+  inherits normally; delete them once no legacy page is left.
+- **Generic legacy class names.** `global.css` styles names like
+  `.wallet-item`, `.pagination` and `.loading-spinner` app-wide, and every page
+  stylesheet is bundled on every route. New components should use CSS Modules
+  (`*.module.css`, supported out of the box) so they cannot collide.
 - **Parallel stylesheets.** `Dashboard.css` and `Analytics.css` share hundreds
   of lines under different class prefixes. Real deduplication needs shared
   class names in the JSX.

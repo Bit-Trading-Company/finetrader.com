@@ -58,10 +58,12 @@ transaction are exchange-independent. Import them from `ordinals.js`,
    annotated `/** @type {import('../exchanges').MarketplaceAdapter} */`.
 4. **Register it.** Import the adapter in `exchanges.js` and add it to
    `ADAPTERS`. `TRADING_EXCHANGES` gets a matching entry.
-5. **UI.** The AutoTrade exchange selector is still a pair of radio buttons in
-   `src/pages/AutoTrade/AutoTrade.jsx`. Add an option there. The page also has
-   a few ord.net-specific checks (search for `TRADING_EXCHANGES.ORDNET`) that
-   may apply to a marketplace needing wallet sign-in.
+5. **UI.** Nothing to do: the AutoTrade exchange selector renders from
+   `TRADING_EXCHANGE_OPTIONS`, so registering the adapter adds its radio
+   button and its label to the trading console messages. If the marketplace
+   needs a signed-in wallet even for reads (as ord.net does), set
+   `needsWalletForReads: true` on the adapter and the page will wait for a
+   proxy wallet before asking for floor prices.
 6. **Test.** Start with a small amount on one proxy wallet: floor price →
    list → delist → buy one item → confirmation → trading fee.
 
