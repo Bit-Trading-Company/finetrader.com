@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import WalletAnalytics from './WalletAnalytics';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
-import { fetchWalletOrdinals } from '../../trading/autoTradingUtils';
+import { fetchWalletOrdinals } from '../../trading/satflow/satflowApi';
 import {
   getMempoolAddressTxsUrl,
   getMempoolAddressTxsMempoolUrl,

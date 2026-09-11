@@ -1,69 +1,32 @@
 /**
- * Simplified Auto-Trading Logic
+ * Auto-trade engine: the strategies run by the AutoTrade page.
  *
- * This module provides a clean, simple approach to auto-trading using
- * the mempoolTxId field to detect when items are ready to trade.
+ * - processWalletItems: one trading cycle (delta neutral and range trading):
+ *   list ready items, buy them from the next wallet, confirm pending purchases.
+ * - buyItemsFromFloor: buy N floor listings before auto-trading starts.
+ * - buyXFromEachWallet: buy up to X floor listings per proxy wallet, then stop.
+ * - sellXFromEachWallet: list X items from each proxy wallet, then stop.
+ *
+ * Marketplace calls go through the adapter returned by getTradingApi(exchange)
+ * (see ./exchanges); token ids, chain lookups, balances and the trading fee
+ * transaction are exchange-independent and imported directly.
  */
 
-import {
-  listOrdinalWithProxyWallet,
-  delistOrdinalWithProxyWallet,
-  getFloorPrice,
-  fetchWalletOrdinals,
-  fetchWalletBalance,
-  getTokenId,
-  hasPendingTransaction,
-  getInscriptionId,
-  fetchCollectionItems,
-  checkPurchaseConfirmed,
-  checkTransactionConfirmed,
-  sendTradingFee,
-  prepareSecurePurchase,
-  completeSecurePurchase,
-} from './autoTradingUtils';
-import * as ordNetTrading from './ordNetTradingUtils';
 import { getMempoolTxUrl } from '../lib/mempoolProvider';
-import { estimateAutoTradePurchaseCost } from './tradingFeeUtils';
-
-export const TRADING_EXCHANGES = {
-  SATFLOW: 'satflow',
-  ORDNET: 'ordnet',
-};
-
-const isOrdNetExchange = (exchange) => exchange === TRADING_EXCHANGES.ORDNET;
-
-const satflowTrading = {
-  listOrdinalWithProxyWallet,
-  delistOrdinalWithProxyWallet,
-  getFloorPrice,
-  fetchWalletOrdinals,
-  fetchWalletBalance,
-  getTokenId,
+import { checkTransactionConfirmed, fetchWalletBalance } from './chain';
+import {
+  TRADING_EXCHANGES,
+  getTradingApi,
+  getItemLink,
+  getExchangeLabel,
+} from './exchanges';
+import { estimateAutoTradePurchaseCost } from './fees';
+import { sendTradingFee } from './feeTransaction';
+import {
   hasPendingTransaction,
+  getTokenId,
   getInscriptionId,
-  fetchCollectionItems,
-  checkPurchaseConfirmed,
-  checkTransactionConfirmed,
-  sendTradingFee,
-  prepareSecurePurchase,
-  completeSecurePurchase,
-};
-
-const getTradingApi = (exchange) =>
-  isOrdNetExchange(exchange)
-    ? { ...satflowTrading, ...ordNetTrading }
-    : satflowTrading;
-
-const getExchangeLabel = (exchange) =>
-  isOrdNetExchange(exchange) ? 'ord.net' : 'Satflow';
-
-/** Console-log link for a listed inscription (null when the id is unknown). */
-const getItemLink = (inscriptionId, exchange) => {
-  if (!inscriptionId) return null;
-  return isOrdNetExchange(exchange)
-    ? `https://ord.net/inscription/${inscriptionId}`
-    : `https://ordinals.com/inscription/${inscriptionId}`;
-};
+} from './ordinals';
 
 /**
  * Process all wallet items: list if needed, buy from next wallet
@@ -685,7 +648,7 @@ const waitForListingAvailable = async (
   collectionSymbol,
   tokenId,
   timeout = 10000,
-  api = satflowTrading,
+  api = getTradingApi(TRADING_EXCHANGES.SATFLOW),
   walletContext = {}
 ) => {
   const startTime = Date.now();

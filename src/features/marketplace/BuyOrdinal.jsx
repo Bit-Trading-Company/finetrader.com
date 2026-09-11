@@ -14,7 +14,7 @@ import { getMempoolTxUrl } from '../../lib/mempoolProvider';
 import {
   prepareSecurePurchase,
   completeSecurePurchase,
-} from '../../trading/autoTradingUtils';
+} from '../../trading/satflow/satflowPurchase';
 import { truncateMiddle, formatSatsAsBtc } from '../../lib/format';
 
 const isSatflowMarketplaceListing = (ordinal) =>

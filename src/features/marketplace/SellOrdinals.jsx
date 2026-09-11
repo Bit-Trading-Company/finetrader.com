@@ -10,7 +10,7 @@ import {
   derivePublicKeyFromPrivateKey,
   generateAddressFromPublicKey,
 } from '../../lib/bitcoinUtils';
-import { fetchWalletOrdinals } from '../../trading/autoTradingUtils';
+import { fetchWalletOrdinals } from '../../trading/satflow/satflowApi';
 import { formatSatsAsBtc, formatCompactNumber } from '../../lib/format';
 
 const SellOrdinals = ({ glEventHub }) => {

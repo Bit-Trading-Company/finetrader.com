@@ -11,17 +11,13 @@ import Dispatch from '../../features/wallet/Dispatch';
 import OrdinalsCollections from '../../features/marketplace/OrdinalsCollections';
 import CollectionOfferModal from '../../features/marketplace/CollectionOfferModal';
 import {
-  checkTransactionConfirmed,
-  getFloorPrice,
-} from '../../trading/autoTradingUtils';
-import {
   processWalletItems,
   buyItemsFromFloor,
   buyXFromEachWallet,
   sellXFromEachWallet,
-  TRADING_EXCHANGES,
-} from '../../trading/simplifiedAutoTrading';
-import * as ordNetTrading from '../../trading/ordNetTradingUtils';
+} from '../../trading/autoTradeEngine';
+import { checkTransactionConfirmed } from '../../trading/chain';
+import { TRADING_EXCHANGES, getTradingApi } from '../../trading/exchanges';
 import {
   MEMPOOL_PROVIDERS,
   getMempoolApiProvider,
@@ -276,14 +272,13 @@ const AutoTrade = () => {
           }
           hasFetchedFloorPriceRef.current = true;
           try {
-            const floorPriceSats =
-              tradingExchange === TRADING_EXCHANGES.ORDNET
-                ? await ordNetTrading.getFloorPrice(collectionSymbol, true, {
-                    wallet: wallets[0],
-                    wallets,
-                    network,
-                  })
-                : await getFloorPrice(collectionSymbol, true);
+            const floorPriceSats = await getTradingApi(
+              tradingExchange
+            ).getFloorPrice(collectionSymbol, true, {
+              wallet: wallets[0],
+              wallets,
+              network,
+            });
             if (floorPriceSats) {
               // Convert from sats to BTC
               const floorPriceBTC = floorPriceSats / 100000000;
@@ -469,7 +464,7 @@ const AutoTrade = () => {
   }, [consoleLogs]);
 
   // =============================================================================
-  // TRADING LOGIC - Uses simplified processWalletItems() from simplifiedAutoTrading.js
+  // TRADING LOGIC - Uses processWalletItems() from trading/autoTradeEngine.js
   // =============================================================================
 
   // Get active wallets based on settings

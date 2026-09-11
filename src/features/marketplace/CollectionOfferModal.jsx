@@ -11,7 +11,7 @@ import {
   derivePublicKeyFromPrivateKey,
   generateAddressFromPublicKey,
 } from '../../lib/bitcoinUtils';
-import { fetchSatflowCollectionBids } from '../../trading/autoTradingUtils';
+import { fetchSatflowCollectionBids } from '../../trading/satflow/satflowApi';
 import { truncateMiddle, formatSatsAsBtc } from '../../lib/format';
 import { hexToBase64 } from '../../lib/encoding';
 

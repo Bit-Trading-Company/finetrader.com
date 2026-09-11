@@ -3,7 +3,7 @@ import CollectionOfferModal from './CollectionOfferModal';
 import {
   fetchSatflowActivityListings,
   enrichSatflowListingItemForDisplay,
-} from '../../trading/autoTradingUtils';
+} from '../../trading/satflow/satflowApi';
 import { formatSatsAsBtc, formatCompactNumber } from '../../lib/format';
 
 const ENRICH_CONCURRENCY = 6;

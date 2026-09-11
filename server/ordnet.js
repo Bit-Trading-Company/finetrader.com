@@ -6,7 +6,7 @@
  *
  * The client's Authorization header (an ord.net session token obtained via
  * BIP-322 sign-in) is forwarded. Session handling and all trading logic live in
- * src/trading/ordNetTradingUtils.js.
+ * src/trading/ordnet/ordnetTrading.js.
  */
 const http = require('./lib/http');
 

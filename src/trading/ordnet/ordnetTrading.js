@@ -6,12 +6,12 @@ import {
   signPsbtWithProxyWallet,
   derivePublicKeyFromPrivateKey,
   deriveAddressFromPrivateKey,
-} from '../lib/bitcoinUtils';
+} from '../../lib/bitcoinUtils';
 import {
   getMempoolAddressUtxoUrl,
   getMempoolTxUrl,
-} from '../lib/mempoolProvider';
-import { getTokenId } from './autoTradingUtils';
+} from '../../lib/mempoolProvider';
+import { getTokenId } from '../ordinals';
 
 const ECPair = ECPairFactory(ecc);
 const ORDNET_SESSION_PREFIX = 'fine-trading-ordnet-session:';

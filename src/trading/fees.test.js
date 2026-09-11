@@ -4,7 +4,7 @@ import {
   FEE_TX_MINER_RESERVE_SATS,
   MIN_TRADING_FEE_OUTPUT_SATS,
   PURCHASE_NETWORK_FEE_RESERVE_SATS,
-} from './tradingFeeUtils';
+} from './fees';
 
 describe('auto trading fee helpers', () => {
   it('uses the minimum relay-safe fee when 1% is below dust', () => {

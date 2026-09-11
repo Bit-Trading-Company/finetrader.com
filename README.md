@@ -24,11 +24,11 @@ npm run build
 
 Copy `.env.example` to `.env` and fill in the values:
 
-| Variable | Required | Description |
-|---|---|---|
-| `SATFLOW_API_KEY` | Yes | Satflow API key used by every `/api/satflow-*` route |
-| `UNISAT_API_KEY` | Yes | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/) |
-| `REACT_APP_HIRO_API_KEY` | Optional | Hiro API key for the inscriptions panel. Embedded in the browser bundle, so treat it as public |
+| Variable                 | Required | Description                                                                                      |
+| ------------------------ | -------- | ------------------------------------------------------------------------------------------------ |
+| `SATFLOW_API_KEY`        | Yes      | Satflow API key used by every `/api/satflow-*` route                                             |
+| `UNISAT_API_KEY`         | Yes      | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/) |
+| `REACT_APP_HIRO_API_KEY` | Optional | Hiro API key for the inscriptions panel. Embedded in the browser bundle, so treat it as public   |
 
 API keys are only read on the server (`server/`): from `.env` during development and from the Vercel project settings in production. Without them, upstream requests are unauthenticated and usually fail with 401/403/429.
 
@@ -44,16 +44,16 @@ Deploy by connecting the repo to Vercel. Set `SATFLOW_API_KEY` and `UNISAT_API_K
 
 ## Routes
 
-| Path | Page | Description |
-|---|---|---|
-| `/` | Splash | Landing / entry screen |
-| `/auto-trade` | AutoTrade | Main automated trading interface |
-| `/dashboard` | Dashboard | Wallet and portfolio overview |
-| `/analytics` | Analytics | Trading analytics and charts |
-| `/home` | Homepage | Legacy Golden Layout workspace |
-| `/consolidator` | WalletConsolidator | UTXO consolidation tool |
-| `/extractor` | OrdinalExtractor | Scan and extract inscription UTXOs |
-| `/satflow-stats` | SatflowStats | Satflow collection statistics |
+| Path             | Page               | Description                        |
+| ---------------- | ------------------ | ---------------------------------- |
+| `/`              | Splash             | Landing / entry screen             |
+| `/auto-trade`    | AutoTrade          | Main automated trading interface   |
+| `/dashboard`     | Dashboard          | Wallet and portfolio overview      |
+| `/analytics`     | Analytics          | Trading analytics and charts       |
+| `/home`          | Homepage           | Legacy Golden Layout workspace     |
+| `/consolidator`  | WalletConsolidator | UTXO consolidation tool            |
+| `/extractor`     | OrdinalExtractor   | Scan and extract inscription UTXOs |
+| `/satflow-stats` | SatflowStats       | Satflow collection statistics      |
 
 ## Project Structure
 
@@ -78,7 +78,7 @@ finetrader.com/
 │   │   ├── marketplace/  # Collection browser, collection bids, manual buy/sell (Satflow)
 │   │   ├── psbt/         # PSBT create/sign tools (legacy /home workspace)
 │   │   └── explorer/     # Inscription and UTXO explorers (legacy /home workspace)
-│   ├── trading/          # Auto-trade engine + Satflow / ord.net trading logic
+│   ├── trading/          # Auto-trade engine + marketplace adapters (Satflow, ord.net)
 │   ├── lib/              # UI-free helpers: keys & PSBT signing, mempool URLs, UniSat proxy URLs
 │   ├── styles/           # global.css (applies app-wide)
 │   └── assets/           # Images, fonts, SVGs
@@ -91,23 +91,26 @@ finetrader.com/
 - **`pages/`** — Route screens wired in `app/App.jsx`. `AutoTrade/` is the core automated trading UI; `Homepage/` is the legacy Golden Layout workspace.
 - **`features/`** — UI shared across pages, grouped by domain (wallet, marketplace, PSBT tools, explorers).
 - **`trading/`** — Business logic for trading:
-  - `simplifiedAutoTrading.js` — auto-trade strategy engine (cycles, listing, buyer selection)
-  - `autoTradingUtils.js` — Satflow API calls, secure purchase/listing flows, fee transaction, balances
-  - `ordNetTradingUtils.js` — ord.net exchange integration
-  - `tradingFeeUtils.js` — trading fee constants and cost estimates
+  - `exchanges.js` — marketplace registry and the `MarketplaceAdapter` contract; `getTradingApi(exchange)` returns an adapter
+  - `autoTradeEngine.js` — auto-trade strategies (trading cycles, floor buys, buy/sell X per wallet)
+  - `satflow/` — Satflow adapter: API reads, listing, secure purchase
+  - `ordnet/` — ord.net adapter and trading integration
+  - `ordinals.js`, `chain.js` — exchange-independent token helpers and chain lookups (confirmations, balances)
+  - `fees.js`, `feeTransaction.js` — trading fee amounts and the fee transaction
+  - Adding a marketplace: [docs/ADDING_A_MARKETPLACE.md](docs/ADDING_A_MARKETPLACE.md)
 - **`lib/`** — `bitcoinUtils.js` (proxy wallet key derivation, PSBT signing), `mempoolProvider.js` (mempool.space / Blockstream URLs), `unisatProxy.js` (`/api/unisat` URLs)
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `npm start` | Start dev server (CRACO + hot reload) |
-| `npm run build` | Production build to `./build` |
-| `npm test` | Run tests (Jest; `src/` and `server/`) |
-| `npm run test:ci` | CI test run with coverage |
-| `npm run lint` | ESLint check (`src/`, `api/`, `server/`) |
-| `npm run lint:fix` | ESLint auto-fix |
-| `npm run format` | Prettier format |
+| Command            | Description                              |
+| ------------------ | ---------------------------------------- |
+| `npm start`        | Start dev server (CRACO + hot reload)    |
+| `npm run build`    | Production build to `./build`            |
+| `npm test`         | Run tests (Jest; `src/` and `server/`)   |
+| `npm run test:ci`  | CI test run with coverage                |
+| `npm run lint`     | ESLint check (`src/`, `api/`, `server/`) |
+| `npm run lint:fix` | ESLint auto-fix                          |
+| `npm run format`   | Prettier format                          |
 
 ## Tech Stack
 
