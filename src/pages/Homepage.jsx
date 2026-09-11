@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import GoldenLayout from 'golden-layout';
+// Golden Layout's own styles (previously loaded from an unpinned CDN in index.html).
+// Must stay above index.css so app styles keep overriding them.
+import 'golden-layout/src/css/goldenlayout-base.css';
+import 'golden-layout/src/css/goldenlayout-dark-theme.css';
 import '../index.css'; // Import Homepage styles
 
 // Import our layout components

@@ -2,10 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="shortcut icon" href="./favicon.png" type="image/png" />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" type="image/png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Ordinals trading and exploring" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <!-- Primary Meta Tags -->
@@ -17,7 +16,6 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://metatags.io/" />
     <meta property="og:title" content="FINE TRADING - Bitcoin Trading Dashboard" />
     <meta
       property="og:description"
@@ -25,13 +23,11 @@
     />
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://metatags.io/" />
     <meta property="twitter:title" content="FINE TRADING - Bitcoin Trading Platform" />
     <meta
       property="twitter:description"
       content="Advanced bitcoin trading and wallet management platform"
     />
-    <!-- Meta Tags Generated with https://metatags.io -->
     <title>FINE TRADING</title>
 
     <!-- Inline script to block MetaMask (Bitcoin app only) -->
@@ -43,7 +39,7 @@
         console.error = function(...args) {
           const errorString = args.join(' ');
           // Suppress MetaMask-specific errors
-          if (errorString.includes('MetaMask') || 
+          if (errorString.includes('MetaMask') ||
               errorString.includes('ethereum') ||
               errorString.includes('chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn')) {
             return; // Silently ignore MetaMask errors
@@ -53,8 +49,8 @@
 
         // Prevent unhandled promise rejections from MetaMask
         window.addEventListener('unhandledrejection', function(event) {
-          if (event.reason && 
-              (event.reason.message?.includes('MetaMask') || 
+          if (event.reason &&
+              (event.reason.message?.includes('MetaMask') ||
                event.reason.message?.includes('ethereum'))) {
             event.preventDefault(); // Suppress MetaMask errors
           }
@@ -85,18 +81,6 @@
         }
       })();
     </script>
-
-    <!-- Tailwind CSS will be included in the main CSS bundle -->
-
-    <!-- Golden Layout CSS -->
-    <link
-      rel="stylesheet"
-      href="https://golden-layout.com/files/latest/css/goldenlayout-base.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css"
-    />
   </head>
 
   <body>

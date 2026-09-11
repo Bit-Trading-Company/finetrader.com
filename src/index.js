@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 // CSS is now loaded per-page instead of globally
 import App from './App';
-import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { OrdConnectProvider } from '@ordzaar/ord-connect';
 import { AppProvider } from './context/appContext';
@@ -109,8 +108,6 @@ if (rootElement) {
     </React.StrictMode>
   );
 }
-
-reportWebVitals();
 
 // React Router v7 will require future flags for startTransition and relative splat path.
 // See https://reactrouter.com/en/main/upgrading/v6-to-v7#future-flags
