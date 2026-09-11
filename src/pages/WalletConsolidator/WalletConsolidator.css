@@ -1,0 +1,814 @@
+body {
+  overflow: auto;
+}
+
+/* ── Container & Layout ── */
+
+.consolidator-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+}
+
+.consolidator-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(17, 22, 35, 0.78);
+  z-index: 0;
+}
+
+.consolidator-content {
+  position: relative;
+  z-index: 1;
+  max-width: 820px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 12px;
+}
+
+/* ── Header ── */
+
+.consolidator-title {
+  text-align: center;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #f7fafc;
+  margin-bottom: 4px;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+}
+
+.consolidator-subtitle {
+  text-align: center;
+  font-size: 1rem;
+  color: #a0aec0;
+  margin-bottom: 8px;
+}
+
+/* ── Settings button ── */
+
+.consolidator-settings-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  background-color: #4a5568;
+  border: 1px solid #718096;
+  color: #f7fafc;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  z-index: 20;
+  transition: background-color 0.2s;
+}
+
+.consolidator-settings-btn:hover {
+  background-color: #5a6478;
+}
+
+/* ── Step cards ── */
+
+.consolidator-step {
+  background: #2d3748;
+  border-radius: 12px;
+  border: 1px solid #4a5568;
+  overflow: hidden;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.consolidator-step:hover {
+  border-color: #f6ad55;
+  box-shadow: 0 4px 16px rgba(246, 173, 85, 0.18);
+}
+
+.consolidator-step-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.consolidator-step-header:hover {
+  background-color: #374151;
+}
+
+.consolidator-step-header.active {
+  background-color: #374151;
+  border-bottom: 2px solid #f6ad55;
+}
+
+.consolidator-step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #4a5568;
+  color: #f7fafc;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.consolidator-step-title {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f7fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.consolidator-badge {
+  background: #f6ad55;
+  color: #1a202c;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.consolidator-step-status {
+  margin-left: auto;
+}
+
+.consolidator-step-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: default;
+  accent-color: #48bb78;
+}
+
+.consolidator-step-content {
+  padding: 20px 24px 24px;
+}
+
+.consolidator-step-content.hidden {
+  display: none;
+}
+
+/* ── Buttons ── */
+
+.consolidator-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f7fafc;
+  background: #f6ad55;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
+}
+
+.consolidator-btn:hover:not(:disabled) {
+  background: #ed8936;
+}
+
+.consolidator-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.consolidator-btn--secondary {
+  background: #4a5568;
+  border: 1px solid #718096;
+}
+
+.consolidator-btn--secondary:hover:not(:disabled) {
+  background: #5a6478;
+}
+
+.consolidator-btn--tiny {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.consolidator-btn--large {
+  padding: 14px 28px;
+  font-size: 1.05rem;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.consolidator-btn--start {
+  background: linear-gradient(135deg, #f6ad55, #ed8936);
+}
+
+.consolidator-btn--start:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+}
+
+.consolidator-btn--stop {
+  background: linear-gradient(135deg, #fc8181, #e53e3e);
+}
+
+.consolidator-btn--stop:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e53e3e, #c53030);
+}
+
+/* ── Wallet connect list ── */
+
+.consolidator-wallet-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.consolidator-wallet-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #374151;
+  border: 1px solid #4a5568;
+  border-radius: 10px;
+  color: #f7fafc;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.consolidator-wallet-item:hover {
+  background: #4a5568;
+  border-color: #f6ad55;
+}
+
+.consolidator-wallet-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* ── Connected info ── */
+
+.consolidator-connected-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.consolidator-connected-address {
+  font-size: 0.9rem;
+  color: #68d391;
+  font-family: 'Courier New', monospace;
+}
+
+/* ── Destination section ── */
+
+.consolidator-destination-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.consolidator-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.consolidator-radio-label input[type='radio'] {
+  accent-color: #f6ad55;
+  width: 16px;
+  height: 16px;
+}
+
+.consolidator-address-preview {
+  margin-top: 8px;
+  margin-left: 26px;
+  padding: 10px 14px;
+  background: #1a202c;
+  border-radius: 8px;
+  border: 1px solid #4a5568;
+}
+
+.consolidator-address-label {
+  font-size: 0.8rem;
+  color: #a0aec0;
+  margin-right: 8px;
+}
+
+.consolidator-address-value {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #68d391;
+  word-break: break-all;
+}
+
+.consolidator-custom-address {
+  margin-top: 10px;
+  margin-left: 26px;
+}
+
+.consolidator-address-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 8px;
+  color: #f7fafc;
+  font-family: 'Courier New', monospace;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.consolidator-address-input:focus {
+  border-color: #f6ad55;
+}
+
+.consolidator-address-input.error {
+  border-color: #fc8181;
+}
+
+.consolidator-error-text {
+  font-size: 0.85rem;
+  color: #fc8181;
+  margin-top: 4px;
+}
+
+.consolidator-success-text {
+  font-size: 0.85rem;
+  color: #68d391;
+  margin-top: 4px;
+}
+
+.consolidator-hint {
+  font-size: 0.82rem;
+  color: #718096;
+  margin-top: 4px;
+}
+
+.consolidator-hint--warn {
+  color: #ed8936;
+}
+
+/* ── Controls section ── */
+
+.consolidator-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.consolidator-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.consolidator-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.consolidator-number-input {
+  width: 120px;
+  padding: 8px 12px;
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 8px;
+  color: #f7fafc;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.consolidator-number-input:focus {
+  border-color: #f6ad55;
+}
+
+.consolidator-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e2e8f0;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.consolidator-checkbox-label input[type='checkbox'] {
+  accent-color: #f6ad55;
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Wallet checkbox list ── */
+
+.consolidator-wallet-checkboxes {
+  margin-top: 10px;
+  margin-left: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.consolidator-wallet-check-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.consolidator-wallet-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.consolidator-wallet-checkbox-row input[type='checkbox'] {
+  accent-color: #f6ad55;
+  width: 14px;
+  height: 14px;
+}
+
+.consolidator-wallet-label {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.consolidator-wallet-badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.badge--success {
+  background: #2f855a;
+  color: #c6f6d5;
+}
+
+.badge--skipped {
+  background: #4a5568;
+  color: #a0aec0;
+}
+
+.badge--error {
+  background: #c53030;
+  color: #fed7d7;
+}
+
+/* ── Summary card ── */
+
+.consolidator-summary-card {
+  padding: 14px 18px;
+  background: #1a202c;
+  border-radius: 10px;
+  border: 1px solid #4a5568;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.consolidator-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.consolidator-summary-label {
+  font-size: 0.85rem;
+  color: #a0aec0;
+  min-width: 120px;
+}
+
+.consolidator-summary-value {
+  font-size: 0.9rem;
+  color: #f7fafc;
+  font-weight: 500;
+}
+
+.consolidator-address-mono {
+  font-family: 'Courier New', monospace;
+  color: #68d391;
+}
+
+/* ── Preview card ── */
+
+.consolidator-preview-card {
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.consolidator-preview-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f6ad55;
+  margin: 0 0 12px 0;
+}
+
+.consolidator-preview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.consolidator-preview-stat {
+  background: #2d3748;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.consolidator-preview-stat-label {
+  font-size: 0.75rem;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.consolidator-preview-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f7fafc;
+}
+
+.consolidator-preview-stat-sub {
+  font-size: 0.75rem;
+  color: #a0aec0;
+}
+
+.consolidator-preview-wallets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.consolidator-preview-wallet-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #2d3748;
+  font-size: 0.82rem;
+}
+
+.consolidator-preview-wallet-row.empty {
+  opacity: 0.5;
+}
+
+.consolidator-preview-wallet-addr {
+  font-family: 'Courier New', monospace;
+  color: #a0aec0;
+}
+
+.consolidator-preview-wallet-bal {
+  color: #68d391;
+  font-weight: 500;
+}
+
+/* ── Action row ── */
+
+.consolidator-action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Requirements list ── */
+
+.consolidator-requirements {
+  margin-top: 4px;
+}
+
+.consolidator-requirements-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.consolidator-requirements-list li {
+  font-size: 0.85rem;
+  color: #718096;
+  padding-left: 4px;
+}
+
+.consolidator-requirements-list li.met {
+  color: #68d391;
+}
+
+/* ── Console ── */
+
+.consolidator-console {
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.consolidator-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #4a5568;
+}
+
+.consolidator-console-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #a0aec0;
+}
+
+.consolidator-console-logs {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+}
+
+.consolidator-console-empty {
+  color: #4a5568;
+  font-style: italic;
+}
+
+.consolidator-console-log {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  line-height: 1.5;
+}
+
+.consolidator-console-time {
+  color: #4a5568;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.consolidator-console-message {
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+}
+
+.consolidator-console-link {
+  color: #63b3ed;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  flex-shrink: 0;
+}
+
+.consolidator-console-link:hover {
+  color: #90cdf4;
+}
+
+/* ── Modal ── */
+
+.consolidator-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.consolidator-modal-content {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.consolidator-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid #4a5568;
+}
+
+.consolidator-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f7fafc;
+}
+
+.consolidator-modal-close {
+  background: none;
+  border: none;
+  color: #a0aec0;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.consolidator-modal-close:hover {
+  color: #f7fafc;
+}
+
+.consolidator-modal-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.consolidator-modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid #4a5568;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.consolidator-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.consolidator-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 4px;
+}
+
+/* ── Scrollbar styling ── */
+
+.consolidator-console-logs::-webkit-scrollbar,
+.consolidator-preview-wallets::-webkit-scrollbar {
+  width: 6px;
+}
+
+.consolidator-console-logs::-webkit-scrollbar-track,
+.consolidator-preview-wallets::-webkit-scrollbar-track {
+  background: #1a202c;
+}
+
+.consolidator-console-logs::-webkit-scrollbar-thumb,
+.consolidator-preview-wallets::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
+}
+
+.consolidator-console-logs::-webkit-scrollbar-thumb:hover,
+.consolidator-preview-wallets::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}

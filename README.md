@@ -69,34 +69,33 @@ finetrader.com/
 ├── docs/reference/       # Upstream API specs (Satflow OpenAPI)
 ├── public/               # Static assets served as-is (index.html, favicon, manifest)
 ├── src/
-│   ├── pages/            # Route-level views (one per URL)
-│   ├── components/       # Reusable UI
-│   │   └── layout/       # Trading UI: wallets, collections, PSBT signing, dispatch
-│   ├── context/          # React context (theme, app state)
-│   ├── hooks/            # Custom hooks (wallet connect, localStorage)
-│   ├── modules/          # Feature modules (bitprint wallet integration)
-│   ├── utils/            # Core logic: auto-trading, Bitcoin/PSBT, mempool, APIs
-│   ├── assets/           # Images, fonts, SVGs
-│   ├── App.js            # Route definitions
-│   ├── index.js          # App entry point + wallet providers
-│   └── setupProxy.js     # Dev server: mounts server/ handlers on /api/*
+│   ├── index.js          # Entry point: MetaMask guards + root providers
+│   ├── setupProxy.js     # Dev server: mounts server/ handlers on /api/*
+│   ├── app/              # App shell: routes (App.jsx), ErrorBoundary, theme context
+│   ├── pages/            # One folder per route, with its CSS and page-only helpers
+│   ├── features/
+│   │   ├── wallet/       # Wallet connect, proxy wallet generation/selection, funding (Dispatch)
+│   │   ├── marketplace/  # Collection browser, collection bids, manual buy/sell (Satflow)
+│   │   ├── psbt/         # PSBT create/sign tools (legacy /home workspace)
+│   │   └── explorer/     # Inscription and UTXO explorers (legacy /home workspace)
+│   ├── trading/          # Auto-trade engine + Satflow / ord.net trading logic
+│   ├── lib/              # UI-free helpers: keys & PSBT signing, mempool URLs, UniSat proxy URLs
+│   ├── styles/           # global.css (applies app-wide)
+│   └── assets/           # Images, fonts, SVGs
 ├── craco.config.js       # Webpack/Jest overrides (Node polyfills, ESM transforms)
 └── vercel.json           # Vercel build config + API rewrites
 ```
 
 ### Key `src/` areas
 
-- **`pages/`** — Top-level screens wired in `App.js`. `AutoTrade.jsx` is the core automated trading UI.
-- **`components/layout/`** — Trading building blocks: wallet management, collection browser, PSBT creation/signing, buy/sell dispatch.
-- **`utils/`** — Business logic separated from UI:
-  - `simplifiedAutoTrading.js` / `autoTradingUtils.js` — automated buy/sell strategies (Satflow)
+- **`pages/`** — Route screens wired in `app/App.jsx`. `AutoTrade/` is the core automated trading UI; `Homepage/` is the legacy Golden Layout workspace.
+- **`features/`** — UI shared across pages, grouped by domain (wallet, marketplace, PSBT tools, explorers).
+- **`trading/`** — Business logic for trading:
+  - `simplifiedAutoTrading.js` — auto-trade strategy engine (cycles, listing, buyer selection)
+  - `autoTradingUtils.js` — Satflow API calls, secure purchase/listing flows, fee transaction, balances
   - `ordNetTradingUtils.js` — ord.net exchange integration
   - `tradingFeeUtils.js` — trading fee constants and cost estimates
-  - `bitcoinUtils.js` — Bitcoin key derivation and PSBT signing
-  - `extractorUtils.js` — inscription UTXO extraction
-  - `consolidatorUtils.js` — wallet UTXO consolidation
-  - `mempoolProvider.js` — mempool API abstraction
-  - `unisatProxy.js` — `/api/unisat` URL builder
+- **`lib/`** — `bitcoinUtils.js` (proxy wallet key derivation, PSBT signing), `mempoolProvider.js` (mempool.space / Blockstream URLs), `unisatProxy.js` (`/api/unisat` URLs)
 
 ## Scripts
 

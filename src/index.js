@@ -1,11 +1,16 @@
+/**
+ * App entry point: MetaMask interference guards, then the root providers
+ * (router + ord-connect wallet state) around <App />.
+ *
+ * Note: every page is statically imported by App, so all page CSS is bundled
+ * and applied globally regardless of the current route.
+ */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-// CSS is now loaded per-page instead of globally
-import App from './App';
+import App from './app/App';
 import { BrowserRouter } from 'react-router-dom';
 import { OrdConnectProvider } from '@ordzaar/ord-connect';
-import { AppProvider } from './context/appContext';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary from './app/ErrorBoundary';
 
 // AGGRESSIVELY block MetaMask from interfering with Bitcoin app
 // This is a Bitcoin-only application and should not use Ethereum wallets
@@ -98,11 +103,9 @@ if (rootElement) {
     <React.StrictMode>
       <ErrorBoundary>
         <BrowserRouter>
-          <AppProvider>
-            <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-              <App />
-            </OrdConnectProvider>
-          </AppProvider>
+          <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
+            <App />
+          </OrdConnectProvider>
         </BrowserRouter>
       </ErrorBoundary>
     </React.StrictMode>

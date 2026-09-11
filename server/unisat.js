@@ -7,7 +7,7 @@
  *   -> https://open-api.unisat.io/v1/indexer/<indexer-path>?cursor=0&size=16
  *
  * Examples: path=address/bc1p.../inscription-utxo-data, path=utxo/<txid>/<vout>
- * Frontend URL builder: src/utils/unisatProxy.js
+ * Frontend URL builder: src/lib/unisatProxy.js
  */
 const { getUnisatApiKey } = require('./lib/env');
 const http = require('./lib/http');
