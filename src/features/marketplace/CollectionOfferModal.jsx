@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  useOrdConnect,
-  useSign,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, useSign } from '@ordzaar/ord-connect';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
+import {
+  loadSelectedProxyWallet,
+  clearSelectedProxyWallet,
+} from '../wallet/proxyWalletStorage';
 import {
   signPsbtWithProxyWallet,
   derivePublicKeyFromPrivateKey,
@@ -76,8 +76,7 @@ function DetailRows({ data, excludeKeys = [] }) {
   ));
 }
 
-// Inner component that uses the hooks
-const CollectionOfferModalInner = ({
+const CollectionOfferModal = ({
   glEventHub,
   collectionSymbol,
   isOpen,
@@ -111,21 +110,10 @@ const CollectionOfferModalInner = ({
 
   // Restore selected wallet state on mount (only once)
   useEffect(() => {
-    const storedWallet = localStorage.getItem('selected-proxy-wallet');
-    if (storedWallet) {
-      try {
-        const walletData = JSON.parse(storedWallet);
-        const restoredWallet = {
-          index: walletData.index,
-          address: walletData.address,
-          publicKey: walletData.publicKey,
-          privateKey: walletData.privateKey,
-        };
-        setSelectedWallet(restoredWallet);
-        setUseProxyWallet(true);
-      } catch (err) {
-        console.error('Error restoring wallet from localStorage:', err);
-      }
+    const restoredWallet = loadSelectedProxyWallet();
+    if (restoredWallet) {
+      setSelectedWallet(restoredWallet);
+      setUseProxyWallet(true);
     }
     // Don't emit request-wallet-state here to avoid infinite loops
     // Wallet state will be set via wallet-selected events
@@ -141,7 +129,7 @@ const CollectionOfferModalInner = ({
         wallet &&
         (!selectedWallet || selectedWallet.index !== wallet.index)
       ) {
-        console.log('CollectionOfferModal: Wallet selected:', wallet);
+        console.log('CollectionOfferModal: Wallet selected:', wallet?.index);
         setSelectedWallet(wallet);
         setUseProxyWallet(true);
       }
@@ -154,7 +142,7 @@ const CollectionOfferModalInner = ({
         setOfferPrice('');
         setError('');
         setSuccess('');
-        localStorage.removeItem('selected-proxy-wallet');
+        clearSelectedProxyWallet();
       }
     };
 
@@ -164,7 +152,7 @@ const CollectionOfferModalInner = ({
       setOfferPrice('');
       setError('');
       setSuccess('');
-      localStorage.removeItem('selected-proxy-wallet');
+      clearSelectedProxyWallet();
     };
 
     glEventHub.on('wallet-selected', handleWalletSelect);
@@ -1142,25 +1130,6 @@ const CollectionOfferModalInner = ({
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const CollectionOfferModal = ({
-  glEventHub,
-  collectionSymbol,
-  isOpen,
-  onClose,
-}) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <CollectionOfferModalInner
-        glEventHub={glEventHub}
-        collectionSymbol={collectionSymbol}
-        isOpen={isOpen}
-        onClose={onClose}
-      />
-    </OrdConnectProvider>
   );
 };
 

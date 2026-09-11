@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  useOrdConnect,
-  useSign,
-  useSendV2,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, useSign, useSendV2 } from '@ordzaar/ord-connect';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
 import {
@@ -13,8 +8,7 @@ import {
 } from '../../lib/mempoolProvider';
 import { truncateMiddle } from '../../lib/format';
 
-// Inner component that uses the hooks
-const SignPSBTInner = ({ glEventHub }) => {
+const SignPSBT = ({ glEventHub }) => {
   const [psbtInput, setPsbtInput] = useState('');
   const [signedPsbt, setSignedPsbt] = useState('');
   const [txId, setTxId] = useState('');
@@ -41,7 +35,7 @@ const SignPSBTInner = ({ glEventHub }) => {
   // Listen for wallet selection events from WalletManagement
   useEffect(() => {
     const handleWalletSelect = (wallet) => {
-      console.log('SignPSBT: Wallet selected:', wallet);
+      console.log('SignPSBT: Wallet selected:', wallet?.index);
       setSelectedWallet(wallet);
     };
 
@@ -624,15 +618,6 @@ const SignPSBTInner = ({ glEventHub }) => {
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const SignPSBT = ({ glContainer, glEventHub }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <SignPSBTInner glContainer={glContainer} glEventHub={glEventHub} />
-    </OrdConnectProvider>
   );
 };
 

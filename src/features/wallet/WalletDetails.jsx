@@ -26,7 +26,7 @@ const WalletDetails = ({
   useEffect(() => {
     // Listen for wallet selection events from WalletManagement (for dynamic updates)
     const handleWalletSelect = (wallet) => {
-      console.log('WalletDetails: Wallet selected via event:', wallet);
+      console.log('WalletDetails: Wallet selected via event:', wallet?.index);
       // Only update if no prop is provided
       if (!walletProp) {
         setSelectedWallet(wallet);

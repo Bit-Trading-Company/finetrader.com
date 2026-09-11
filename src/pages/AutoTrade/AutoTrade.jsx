@@ -5,12 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
-import { useConnect } from '../../features/wallet/useConnect.ts';
-import {
-  useBitprint,
-  BitprintProvider,
-} from '../../features/wallet/bitprint.tsx';
+import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import Dispatch from '../../features/wallet/Dispatch';
 import OrdinalsCollections from '../../features/marketplace/OrdinalsCollections';
@@ -47,8 +42,7 @@ const StepStatus = {
   IN_PROGRESS: 'âŸ³',
 };
 
-// Inner component that uses the hooks
-const AutoTradeInner = () => {
+const AutoTrade = () => {
   // Step states
   const [currentStep, setCurrentStep] = useState(1);
   const [stepStatuses, setStepStatuses] = useState({
@@ -59,26 +53,14 @@ const AutoTradeInner = () => {
     5: null, // Start Trading
   });
 
-  // Wallet connection state
+  // Wallet connection state (connect/disconnect reload the page on success)
   const {
     network,
     address: connectedAddress,
-    disconnectWallet,
-  } = useOrdConnect();
-
-  const { globalState: bitprint } = useBitprint();
-  const { connectWallet } = useConnect({
-    onClose: () => {},
-    onError: (err) => {
-      console.error('Connection error:', err);
-    },
-  });
-
-  // Check if wallet is connected
-  const isWalletConnected =
-    connectedAddress &&
-    connectedAddress.ordinals &&
-    !(bitprint && bitprint.isDisconnected);
+    isWalletConnected,
+    connect,
+    disconnect,
+  } = useWalletConnection();
 
   // Step 2: Wallet Management
   const [wallets, setWallets] = useState([]);
@@ -411,43 +393,19 @@ const AutoTradeInner = () => {
     // when the user manually switches back to mempool.space.
   }, [mempoolProvider]);
 
-  // Handle wallet connection
+  // Handle wallet connection (the page reloads on success)
   const handleConnect = async (wallet) => {
     try {
-      if (bitprint) {
-        bitprint.isDisconnected = false;
-      }
-      localStorage.removeItem('wallet-disconnected');
-      const result = await Promise.race([
-        connectWallet(wallet),
-        new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)),
-      ]);
-      if (typeof result !== 'string') {
-        console.log('Wallet connected successfully');
-        // Always refresh the page after a successful wallet connection
-        // This ensures all components see the new connection state
-        window.location.reload();
-      }
+      await connect(wallet);
     } catch (error) {
       console.error('Wallet connection error:', error);
     }
   };
 
-  // Handle disconnect
-  const handleDisconnect = async () => {
+  // Handle disconnect (the page reloads)
+  const handleDisconnect = () => {
     try {
-      console.log('Attempting to disconnect wallet');
-
-      if (bitprint && bitprint.disconnect) {
-        bitprint.disconnect();
-      }
-
-      localStorage.setItem('wallet-disconnected', 'true');
-      disconnectWallet();
-
-      // Always refresh the page after disconnecting the wallet
-      // This ensures all components reset to the disconnected state
-      window.location.reload();
+      disconnect();
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
     }
@@ -2238,17 +2196,6 @@ const AutoTradeInner = () => {
         />
       </div>
     </div>
-  );
-};
-
-// Main component with providers
-const AutoTrade = () => {
-  return (
-    <BitprintProvider>
-      <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-        <AutoTradeInner />
-      </OrdConnectProvider>
-    </BitprintProvider>
   );
 };
 

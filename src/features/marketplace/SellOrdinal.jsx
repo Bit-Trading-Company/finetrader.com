@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import {
-  useOrdConnect,
-  useSign,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, useSign } from '@ordzaar/ord-connect';
 import * as bitcoin from 'bitcoinjs-lib';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
+import {
+  loadSelectedProxyWallet,
+  clearSelectedProxyWallet,
+} from '../wallet/proxyWalletStorage';
 import {
   signPsbtWithProxyWallet,
   derivePublicKeyFromPrivateKey,
@@ -21,11 +21,7 @@ if (typeof window !== 'undefined') {
   window.bitcoin = bitcoin;
 }
 
-// Inner component that uses the hooks
-const SellOrdinalInner = ({
-  glEventHub,
-  selectedOrdinal: selectedOrdinalProp,
-}) => {
+const SellOrdinal = ({ glEventHub, selectedOrdinal: selectedOrdinalProp }) => {
   const [selectedOrdinal, setSelectedOrdinal] = useState(null);
   const [getListingResponse, setGetListingResponse] = useState(null);
   const [unsignedPsbt, setUnsignedPsbt] = useState('');
@@ -90,26 +86,10 @@ const SellOrdinalInner = ({
   // Restore selected wallet state on mount
   useEffect(() => {
     // Check if there's a stored wallet selection
-    const storedWallet = localStorage.getItem('selected-proxy-wallet');
-    if (storedWallet) {
-      try {
-        const walletData = JSON.parse(storedWallet);
-        // Reconstruct wallet object from stored data
-        const restoredWallet = {
-          index: walletData.index,
-          address: walletData.address,
-          publicKey: walletData.publicKey,
-          privateKey: walletData.privateKey,
-        };
-        setSelectedWallet(restoredWallet);
-        setUseProxyWallet(true);
-        console.log(
-          'SellOrdinal: Restored wallet selection from localStorage:',
-          restoredWallet
-        );
-      } catch (err) {
-        console.error('Error restoring wallet from localStorage:', err);
-      }
+    const restoredWallet = loadSelectedProxyWallet();
+    if (restoredWallet) {
+      setSelectedWallet(restoredWallet);
+      setUseProxyWallet(true);
     }
 
     // Also request current wallet state from WalletManagement
@@ -127,7 +107,10 @@ const SellOrdinalInner = ({
 
     // Listen for proxy wallet state transfer from SellOrdinals
     const handleProxyWalletStateTransfer = (state) => {
-      console.log('SellOrdinal: Proxy wallet state transferred:', state);
+      console.log(
+        'SellOrdinal: Proxy wallet state transferred:',
+        state?.selectedWallet?.index
+      );
       if (state.selectedWallet) {
         setSelectedWallet(state.selectedWallet);
         setUseProxyWallet(state.useProxyWallet || true); // Default to true if wallet is selected
@@ -139,7 +122,7 @@ const SellOrdinalInner = ({
 
     // Listen for wallet selection events from WalletManagement
     const handleWalletSelect = (wallet) => {
-      console.log('SellOrdinal: Wallet selected:', wallet);
+      console.log('SellOrdinal: Wallet selected:', wallet?.index);
       setSelectedWallet(wallet);
       // Auto-switch to proxy wallet when first selected
       setUseProxyWallet(true);
@@ -162,7 +145,7 @@ const SellOrdinalInner = ({
         setPriceInSats('');
         setPsbtWalletInfo(null);
         // Clear persisted wallet selection
-        localStorage.removeItem('selected-proxy-wallet');
+        clearSelectedProxyWallet();
       }
     };
 
@@ -181,7 +164,7 @@ const SellOrdinalInner = ({
       setPriceInSats('');
       setPsbtWalletInfo(null);
       // Clear persisted wallet selection
-      localStorage.removeItem('selected-proxy-wallet');
+      clearSelectedProxyWallet();
     };
 
     if (glEventHub) {
@@ -1137,19 +1120,6 @@ const SellOrdinalInner = ({
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const SellOrdinal = ({ glContainer, glEventHub, selectedOrdinal }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <SellOrdinalInner
-        glContainer={glContainer}
-        glEventHub={glEventHub}
-        selectedOrdinal={selectedOrdinal}
-      />
-    </OrdConnectProvider>
   );
 };
 

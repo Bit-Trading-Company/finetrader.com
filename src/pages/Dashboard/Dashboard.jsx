@@ -1,20 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import FineBuyer from '../../features/marketplace/FineBuyer';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
-import { useConnect } from '../../features/wallet/useConnect.ts';
-import {
-  useBitprint,
-  BitprintProvider,
-} from '../../features/wallet/bitprint.tsx';
+import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import './Dashboard.css';
 import lineImage from '../../assets/images/png/line.png';
 import { truncateMiddle, shortenAddress } from '../../lib/format';
 import { useEventHub } from '../../lib/eventHub';
 import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
 
-// Inner component that uses the hooks
-const DashboardInner = () => {
+const Dashboard = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const dropdownRef = useRef(null);
@@ -24,29 +18,15 @@ const DashboardInner = () => {
 
   const {
     network,
-    disconnectWallet,
     address: connectedAddress,
     publicKey: connectedPublicKey,
     format: connectedFormat,
-    wallet: connectedWallet,
     chain,
-    updateNetwork,
-  } = useOrdConnect();
-
-  const { globalState: bitprint } = useBitprint();
-
-  const { connectWallet } = useConnect({
-    onClose: () => {},
-    onError: (err) => {
-      setErrorMessage(err);
-    },
-  });
-
-  // Check if wallet is connected
-  const isWalletConnected =
-    connectedAddress &&
-    connectedAddress.ordinals &&
-    !(bitprint && bitprint.isDisconnected);
+    isWalletConnected,
+    connect,
+    disconnect,
+    changeNetwork,
+  } = useWalletConnection({ onError: setErrorMessage });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -62,35 +42,17 @@ const DashboardInner = () => {
     };
   }, []);
 
-  // Handle wallet connection
+  // Handle wallet connection (the page reloads on success)
   const handleConnect = async (wallet) => {
-    console.log('Attempting to connect wallet:', wallet);
     setErrorMessage('');
-
-    if (bitprint) {
-      bitprint.isDisconnected = false;
-    }
-
-    localStorage.removeItem('wallet-disconnected');
-
     try {
-      const walletConnectPromise = connectWallet(wallet);
-      const result = await Promise.race([
-        walletConnectPromise,
-        new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)),
-      ]);
-
-      if (typeof result === 'string') {
+      const status = await connect(wallet);
+      if (status === 'timeout') {
         setErrorMessage(
           'No wallet pop-up? The extension is not responding. Try reloading your browser.'
         );
-      } else {
-        console.log('Wallet connected successfully:', result);
+      } else if (status === 'connected') {
         setIsDropdownOpen(false);
-
-        // Always refresh the page after a successful wallet connection
-        // This ensures all components see the new connection state
-        window.location.reload();
       }
     } catch (error) {
       console.error('Wallet connection error:', error);
@@ -98,22 +60,11 @@ const DashboardInner = () => {
     }
   };
 
-  // Handle disconnect
-  const handleDisconnect = async () => {
+  // Handle disconnect (the page reloads)
+  const handleDisconnect = () => {
     try {
-      console.log('Attempting to disconnect wallet');
-
-      if (bitprint && bitprint.disconnect) {
-        bitprint.disconnect();
-      }
-
-      localStorage.setItem('wallet-disconnected', 'true');
-      disconnectWallet();
       setIsDropdownOpen(false);
-
-      // Always refresh the page after disconnecting the wallet
-      // This ensures all components reset to the disconnected state
-      window.location.reload();
+      disconnect();
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
       setErrorMessage('Failed to disconnect wallet. Please try again.');
@@ -121,16 +72,7 @@ const DashboardInner = () => {
   };
 
   // Handle network change
-  const handleNetworkChange = async (event) => {
-    const selectedNetwork = event.target.value;
-    updateNetwork(selectedNetwork);
-
-    try {
-      await connectWallet(connectedWallet);
-    } catch {
-      // Error reconnecting wallet
-    }
-  };
+  const handleNetworkChange = (event) => changeNetwork(event.target.value);
 
   return (
     <div className="dashboard-container">
@@ -268,17 +210,6 @@ const DashboardInner = () => {
         </div>
       </div>
     </div>
-  );
-};
-
-// Main component with providers
-const Dashboard = () => {
-  return (
-    <BitprintProvider>
-      <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-        <DashboardInner />
-      </OrdConnectProvider>
-    </BitprintProvider>
   );
 };
 

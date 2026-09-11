@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
-import {
-  useOrdConnect,
-  useSignMessage,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, useSignMessage } from '@ordzaar/ord-connect';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
 import { truncateMiddle } from '../../lib/format';
 
-// Inner component that uses the hooks
-const CreatePSBTInner = ({ glEventHub }) => {
+const CreatePSBT = ({ glEventHub }) => {
   const [inputs, setInputs] = useState([
     {
       txid: '',
@@ -145,7 +140,7 @@ const CreatePSBTInner = ({ glEventHub }) => {
   // Listen for wallet selection events from WalletManagement
   useEffect(() => {
     const handleWalletSelect = (wallet) => {
-      console.log('CreatePSBT: Wallet selected:', wallet);
+      console.log('CreatePSBT: Wallet selected:', wallet?.index);
       setSelectedWallet(wallet);
     };
 
@@ -900,15 +895,6 @@ const CreatePSBTInner = ({ glEventHub }) => {
         {success && <div className="success-message">{success}</div>}
       </div>
     </div>
-  );
-};
-
-// Main component that wraps the inner component with providers
-const CreatePSBT = ({ glContainer, glEventHub }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <CreatePSBTInner glContainer={glContainer} glEventHub={glEventHub} />
-    </OrdConnectProvider>
   );
 };
 

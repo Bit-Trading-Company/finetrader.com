@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
-import {
-  useOrdConnect,
-  useSign,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, useSign } from '@ordzaar/ord-connect';
 import { useWalletDisconnectState } from './useWalletDisconnectState';
 import {
   getMempoolAddressUtxoUrl,
@@ -54,8 +50,7 @@ const detectAddressFormat = (address) => {
   return 'unknown';
 };
 
-// Inner component that uses the hooks
-const DispatchInner = ({ isOpen, onClose, proxyWallets }) => {
+const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
   const {
     address: connectedAddress,
     publicKey: connectedPublicKey,
@@ -1073,19 +1068,6 @@ const DispatchInner = ({ isOpen, onClose, proxyWallets }) => {
         </div>
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <DispatchInner
-        isOpen={isOpen}
-        onClose={onClose}
-        proxyWallets={proxyWallets}
-      />
-    </OrdConnectProvider>
   );
 };
 

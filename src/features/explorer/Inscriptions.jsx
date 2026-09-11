@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
+import { useOrdConnect } from '@ordzaar/ord-connect';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
 
-// Inner component that uses the hooks
-const InscriptionsInner = ({ glEventHub }) => {
+const Inscriptions = ({ glEventHub }) => {
   const { network, address: connectedAddress } = useOrdConnect();
   const [selectedWallet, setSelectedWallet] = useState(null);
   const isDisconnected = useWalletDisconnectState();
@@ -97,7 +96,7 @@ const InscriptionsInner = ({ glEventHub }) => {
   // Listen for wallet selection events from WalletManagement
   useEffect(() => {
     const handleWalletSelect = (wallet) => {
-      console.log('Inscriptions: Wallet selected:', wallet);
+      console.log('Inscriptions: Wallet selected:', wallet?.index);
       setSelectedWallet(wallet);
       setInscriptions([]);
       setPagination((prev) => ({ ...prev, offset: 0, total: 0 }));
@@ -535,15 +534,6 @@ const InscriptionsInner = ({ glEventHub }) => {
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const Inscriptions = ({ glContainer, glEventHub }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <InscriptionsInner glContainer={glContainer} glEventHub={glEventHub} />
-    </OrdConnectProvider>
   );
 };
 

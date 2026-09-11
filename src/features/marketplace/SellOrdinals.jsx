@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
+import { useOrdConnect } from '@ordzaar/ord-connect';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
 import WalletStatus from '../wallet/WalletStatus';
+import {
+  loadSelectedProxyWallet,
+  clearSelectedProxyWallet,
+} from '../wallet/proxyWalletStorage';
 import {
   derivePublicKeyFromPrivateKey,
   generateAddressFromPublicKey,
@@ -9,8 +13,7 @@ import {
 import { fetchWalletOrdinals } from '../../trading/autoTradingUtils';
 import { formatSatsAsBtc, formatCompactNumber } from '../../lib/format';
 
-// Inner component that uses the hooks
-const SellOrdinalsInner = ({ glEventHub }) => {
+const SellOrdinals = ({ glEventHub }) => {
   const { address: connectedAddress, network: connectedNetwork } =
     useOrdConnect();
   const isDisconnected = useWalletDisconnectState();
@@ -97,26 +100,10 @@ const SellOrdinalsInner = ({ glEventHub }) => {
   // Restore selected wallet state on mount
   useEffect(() => {
     // Check if there's a stored wallet selection
-    const storedWallet = localStorage.getItem('selected-proxy-wallet');
-    if (storedWallet) {
-      try {
-        const walletData = JSON.parse(storedWallet);
-        // Reconstruct wallet object from stored data
-        const restoredWallet = {
-          index: walletData.index,
-          address: walletData.address,
-          publicKey: walletData.publicKey,
-          privateKey: walletData.privateKey,
-        };
-        setSelectedWallet(restoredWallet);
-        setUseProxyWallet(true);
-        console.log(
-          'SellOrdinals: Restored wallet selection from localStorage:',
-          restoredWallet
-        );
-      } catch (err) {
-        console.error('Error restoring wallet from localStorage:', err);
-      }
+    const restoredWallet = loadSelectedProxyWallet();
+    if (restoredWallet) {
+      setSelectedWallet(restoredWallet);
+      setUseProxyWallet(true);
     }
 
     // Also request current wallet state from WalletManagement
@@ -128,7 +115,7 @@ const SellOrdinalsInner = ({ glEventHub }) => {
   // Listen for wallet selection events from WalletManagement
   useEffect(() => {
     const handleWalletSelect = (wallet) => {
-      console.log('SellOrdinals: Wallet selected:', wallet);
+      console.log('SellOrdinals: Wallet selected:', wallet?.index);
       setSelectedWallet(wallet);
       // Auto-switch to proxy wallet when first selected
       setUseProxyWallet(true);
@@ -147,7 +134,7 @@ const SellOrdinalsInner = ({ glEventHub }) => {
         setOwnerAddress(null);
         setItems([]);
         // Clear persisted wallet selection
-        localStorage.removeItem('selected-proxy-wallet');
+        clearSelectedProxyWallet();
       }
     };
 
@@ -159,7 +146,7 @@ const SellOrdinalsInner = ({ glEventHub }) => {
       setOwnerAddress(null);
       setItems([]);
       // Clear persisted wallet selection
-      localStorage.removeItem('selected-proxy-wallet');
+      clearSelectedProxyWallet();
     };
 
     if (glEventHub) {
@@ -479,15 +466,6 @@ const SellOrdinalsInner = ({ glEventHub }) => {
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const SellOrdinals = ({ glEventHub }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <SellOrdinalsInner glEventHub={glEventHub} />
-    </OrdConnectProvider>
   );
 };
 

@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import GoldenLayout from 'golden-layout';
+import { OrdConnectProvider } from '@ordzaar/ord-connect';
 // Golden Layout's own styles (previously loaded from an unpinned CDN in index.html).
-// Must stay above index.css so app styles keep overriding them.
+// Must stay above global.css so app styles keep overriding them.
 import 'golden-layout/src/css/goldenlayout-base.css';
 import 'golden-layout/src/css/goldenlayout-dark-theme.css';
-import '../../styles/global.css'; // Import Homepage styles
+import '../../styles/global.css'; // Global app styles (bundled for every route)
 
-// Import our layout components
+import { BitprintProvider } from '../../features/wallet/bitprint.tsx';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import WalletDetails from '../../features/wallet/WalletDetails';
 import Inscriptions from '../../features/explorer/Inscriptions';
@@ -20,6 +21,93 @@ import BuyOrdinal from '../../features/marketplace/BuyOrdinal';
 import Dispatcher from '../../features/psbt/Dispatcher';
 import CreatePSBT from '../../features/psbt/CreatePSBT';
 import MenuBar from './MenuBar';
+
+/**
+ * Legacy multi-panel workspace (/home) built on Golden Layout 1.x.
+ *
+ * Golden Layout mounts each panel into its own DOM node, so every panel is a
+ * separate React root outside the app's provider tree. Each panel therefore
+ * gets its own wallet providers, and panels talk to each other through
+ * Golden Layout's event hub (passed as `glEventHub`).
+ */
+
+// Golden Layout component name -> React component rendered in that panel.
+const PANEL_COMPONENTS = {
+  walletDetails: WalletDetails,
+  inscriptions: Inscriptions,
+  utxos: UTXOs,
+  signPSBT: SignPSBT,
+  walletManagement: WalletManagement,
+  walletConnect: WalletConnect,
+  buyOrdinal: BuyOrdinal,
+  ordinalsCollections: OrdinalsCollections,
+  dispatcher: Dispatcher,
+  createPSBT: CreatePSBT,
+  collectionDetails: CollectionDetails,
+};
+
+const panel = (componentName, title, extra = {}) => ({
+  type: 'component',
+  componentName,
+  title,
+  id: componentName,
+  ...extra,
+});
+
+// Built per mount: Golden Layout may mutate the config it is given.
+const createLayoutConfig = () => ({
+  content: [
+    {
+      type: 'row',
+      content: [
+        {
+          type: 'column',
+          content: [
+            {
+              type: 'stack',
+              content: [
+                panel('ordinalsCollections', 'Ordinals Collections'),
+                panel('dispatcher', 'Dispatcher'),
+              ],
+            },
+          ],
+        },
+        {
+          type: 'column',
+          content: [
+            {
+              type: 'row',
+              content: [
+                {
+                  type: 'stack',
+                  content: [
+                    panel('walletManagement', 'Wallet Management'),
+                    panel('buyOrdinal', 'Buy Ordinal'),
+                    panel('walletDetails', 'Wallet Details'),
+                  ],
+                },
+                {
+                  type: 'stack',
+                  content: [panel('walletConnect', 'Wallet Connect')],
+                },
+              ],
+            },
+            {
+              type: 'stack',
+              content: [
+                panel('createPSBT', 'Create PSBT'),
+                panel('collectionDetails', 'Collection'),
+                panel('signPSBT', 'Sign PSBT'),
+                panel('utxos', 'Explore UTXOs', { isClosable: false }),
+                panel('inscriptions', 'Inscriptions', { isClosable: false }),
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+});
 
 const Homepage = () => {
   const layoutRef = useRef(null);
@@ -37,242 +125,22 @@ const Homepage = () => {
     };
 
     window.addEventListener('resize', handleResize);
-    // Golden Layout configuration
-    const config = {
-      content: [
-        {
-          type: 'row',
-          content: [
-            {
-              type: 'column',
-              content: [
-                {
-                  type: 'stack',
-                  content: [
-                    {
-                      type: 'component',
-                      componentName: 'ordinalsCollections',
-                      title: 'Ordinals Collections',
-                      id: 'ordinalsCollections',
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'dispatcher',
-                      title: 'Dispatcher',
-                      id: 'dispatcher',
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              type: 'column',
-              content: [
-                {
-                  type: 'row',
-                  content: [
-                    {
-                      type: 'stack',
-                      content: [
-                        {
-                          type: 'component',
-                          componentName: 'walletManagement',
-                          title: 'Wallet Management',
-                          id: 'walletManagement',
-                        },
-                        {
-                          type: 'component',
-                          componentName: 'buyOrdinal',
-                          title: 'Buy Ordinal',
-                          id: 'buyOrdinal',
-                        },
-                        {
-                          type: 'component',
-                          componentName: 'walletDetails',
-                          title: 'Wallet Details',
-                          id: 'walletDetails',
-                        },
-                      ],
-                    },
-                    {
-                      type: 'stack',
-                      content: [
-                        {
-                          type: 'component',
-                          componentName: 'walletConnect',
-                          title: 'Wallet Connect',
-                          id: 'walletConnect',
-                        },
-                      ],
-                    },
-                  ],
-                },
-                {
-                  type: 'stack',
-                  content: [
-                    {
-                      type: 'component',
-                      componentName: 'createPSBT',
-                      title: 'Create PSBT',
-                      id: 'createPSBT',
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'collectionDetails',
-                      title: 'Collection',
-                      id: 'collectionDetails',
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'signPSBT',
-                      title: 'Sign PSBT',
-                      id: 'signPSBT',
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'utxos',
-                      title: 'Explore UTXOs',
-                      id: 'utxos',
-                      isClosable: false,
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'inscriptions',
-                      title: 'Inscriptions',
-                      id: 'inscriptions',
-                      isClosable: false,
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
 
-    // Create Golden Layout instance
-    const layout = new GoldenLayout(config, layoutRef.current);
+    const layout = new GoldenLayout(createLayoutConfig(), layoutRef.current);
 
-    layout.registerComponent('walletDetails', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(WalletDetails, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('inscriptions', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(Inscriptions, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('utxos', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(UTXOs, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('signPSBT', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(SignPSBT, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('walletManagement', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(WalletManagement, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('walletConnect', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(WalletConnect, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('buyOrdinal', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(BuyOrdinal, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('ordinalsCollections', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(OrdinalsCollections, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('dispatcher', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(Dispatcher, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('createPSBT', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(CreatePSBT, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('collectionDetails', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(CollectionDetails, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
+    Object.entries(PANEL_COMPONENTS).forEach(([name, Component]) => {
+      layout.registerComponent(name, function (container) {
+        const root = createRoot(container.getElement()[0]);
+        root.render(
+          <BitprintProvider>
+            <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
+              <Component glContainer={container} glEventHub={layout.eventHub} />
+            </OrdConnectProvider>
+          </BitprintProvider>
+        );
+        // Unmount after the current render/commit when the panel is destroyed.
+        container.on('destroy', () => setTimeout(() => root.unmount(), 0));
+      });
     });
 
     // Initialize the layout

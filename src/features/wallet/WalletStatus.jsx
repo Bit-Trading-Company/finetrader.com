@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
+import { useOrdConnect } from '@ordzaar/ord-connect';
 import { useWalletDisconnectState } from './useWalletDisconnectState';
+import { loadSelectedProxyWallet } from './proxyWalletStorage';
 import { shortenAddress } from '../../lib/format';
 
-// Inner component that uses the hooks
-const WalletStatusInner = ({
-  glEventHub,
-  selectedWallet,
-  onWalletSourceChange,
-}) => {
+const WalletStatus = ({ glEventHub, selectedWallet, onWalletSourceChange }) => {
   const { address: connectedAddress } = useOrdConnect();
   const [connectionState, setConnectionState] = useState(null);
   const [useProxyWallet, setUseProxyWallet] = useState(false);
@@ -17,22 +13,15 @@ const WalletStatusInner = ({
   // Restore selected wallet state on mount (only once)
   useEffect(() => {
     // Check if there's a stored wallet selection
-    const storedWallet = localStorage.getItem('selected-proxy-wallet');
-    if (storedWallet) {
-      try {
-        // Parse to validate it's valid JSON, but we don't need the data
-        JSON.parse(storedWallet);
-        // If there's a stored wallet, set useProxyWallet to true
-        setUseProxyWallet(true);
-        if (onWalletSourceChange) {
-          onWalletSourceChange(true);
-        }
-        console.log(
-          'WalletStatus: Restored proxy wallet preference from localStorage'
-        );
-      } catch (err) {
-        console.error('Error reading stored wallet:', err);
+    if (loadSelectedProxyWallet()) {
+      // If there's a stored wallet, set useProxyWallet to true
+      setUseProxyWallet(true);
+      if (onWalletSourceChange) {
+        onWalletSourceChange(true);
       }
+      console.log(
+        'WalletStatus: Restored proxy wallet preference from localStorage'
+      );
     }
 
     // Also request current wallet state from WalletManagement (only once)
@@ -45,7 +34,7 @@ const WalletStatusInner = ({
   // Listen for wallet selection events from WalletManagement
   useEffect(() => {
     const handleWalletSelect = (wallet) => {
-      console.log('WalletStatus: Wallet selected:', wallet);
+      console.log('WalletStatus: Wallet selected:', wallet?.index);
       // Auto-switch to proxy wallet when first selected
       setUseProxyWallet(true);
       if (onWalletSourceChange) {
@@ -253,19 +242,6 @@ const WalletStatusInner = ({
         </div>
       )}
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const WalletStatus = ({ glEventHub, selectedWallet, onWalletSourceChange }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <WalletStatusInner
-        glEventHub={glEventHub}
-        selectedWallet={selectedWallet}
-        onWalletSourceChange={onWalletSourceChange}
-      />
-    </OrdConnectProvider>
   );
 };
 

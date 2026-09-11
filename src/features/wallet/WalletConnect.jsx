@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useOrdConnect, Chain, OrdConnectProvider } from '@ordzaar/ord-connect';
+import { useOrdConnect, Chain } from '@ordzaar/ord-connect';
 import { useConnect } from './useConnect.ts';
-import { useBitprint, BitprintProvider } from './bitprint.tsx';
+import { useBitprint } from './bitprint.tsx';
 import { truncateMiddle } from '../../lib/format';
 import { CONNECT_WALLET_LIST } from './walletOptions';
 
@@ -21,8 +21,7 @@ import { CONNECT_WALLET_LIST } from './walletOptions';
 //   },
 // ];
 
-// Inner component that uses the hooks
-const WalletConnectInner = ({ glEventHub }) => {
+const WalletConnect = ({ glEventHub }) => {
   const [activeTab, setActiveTab] = useState('wallet');
   const [chainTab] = useState('btc');
   const [errorMessage, setErrorMessage] = useState('');
@@ -448,17 +447,6 @@ const WalletConnectInner = ({ glEventHub }) => {
         </div>
       )}
     </div>
-  );
-};
-
-// Main component that wraps the inner component with providers
-const WalletConnect = ({ glContainer, glEventHub }) => {
-  return (
-    <BitprintProvider>
-      <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-        <WalletConnectInner glContainer={glContainer} glEventHub={glEventHub} />
-      </OrdConnectProvider>
-    </BitprintProvider>
   );
 };
 

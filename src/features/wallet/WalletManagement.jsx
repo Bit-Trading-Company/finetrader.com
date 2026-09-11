@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  useOrdConnect,
-  useSignMessage,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, useSignMessage } from '@ordzaar/ord-connect';
 import { generateDeterministicWallets } from '../../lib/bitcoinUtils';
 import Dispatch from './Dispatch';
 import WalletDetails from './WalletDetails';
+import {
+  loadSelectedProxyWallet,
+  saveSelectedProxyWallet,
+  clearSelectedProxyWallet,
+} from './proxyWalletStorage';
 import { shortenAddress } from '../../lib/format';
 
-// Inner component that uses the hooks
-const WalletManagementInner = ({ glEventHub }) => {
+const WalletManagement = ({ glEventHub }) => {
   const { address: connectedAddress, wallet: connectedWallet } =
     useOrdConnect();
 
@@ -45,7 +45,7 @@ const WalletManagementInner = ({ glEventHub }) => {
         setSelectedWallet(null);
         setError(null);
         // Clear persisted wallet selection
-        localStorage.removeItem('selected-proxy-wallet');
+        clearSelectedProxyWallet();
       }
     };
 
@@ -95,31 +95,23 @@ const WalletManagementInner = ({ glEventHub }) => {
       setSelectedWallet(null);
       setError(null);
       // Clear persisted wallet selection
-      localStorage.removeItem('selected-proxy-wallet');
+      clearSelectedProxyWallet();
     }
   }, [isWalletConnected, connectedAddress, connectedWallet]);
 
   // Restore selected wallet from localStorage when wallets are generated
   useEffect(() => {
     if (wallets.length > 0 && !selectedWallet) {
-      const storedWallet = localStorage.getItem('selected-proxy-wallet');
-      if (storedWallet) {
-        try {
-          const walletData = JSON.parse(storedWallet);
-          // Find the wallet with matching index
-          const restoredWallet = wallets.find(
-            (w) => w.index === walletData.index
-          );
-          if (restoredWallet) {
-            setSelectedWallet(restoredWallet);
-            // Emit event to notify other components
-            if (glEventHub) {
-              glEventHub.emit('wallet-selected', restoredWallet);
-            }
+      const stored = loadSelectedProxyWallet();
+      if (stored) {
+        // Find the wallet with matching index
+        const restoredWallet = wallets.find((w) => w.index === stored.index);
+        if (restoredWallet) {
+          setSelectedWallet(restoredWallet);
+          // Emit event to notify other components
+          if (glEventHub) {
+            glEventHub.emit('wallet-selected', restoredWallet);
           }
-        } catch (err) {
-          console.error('Error restoring selected wallet:', err);
-          localStorage.removeItem('selected-proxy-wallet');
         }
       }
     }
@@ -188,19 +180,7 @@ const WalletManagementInner = ({ glEventHub }) => {
   const handleWalletSelect = (wallet) => {
     setSelectedWallet(wallet);
     // Store selected wallet in localStorage for persistence across navigation
-    if (wallet) {
-      localStorage.setItem(
-        'selected-proxy-wallet',
-        JSON.stringify({
-          index: wallet.index,
-          address: wallet.address,
-          publicKey: wallet.publicKey,
-          privateKey: wallet.privateKey, // Store for signing operations
-        })
-      );
-    } else {
-      localStorage.removeItem('selected-proxy-wallet');
-    }
+    saveSelectedProxyWallet(wallet);
     // Emit event to other components
     if (glEventHub) {
       glEventHub.emit('wallet-selected', wallet);
@@ -425,15 +405,6 @@ const WalletManagementInner = ({ glEventHub }) => {
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const WalletManagement = ({ glEventHub }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <WalletManagementInner glEventHub={glEventHub} />
-    </OrdConnectProvider>
   );
 };
 

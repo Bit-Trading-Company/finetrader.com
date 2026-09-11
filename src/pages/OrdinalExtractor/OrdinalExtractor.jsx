@@ -5,16 +5,8 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import {
-  useOrdConnect,
-  OrdConnectProvider,
-  useSign,
-} from '@ordzaar/ord-connect';
-import { useConnect } from '../../features/wallet/useConnect.ts';
-import {
-  useBitprint,
-  BitprintProvider,
-} from '../../features/wallet/bitprint.tsx';
+import { useSign } from '@ordzaar/ord-connect';
+import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import {
   fetchAllInscriptionUtxos,
@@ -38,7 +30,7 @@ const StepStatus = {
   IN_PROGRESS: 'in_progress',
 };
 
-const OrdinalExtractorInner = () => {
+const OrdinalExtractor = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [stepStatuses, setStepStatuses] = useState({
     1: null,
@@ -47,25 +39,17 @@ const OrdinalExtractorInner = () => {
     4: null,
   });
 
+  // Wallet connection (connect/disconnect reload the page on success)
   const {
     network,
     address: connectedAddress,
     publicKey: connectedPublicKey,
-    disconnectWallet,
-  } = useOrdConnect();
+    isWalletConnected,
+    connect,
+    disconnect,
+  } = useWalletConnection();
 
   const { sign } = useSign();
-
-  const { globalState: bitprint } = useBitprint();
-  const { connectWallet } = useConnect({
-    onClose: () => {},
-    onError: (err) => console.error('Connection error:', err),
-  });
-
-  const isWalletConnected =
-    connectedAddress &&
-    connectedAddress.ordinals &&
-    !(bitprint && bitprint.isDisconnected);
 
   // Proxy wallets from WalletManagement
   const [wallets, setWallets] = useState([]);
@@ -172,24 +156,15 @@ const OrdinalExtractorInner = () => {
 
   const handleConnect = async (wallet) => {
     try {
-      if (bitprint) bitprint.isDisconnected = false;
-      localStorage.removeItem('wallet-disconnected');
-      const result = await Promise.race([
-        connectWallet(wallet),
-        new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)),
-      ]);
-      if (typeof result !== 'string') window.location.reload();
+      await connect(wallet);
     } catch (err) {
       console.error('Wallet connection error:', err);
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     try {
-      if (bitprint?.disconnect) bitprint.disconnect();
-      localStorage.setItem('wallet-disconnected', 'true');
-      disconnectWallet();
-      window.location.reload();
+      disconnect();
     } catch (err) {
       console.error('Error disconnecting wallet:', err);
     }
@@ -979,16 +954,6 @@ const OrdinalExtractorInner = () => {
         </div>
       </div>
     </div>
-  );
-};
-
-const OrdinalExtractor = () => {
-  return (
-    <BitprintProvider>
-      <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-        <OrdinalExtractorInner />
-      </OrdConnectProvider>
-    </BitprintProvider>
   );
 };
 

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
+import { useOrdConnect } from '@ordzaar/ord-connect';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
 import { getMempoolAddressUtxoUrl } from '../../lib/mempoolProvider';
 
-// Inner component that uses the hooks
-const UTXOsInner = ({ glEventHub }) => {
+const UTXOs = ({ glEventHub }) => {
   const { network, address: connectedAddress } = useOrdConnect();
   const [selectedWallet, setSelectedWallet] = useState(null);
   const isDisconnected = useWalletDisconnectState();
@@ -69,7 +68,7 @@ const UTXOsInner = ({ glEventHub }) => {
   // Listen for wallet selection events from WalletManagement
   useEffect(() => {
     const handleWalletSelect = (wallet) => {
-      console.log('UTXOs: Wallet selected:', wallet);
+      console.log('UTXOs: Wallet selected:', wallet?.index);
       setSelectedWallet(wallet);
       setUtxos([]);
       setError(null);
@@ -498,15 +497,6 @@ const UTXOsInner = ({ glEventHub }) => {
         )}
       </div>
     </div>
-  );
-};
-
-// Wrapper component that provides the context
-const UTXOs = ({ glContainer, glEventHub }) => {
-  return (
-    <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-      <UTXOsInner glContainer={glContainer} glEventHub={glEventHub} />
-    </OrdConnectProvider>
   );
 };
 

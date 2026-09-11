@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
-import { useConnect } from '../../features/wallet/useConnect.ts';
-import {
-  useBitprint,
-  BitprintProvider,
-} from '../../features/wallet/bitprint.tsx';
+import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import {
   consolidateAllWallets,
@@ -29,7 +24,7 @@ const StepStatus = {
   IN_PROGRESS: 'in_progress',
 };
 
-const WalletConsolidatorInner = () => {
+const WalletConsolidator = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [stepStatuses, setStepStatuses] = useState({
     1: null,
@@ -38,22 +33,14 @@ const WalletConsolidatorInner = () => {
     4: null,
   });
 
+  // Wallet connection (connect/disconnect reload the page on success)
   const {
     network,
     address: connectedAddress,
-    disconnectWallet,
-  } = useOrdConnect();
-
-  const { globalState: bitprint } = useBitprint();
-  const { connectWallet } = useConnect({
-    onClose: () => {},
-    onError: (err) => console.error('Connection error:', err),
-  });
-
-  const isWalletConnected =
-    connectedAddress &&
-    connectedAddress.ordinals &&
-    !(bitprint && bitprint.isDisconnected);
+    isWalletConnected,
+    connect,
+    disconnect,
+  } = useWalletConnection();
 
   // Proxy wallets from WalletManagement
   const [wallets, setWallets] = useState([]);
@@ -177,24 +164,15 @@ const WalletConsolidatorInner = () => {
 
   const handleConnect = async (wallet) => {
     try {
-      if (bitprint) bitprint.isDisconnected = false;
-      localStorage.removeItem('wallet-disconnected');
-      const result = await Promise.race([
-        connectWallet(wallet),
-        new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000)),
-      ]);
-      if (typeof result !== 'string') window.location.reload();
+      await connect(wallet);
     } catch (err) {
       console.error('Wallet connection error:', err);
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     try {
-      if (bitprint?.disconnect) bitprint.disconnect();
-      localStorage.setItem('wallet-disconnected', 'true');
-      disconnectWallet();
-      window.location.reload();
+      disconnect();
     } catch (err) {
       console.error('Error disconnecting wallet:', err);
     }
@@ -965,16 +943,6 @@ const WalletConsolidatorInner = () => {
         )}
       </div>
     </div>
-  );
-};
-
-const WalletConsolidator = () => {
-  return (
-    <BitprintProvider>
-      <OrdConnectProvider network="mainnet" chain="bitcoin" ssr={true}>
-        <WalletConsolidatorInner />
-      </OrdConnectProvider>
-    </BitprintProvider>
   );
 };
 
