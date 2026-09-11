@@ -112,6 +112,77 @@ module.exports = function (app) {
     '/api/satflow-purchase-broadcast',
   ].forEach((p) => app.use(p, devJsonBody));
 
+  app.use('/api/ordnet', devJsonBody, async (req, res) => {
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Requested-With'
+      );
+      res.status(204).end();
+      return;
+    }
+
+    const full = String(req.originalUrl || req.url || '/');
+    const u = new URL(
+      full.startsWith('http')
+        ? full
+        : `http://localhost${full.startsWith('/') ? '' : '/'}${full}`
+    );
+    const rawPath = String(u.searchParams.get('path') || '');
+    if (!rawPath || rawPath.includes('://') || rawPath.includes('..')) {
+      res.status(400).json({ error: 'Invalid or missing ord.net path' });
+      return;
+    }
+
+    const upstreamParams = new URLSearchParams();
+    u.searchParams.forEach((value, key) => {
+      if (key !== 'path' && value != null && value !== '') {
+        upstreamParams.append(key, value);
+      }
+    });
+
+    const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    const qs = upstreamParams.toString();
+    const upstreamUrl = `https://ord.net/api/v1${path}${qs ? `?${qs}` : ''}`;
+
+    try {
+      const headers = { accept: 'application/json' };
+      if (req.headers.authorization) {
+        headers.authorization = req.headers.authorization;
+      }
+
+      let body;
+      if (req.method !== 'GET') {
+        headers['content-type'] = 'application/json';
+        body =
+          typeof req.body === 'string'
+            ? req.body
+            : JSON.stringify(req.body || {});
+      }
+
+      const upstream = await fetch(upstreamUrl, {
+        method: req.method,
+        headers,
+        body,
+      });
+      const text = await upstream.text();
+      res.status(upstream.status);
+      res.setHeader(
+        'Content-Type',
+        upstream.headers.get('content-type') || 'application/json'
+      );
+      res.send(text);
+    } catch (err) {
+      console.error('ord.net dev proxy error:', err);
+      res.status(502).json({
+        error: 'Failed to fetch ord.net',
+        message: err && err.message ? err.message : String(err),
+      });
+    }
+  });
+
   // UniSat indexer (Ordinal Extractor: inscription-utxo-data, utxo inscription checks)
   app.use('/api/unisat', async (req, res) => {
     if (req.method === 'OPTIONS') {
@@ -194,42 +265,6 @@ module.exports = function (app) {
       });
     }
   });
-
-  // Ordinals.com output API (browser CORS blocks direct calls; fee logic needs inscription checks)
-  app.use(
-    '/api/ordinals-output',
-    createProxyMiddleware({
-      target: 'https://ordinals.com',
-      changeOrigin: true,
-      pathRewrite: (path, req) => {
-        const full = String(req.originalUrl || req.url || '/');
-        const u = new URL(
-          full.startsWith('http')
-            ? full
-            : `http://localhost${full.startsWith('/') ? '' : '/'}${full}`
-        );
-        const txid = (u.searchParams.get('txid') || '').trim();
-        const vout = u.searchParams.get('vout');
-        if (!/^[0-9a-fA-F]{64}$/.test(txid)) {
-          return path;
-        }
-        const v =
-          vout != null && vout !== '' ? String(parseInt(String(vout), 10)) : '';
-        if (v === '' || Number.isNaN(Number(v))) {
-          return path;
-        }
-        return `/api/output/${txid}:${v}`;
-      },
-      onProxyReq: (proxyReq) => {
-        proxyReq.setHeader('accept', 'application/json');
-        proxyReq.setHeader('user-agent', 'Fine-Trading-App/1.0');
-      },
-      onError: (err, req, res) => {
-        console.error('Ordinals output proxy error:', err);
-        res.status(500).json({ error: 'Ordinals output proxy request failed' });
-      },
-    })
-  );
 
   // Proxy MagicEden Runes API requests to avoid CORS issues in development
   app.use(

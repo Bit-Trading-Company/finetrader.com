@@ -13,9 +13,14 @@ import {
   getMempoolTxStatusUrl,
   getMempoolAddressUrl,
   getMempoolAddressUtxoUrl,
+  getMempoolAddressTxsMempoolUrl,
   getMempoolFeeEstimatesUrl,
   getMempoolRecommendedFeesUrl,
 } from './mempoolProvider';
+import {
+  calculateTradingFeeAmount,
+  TRADING_FEE_RECEIVER_ADDRESS,
+} from './tradingFeeUtils';
 
 /**
  * Get token ID from ordinal - tries multiple possible field names
@@ -1901,20 +1906,17 @@ export const sendTradingFee = async (
   purchasePrice,
   purchaseTxid,
   network = 'mainnet',
-  _addConsoleLog = null
+  addConsoleLog = null
 ) => {
-  const FEE_RECEIVER_ADDRESS =
-    'bc1p45w8kgh694x7r2laqwfyyfslaqv0shjcrpzu5gkypk3wxmlz5prs3w6dgm';
-  const FEE_PERCENTAGE = 0.01; // 1%
-
-  void _addConsoleLog;
+  const log = (message) => {
+    if (typeof addConsoleLog === 'function') addConsoleLog(message);
+  };
 
   try {
-    // Nominal fee: 1% of purchase (sats). If below dust, round up so the fee output is relay-safe.
-    const DUST_OUTPUT_THRESHOLD_SATS = 330;
-    const nominalFeeSats = Math.floor(purchasePrice * FEE_PERCENTAGE);
+    // Nominal fee: 1% of purchase (sats). If below dust, send the minimum relay-safe output.
+    const feeAmount = calculateTradingFeeAmount(purchasePrice);
 
-    if (nominalFeeSats <= 0) {
+    if (feeAmount <= 0) {
       const errorMsg = 'Fee amount is zero or negative';
       return {
         success: false,
@@ -1945,22 +1947,10 @@ export const sendTradingFee = async (
       throw new Error('Could not get wallet address or public key');
     }
 
-    const FEE_ORDINAL_CHECK_STRICT_KEY =
-      'fine-trading-fee-ordinal-check-strict';
-    const strictOrdinalCheckForFees = (() => {
-      try {
-        if (typeof localStorage === 'undefined') return true;
-        const v = localStorage.getItem(FEE_ORDINAL_CHECK_STRICT_KEY);
-        if (v === '0' || v === 'false') return false;
-        return true;
-      } catch {
-        return true;
-      }
-    })();
-
-    // Drop legacy accrual key from older builds (no longer used).
+    // Drop legacy fee keys from older builds. Fee UTXO ordinal checks are now always enforced.
     try {
       if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('fine-trading-fee-ordinal-check-strict');
         localStorage.removeItem(
           `fine-trading-fee-accrual-v1:${String(address).toLowerCase()}`
         );
@@ -1968,8 +1958,6 @@ export const sendTradingFee = async (
     } catch {
       // ignore
     }
-
-    const feeAmount = Math.max(nominalFeeSats, DUST_OUTPUT_THRESHOLD_SATS);
 
     /**
      * Taproot (key-path) signing uses the BIP340 "x-only" internal key with an even Y.
@@ -2005,19 +1993,221 @@ export const sendTradingFee = async (
 
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-    const fetchOrdinalOutpointJson = async (txid, vout) => {
-      // Same-origin proxy (dev: setupProxy, prod: /api/ordinals-output.js) — avoids browser CORS to ordinals.com.
-      const params = new URLSearchParams({ txid, vout: String(vout) });
-      const url = `/api/ordinals-output?${params.toString()}`;
-      const ORD_RETRIES = 8;
-      const ORD_DELAY_MS = 2000;
-      for (let attempt = 1; attempt <= ORD_RETRIES; attempt++) {
-        const res = await fetch(url, { method: 'GET' });
+    const buildUnisatProxyUrl = (indexerPath, query = {}) => {
+      const params = new URLSearchParams();
+      params.set('path', String(indexerPath).replace(/^\/+/, ''));
+      for (const [key, value] of Object.entries(query)) {
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(key, String(value));
+        }
+      }
+      return `/api/unisat?${params.toString()}`;
+    };
+
+    const normalizeOutpointKey = (txid, vout) => {
+      const tx = txid == null ? '' : String(txid).trim();
+      const idx = Number(vout);
+      if (!/^[0-9a-fA-F]{64}$/.test(tx)) return null;
+      if (!Number.isInteger(idx) || idx < 0) return null;
+      return `${tx.toLowerCase()}:${idx}`;
+    };
+
+    const parseOutpointKeyFromString = (value) => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      const match = trimmed.match(/^([0-9a-fA-F]{64}):(\d+)(?::\d+)?$/);
+      if (!match) return null;
+      return normalizeOutpointKey(match[1], match[2]);
+    };
+
+    const getObjectOutpointKey = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      const txid =
+        obj.txid ||
+        obj.txId ||
+        obj.tx_hash ||
+        obj.txHash ||
+        obj.transactionId ||
+        obj.transaction_id ||
+        obj.outpoint?.txid ||
+        obj.outpoint?.txId ||
+        obj.utxo?.txid ||
+        obj.utxo?.txId;
+      const vout =
+        obj.vout ??
+        obj.outputIndex ??
+        obj.output_index ??
+        obj.output ??
+        obj.index ??
+        obj.n ??
+        obj.outpoint?.vout ??
+        obj.outpoint?.index ??
+        obj.utxo?.vout ??
+        obj.utxo?.index;
+
+      return normalizeOutpointKey(txid, vout);
+    };
+
+    const addOutpointFromObject = (outpoints, obj) => {
+      if (!obj || typeof obj !== 'object') return;
+
+      const directKey = getObjectOutpointKey(obj);
+      if (directKey) outpoints.add(directKey);
+
+      const stringFields = [
+        obj.satpoint,
+        obj.location,
+        obj.output,
+        obj.outputId,
+        obj.output_id,
+        obj.outpoint,
+        obj.utxo,
+      ];
+      for (const field of stringFields) {
+        const parsed = parseOutpointKeyFromString(field);
+        if (parsed) outpoints.add(parsed);
+      }
+    };
+
+    const getArrayPayload = (...values) => {
+      for (const value of values) {
+        if (Array.isArray(value)) return value;
+      }
+      return [];
+    };
+
+    const fetchUnisatInscriptionOutpointSet = async () => {
+      const outpoints = new Set();
+      let cursor = 0;
+      const pageSize = 100;
+
+      for (let page = 0; page < 20; page++) {
+        const url = buildUnisatProxyUrl(
+          `address/${encodeURIComponent(address)}/inscription-utxo-data`,
+          { cursor: String(cursor), size: String(pageSize) }
+        );
+        const res = await fetch(url, {
+          headers: { accept: 'application/json' },
+        });
+        if (!res.ok) {
+          throw new Error(`UniSat inscription lookup failed (${res.status})`);
+        }
+        const body = await res.json();
+        const data = body && body.data ? body.data : {};
+        const rows = getArrayPayload(
+          data.utxo,
+          data.utxos,
+          data.list,
+          data.result,
+          data.items,
+          Array.isArray(data) ? data : null
+        );
+        const beforeSize = outpoints.size;
+
+        for (const row of rows) {
+          addOutpointFromObject(outpoints, row);
+        }
+
+        if (rows.length > 0 && outpoints.size === beforeSize) {
+          throw new Error(
+            'UniSat returned inscription UTXOs without outpoints'
+          );
+        }
+
+        const total = Number(data.total);
+        cursor = Number(data.cursor ?? cursor) + rows.length;
+        if (rows.length === 0) break;
+        if (Number.isFinite(total) && outpoints.size >= total) break;
+      }
+
+      return outpoints;
+    };
+
+    const fetchSatflowInscriptionOutpointSet = async () => {
+      const outpoints = new Set();
+      const params = new URLSearchParams({
+        address,
+        itemType: 'inscription',
+        limit: '100',
+      });
+
+      const res = await fetch(
+        `/api/satflow-wallet-contents?${params.toString()}`
+      );
+      if (!res.ok) {
+        throw new Error(`Satflow wallet contents failed (${res.status})`);
+      }
+      const body = await res.json();
+      const payload = body?.data || body;
+      const ordinals =
+        payload?.results?.ordinals ||
+        payload?.ordinals ||
+        payload?.items ||
+        payload?.tokens ||
+        [];
+
+      for (const entry of Array.isArray(ordinals) ? ordinals : []) {
+        addOutpointFromObject(outpoints, entry);
+        addOutpointFromObject(outpoints, entry.token);
+        addOutpointFromObject(outpoints, entry.inscription);
+        addOutpointFromObject(outpoints, entry.utxo);
+      }
+
+      if (
+        Array.isArray(ordinals) &&
+        ordinals.length > 0 &&
+        outpoints.size === 0
+      ) {
+        throw new Error('Satflow returned ordinals without outpoint locations');
+      }
+
+      return outpoints;
+    };
+
+    let inscriptionOutpointSet = null;
+    let inscriptionSetUnavailableError = null;
+    const getInscriptionOutpointSet = async () => {
+      if (inscriptionOutpointSet) return inscriptionOutpointSet;
+      if (inscriptionSetUnavailableError) return null;
+
+      const errors = [];
+
+      try {
+        inscriptionOutpointSet = await fetchUnisatInscriptionOutpointSet();
+        return inscriptionOutpointSet;
+      } catch (err) {
+        errors.push(`UniSat: ${err?.message || String(err)}`);
+      }
+
+      try {
+        inscriptionOutpointSet = await fetchSatflowInscriptionOutpointSet();
+        return inscriptionOutpointSet;
+      } catch (err) {
+        errors.push(`Satflow: ${err?.message || String(err)}`);
+      }
+
+      inscriptionSetUnavailableError = errors.join('; ');
+      console.warn(
+        '[fee] inscription exclusion unavailable:',
+        inscriptionSetUnavailableError
+      );
+      return null;
+    };
+
+    const fetchUnisatOutpointJson = async (txid, vout) => {
+      const url = buildUnisatProxyUrl(
+        `utxo/${encodeURIComponent(String(txid))}/${encodeURIComponent(String(vout))}`
+      );
+      const retries = 3;
+      const delaysMs = [0, 2500, 7500];
+
+      for (let attempt = 0; attempt < retries; attempt++) {
+        if (delaysMs[attempt] > 0) await sleep(delaysMs[attempt]);
+        const res = await fetch(url, {
+          headers: { accept: 'application/json' },
+        });
         if (res.status === 404 || res.status === 502 || res.status === 503) {
-          if (attempt < ORD_RETRIES) {
-            await sleep(ORD_DELAY_MS);
-            continue;
-          }
+          if (attempt < retries - 1) continue;
           return null;
         }
         if (!res.ok) {
@@ -2030,41 +2220,48 @@ export const sendTradingFee = async (
           return null;
         }
       }
+
       return null;
     };
 
     const getFeeRateSatVb = async () => {
+      const MIN_FEE_TX_RATE_SAT_VB = 5;
       try {
         const recoUrl = getMempoolRecommendedFeesUrl(network);
         if (recoUrl) {
           const data = await safeFetchJson(recoUrl);
           const v =
-            data?.hourFee ??
-            data?.economyFee ??
+            data?.fastestFee ??
             data?.halfHourFee ??
-            data?.fastestFee;
+            data?.hourFee ??
+            data?.economyFee;
           const n = Number(v);
-          if (Number.isFinite(n) && n > 0) return Math.max(1, Math.round(n));
+          if (Number.isFinite(n) && n > 0) {
+            return Math.max(MIN_FEE_TX_RATE_SAT_VB, Math.ceil(n));
+          }
         }
       } catch {
         // ignore and fall back
       }
       try {
         const est = await safeFetchJson(getMempoolFeeEstimatesUrl(network));
-        // prefer something like 6 blocks, then 3, then 10/25/1 as fallbacks
-        const keys = ['6', '3', '10', '25', '1'];
+        const keys = ['1', '2', '3', '6', '10', '25'];
         for (const k of keys) {
           const n = Number(est?.[k]);
-          if (Number.isFinite(n) && n > 0) return Math.max(1, Math.round(n));
+          if (Number.isFinite(n) && n > 0) {
+            return Math.max(MIN_FEE_TX_RATE_SAT_VB, Math.ceil(n));
+          }
         }
         const any = Object.values(est || {}).find(
           (v) => Number.isFinite(Number(v)) && Number(v) > 0
         );
-        if (any != null) return Math.max(1, Math.round(Number(any)));
+        if (any != null) {
+          return Math.max(MIN_FEE_TX_RATE_SAT_VB, Math.ceil(Number(any)));
+        }
       } catch {
         // ignore
       }
-      return 2; // safe-ish default if API is unavailable
+      return MIN_FEE_TX_RATE_SAT_VB;
     };
 
     const estimateFee = (inputsCount, outputsCount, feeRateSatVb) => {
@@ -2079,51 +2276,53 @@ export const sendTradingFee = async (
       return Math.ceil(Math.max(1, feeRateSatVb) * vbytes);
     };
 
-    const isOutpointSafeNonOrdinal = async (txid, vout) => {
-      if (!strictOrdinalCheckForFees) {
+    const isOutpointSafeNonOrdinal = async (
+      txid,
+      vout,
+      { allowAddressExclusion = true } = {}
+    ) => {
+      const inscriptionSet = allowAddressExclusion
+        ? await getInscriptionOutpointSet()
+        : null;
+      const outpointKey = normalizeOutpointKey(txid, vout);
+      if (!outpointKey) return false;
+
+      if (inscriptionSet && !inscriptionSet.has(outpointKey)) {
         return true;
       }
-      // Strict: only spend if proxied ordinals.com output shows zero inscriptions.
-      const data = await fetchOrdinalOutpointJson(txid, vout);
-      if (!data || typeof data !== 'object') return false;
-      const inscriptions = data.inscriptions;
-      if (Array.isArray(inscriptions)) {
-        return inscriptions.length === 0;
+
+      // Fail closed: only spend when UniSat confirms no inscription-like payload.
+      const body = await fetchUnisatOutpointJson(txid, vout);
+      const data = body && body.data ? body.data : null;
+      if (!data || typeof data !== 'object') {
+        return false;
       }
-      return false;
+      const inscriptions = Array.isArray(data.inscriptions)
+        ? data.inscriptions
+        : [];
+      const inscriptionsCount = Number(data.inscriptionsCount ?? 0);
+      if (
+        (Number.isFinite(inscriptionsCount) && inscriptionsCount > 0) ||
+        inscriptions.length > 0
+      ) {
+        return false;
+      }
+      const runeFields = [
+        data.runes,
+        data.rune,
+        data.rune_balances,
+        data.runeBalances,
+      ];
+      const hasRunePayload = runeFields.some((field) => {
+        if (Array.isArray(field)) return field.length > 0;
+        if (field && typeof field === 'object')
+          return Object.keys(field).length > 0;
+        return Boolean(field);
+      });
+      if (hasRunePayload) return false;
+
+      return true;
     };
-
-    // 1) Poll purchase tx in selected explorer mempool (Esplora API).
-    // If not present yet, wait and retry.
-    const PURCHASE_TX_RETRIES = 8;
-    const PURCHASE_TX_RETRY_DELAY_MS = 2500;
-    let purchaseTx = null;
-    for (let attempt = 1; attempt <= PURCHASE_TX_RETRIES; attempt++) {
-      try {
-        purchaseTx = await safeFetchJson(
-          getMempoolTxApiUrl(purchaseTxid, network)
-        );
-        break;
-      } catch (e) {
-        if (e?.status === 404 && attempt < PURCHASE_TX_RETRIES) {
-          await sleep(PURCHASE_TX_RETRY_DELAY_MS);
-          continue;
-        }
-        throw new Error(
-          `Failed to fetch purchase tx from mempool explorer: ${e?.message || e}`
-        );
-      }
-    }
-
-    if (
-      !purchaseTx ||
-      !Array.isArray(purchaseTx.vout) ||
-      purchaseTx.vout.length === 0
-    ) {
-      throw new Error(
-        'Purchase transaction has no outputs (cannot compute fee UTXO)'
-      );
-    }
 
     const feeRate = await getFeeRateSatVb();
 
@@ -2148,30 +2347,58 @@ export const sendTradingFee = async (
       }
     };
 
-    // Candidate UTXOs from purchase tx: ONLY outputs that decode to our address.
-    // Never fall back to "largest vout" — mempool payloads sometimes omit scriptpubkey_address,
-    // and vout :1 is often seller/marketplace, not buyer change.
-    const voutsToBuyer = purchaseTx.vout
-      .map((v, idx) => ({ ...v, _vout: idx }))
-      .filter(outputPaysToOurAddress)
-      .sort((a, b) => (b.value || 0) - (a.value || 0));
-
-    const purchaseCandidates = voutsToBuyer;
-
     const selectedUtxos = [];
     const selectedOutpoints = new Set();
 
     const addUtxo = (u) => {
-      const key = `${u.txid}:${u.vout}`;
+      const key = normalizeOutpointKey(u.txid, u.vout);
+      if (!key) return;
       if (selectedOutpoints.has(key)) return;
       selectedOutpoints.add(key);
       selectedUtxos.push(u);
     };
 
+    const fetchPurchaseTxWithBackoff = async () => {
+      if (!purchaseTxid) return null;
+      const delaysMs = [0, 10000, 30000];
+
+      for (let attempt = 0; attempt < delaysMs.length; attempt++) {
+        if (delaysMs[attempt] > 0) await sleep(delaysMs[attempt]);
+        try {
+          return await safeFetchJson(getMempoolTxApiUrl(purchaseTxid, network));
+        } catch (e) {
+          if (e?.status === 404 && attempt < delaysMs.length - 1) continue;
+          if (e?.status === 404) return null;
+          throw new Error(
+            `Failed to fetch purchase tx from mempool explorer: ${e?.message || e}`
+          );
+        }
+      }
+      return null;
+    };
+
     const tryAddPurchaseOutput = async () => {
+      const purchaseTx = await fetchPurchaseTxWithBackoff();
+      if (
+        !purchaseTx ||
+        !Array.isArray(purchaseTx.vout) ||
+        purchaseTx.vout.length === 0
+      ) {
+        return false;
+      }
+
+      // Candidate UTXOs from purchase tx: ONLY outputs that decode to our address.
+      // Never fall back to "largest vout" — vout :1 is often seller/marketplace, not buyer change.
+      const purchaseCandidates = purchaseTx.vout
+        .map((v, idx) => ({ ...v, _vout: idx }))
+        .filter(outputPaysToOurAddress)
+        .sort((a, b) => (b.value || 0) - (a.value || 0));
+
       for (const out of purchaseCandidates) {
         const vout = out._vout;
-        const isSafe = await isOutpointSafeNonOrdinal(purchaseTxid, vout);
+        const isSafe = await isOutpointSafeNonOrdinal(purchaseTxid, vout, {
+          allowAddressExclusion: false,
+        });
         if (!isSafe) continue;
         addUtxo({
           txid: purchaseTxid,
@@ -2186,14 +2413,42 @@ export const sendTradingFee = async (
       return false;
     };
 
-    await tryAddPurchaseOutput();
-
-    // 2) If purchase output(s) not enough, add additional wallet UTXOs (non-ordinal).
+    // Prefer existing confirmed wallet UTXOs. Only fall back to purchase change if needed,
+    // because purchase txs can take time to appear in public explorers/indexers.
     const loadWalletUtxos = async () => {
       const list = await safeFetchJson(
         getMempoolAddressUtxoUrl(address, network)
       );
       return Array.isArray(list) ? list : [];
+    };
+
+    const loadMempoolSpentOutpoints = async () => {
+      const spent = new Set();
+      try {
+        const txs = await safeFetchJson(
+          getMempoolAddressTxsMempoolUrl(address, network)
+        );
+        if (!Array.isArray(txs)) return spent;
+
+        for (const tx of txs) {
+          const vin = Array.isArray(tx?.vin) ? tx.vin : [];
+          for (const input of vin) {
+            const prevoutAddress = input?.prevout?.scriptpubkey_address;
+            if (
+              prevoutAddress &&
+              String(prevoutAddress).toLowerCase() !==
+                String(address).toLowerCase()
+            ) {
+              continue;
+            }
+            const key = normalizeOutpointKey(input?.txid, input?.vout);
+            if (key) spent.add(key);
+          }
+        }
+      } catch (err) {
+        console.warn('[fee] could not load mempool spent outpoints:', err);
+      }
+      return spent;
     };
 
     const DUST_THRESHOLD = 330;
@@ -2211,12 +2466,16 @@ export const sendTradingFee = async (
       return { totalIn, feeEst: feeWith1Out, change: change1, outputs: 1 };
     };
 
+    let mempoolSpentOutpoints = await loadMempoolSpentOutpoints();
+
     const addSpendableWalletUtxos = async (list) => {
       const sorted = Array.isArray(list) ? [...list] : [];
       sorted.sort((a, b) => (b.value || 0) - (a.value || 0));
       for (const u of sorted) {
-        const key = `${u.txid}:${u.vout}`;
+        const key = normalizeOutpointKey(u.txid, u.vout);
+        if (!key) continue;
         if (selectedOutpoints.has(key)) continue;
+        if (mempoolSpentOutpoints.has(key)) continue;
         if (u?.value == null || u.value <= 0) continue;
 
         const safe = await isOutpointSafeNonOrdinal(u.txid, u.vout);
@@ -2239,14 +2498,27 @@ export const sendTradingFee = async (
     await addSpendableWalletUtxos(await loadWalletUtxos());
 
     let totals = calcTotals(feeAmount, selectedUtxos);
-    const UTXO_REFRESH_ROUNDS = 5;
-    const UTXO_REFRESH_MS = 2000;
+    const UTXO_REFRESH_ROUNDS = 2;
+    const UTXO_REFRESH_MS = 5000;
     for (let r = 0; r < UTXO_REFRESH_ROUNDS && totals.change < 0; r++) {
       await sleep(UTXO_REFRESH_MS);
+      mempoolSpentOutpoints = await loadMempoolSpentOutpoints();
       await addSpendableWalletUtxos(await loadWalletUtxos());
       totals = calcTotals(feeAmount, selectedUtxos);
     }
+
+    if (totals.change < 0) {
+      log('  Waiting for purchase change to become indexer-safe for fee...');
+      await tryAddPurchaseOutput();
+      totals = calcTotals(feeAmount, selectedUtxos);
+    }
+
     if (selectedUtxos.length === 0) {
+      if (inscriptionSetUnavailableError) {
+        throw new Error(
+          `Could not verify fee UTXO ordinal safety (${inscriptionSetUnavailableError})`
+        );
+      }
       throw new Error(
         'No spendable non-ordinal UTXOs available for fee payment'
       );
@@ -2393,7 +2665,7 @@ export const sendTradingFee = async (
 
     // Fee output
     psbt.addOutput({
-      address: FEE_RECEIVER_ADDRESS,
+      address: TRADING_FEE_RECEIVER_ADDRESS,
       value: BigInt(feeAmount),
     });
 
@@ -2438,17 +2710,19 @@ export const sendTradingFee = async (
     }
 
     const txId = (await broadcastResponse.text()).trim();
+    log(`  Fee sent: ${feeAmount} sats (${txId.slice(0, 16)}...)`);
 
     return {
       success: true,
       txid: txId,
       feeAmount,
       purchasePrice,
-      feeReceiver: FEE_RECEIVER_ADDRESS,
+      feeReceiver: TRADING_FEE_RECEIVER_ADDRESS,
     };
   } catch (err) {
     const errorMsg = err.message || 'Failed to send trading fee';
     console.error('Error sending trading fee:', err);
+    log(`  Fee pending: ${errorMsg}`);
     return {
       success: false,
       error: errorMsg,

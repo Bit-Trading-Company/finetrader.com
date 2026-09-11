@@ -528,7 +528,12 @@ export const signPsbtWithProxyWallet = async (
   network = 'mainnet',
   options = {}
 ) => {
-  const { finalize = true, extractTx = false, walletAddress } = options;
+  const {
+    finalize = true,
+    extractTx = false,
+    walletAddress,
+    inputSigningInstructions = null,
+  } = options;
 
   if (!psbtBase64) {
     throw new Error('PSBT is required');
@@ -643,6 +648,18 @@ export const signPsbtWithProxyWallet = async (
             typeof Transaction.SIGHASH_DEFAULT === 'number'
               ? Transaction.SIGHASH_DEFAULT
               : 0;
+          const instructionByIndex = new Map();
+          if (Array.isArray(inputSigningInstructions)) {
+            inputSigningInstructions.forEach((instruction) => {
+              (instruction?.signingIndexes || []).forEach((index) => {
+                instructionByIndex.set(index, instruction);
+              });
+            });
+          }
+          const targetIndexes =
+            instructionByIndex.size > 0
+              ? Array.from(instructionByIndex.keys())
+              : Array.from({ length: psbtForSigning.inputCount }, (_, i) => i);
 
           // Fee / extract flows: every Taproot witness input must get tapKeySig or
           // finalizeAllInputs fails ("No tapleaf script signature"). Listings may be
@@ -661,7 +678,7 @@ export const signPsbtWithProxyWallet = async (
           );
 
           if (strictSignAllTaprootWitness) {
-            for (let j = 0; j < psbtForSigning.inputCount; j++) {
+            for (const j of targetIndexes) {
               const psbtInput = psbtForSigning.data.inputs[j];
               const wu = psbtInput.witnessUtxo;
               const scr = wu && wu.script;
@@ -687,10 +704,11 @@ export const signPsbtWithProxyWallet = async (
               }
 
               const sighashType =
-                psbtInput.sighashType !== undefined &&
+                instructionByIndex.get(j)?.sigHash ??
+                (psbtInput.sighashType !== undefined &&
                 psbtInput.sighashType !== null
                   ? psbtInput.sighashType
-                  : sighashDefault;
+                  : sighashDefault);
 
               const sighashTypes =
                 sighashType === sighashDefault ? undefined : [sighashType];
@@ -703,7 +721,7 @@ export const signPsbtWithProxyWallet = async (
               );
             }
 
-            for (let j = 0; j < psbtForSigning.inputCount; j++) {
+            for (const j of targetIndexes) {
               const inp = psbtForSigning.data.inputs[j];
               const scr = inp.witnessUtxo && inp.witnessUtxo.script;
               const isP2tr =
@@ -721,7 +739,7 @@ export const signPsbtWithProxyWallet = async (
             signMethodWorked = true;
             signedPsbtBase64Override = psbtForSigning.toBase64();
           } else {
-            for (let j = 0; j < psbtForSigning.inputCount; j++) {
+            for (const j of targetIndexes) {
               try {
                 const psbtInput = psbtForSigning.data.inputs[j];
                 const wu = psbtInput.witnessUtxo;
@@ -747,10 +765,11 @@ export const signPsbtWithProxyWallet = async (
                 }
 
                 const sighashType =
-                  psbtInput.sighashType !== undefined &&
+                  instructionByIndex.get(j)?.sigHash ??
+                  (psbtInput.sighashType !== undefined &&
                   psbtInput.sighashType !== null
                     ? psbtInput.sighashType
-                    : sighashDefault;
+                    : sighashDefault);
 
                 const sighashTypes =
                   sighashType === sighashDefault ? undefined : [sighashType];

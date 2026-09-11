@@ -26,7 +26,9 @@ import {
   buyItemsFromFloor,
   buyXFromEachWallet,
   sellXFromEachWallet,
+  TRADING_EXCHANGES,
 } from '../utils/simplifiedAutoTrading';
+import * as ordNetTrading from '../utils/ordNetTradingUtils';
 import {
   MEMPOOL_PROVIDERS,
   getMempoolApiProvider,
@@ -140,6 +142,9 @@ const AutoTradeInner = () => {
 
   // Step 5: Auto Trading
   const [tradingMode, setTradingMode] = useState('auto-buy-sell'); // Trading mode
+  const [tradingExchange, setTradingExchange] = useState(
+    TRADING_EXCHANGES.SATFLOW
+  );
   const [isTrading, setIsTrading] = useState(false);
   const [timerHours, setTimerHours] = useState(0);
   const [timerMinutes, setTimerMinutes] = useState(1);
@@ -186,18 +191,6 @@ const AutoTradeInner = () => {
       const v = window.localStorage.getItem(FINE_TRADING_USE_FEES_KEY);
       if (v === '0' || v === 'false') return false;
       if (v === '1' || v === 'true') return true;
-      return true;
-    } catch {
-      return true;
-    }
-  });
-  const [strictFeeOrdinalCheck, setStrictFeeOrdinalCheck] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return true;
-      const v = window.localStorage.getItem(
-        'fine-trading-fee-ordinal-check-strict'
-      );
-      if (v === '0' || v === 'false') return false;
       return true;
     } catch {
       return true;
@@ -350,9 +343,22 @@ const AutoTradeInner = () => {
           selectedCollection.collectionId;
 
         if (collectionSymbol) {
+          if (
+            tradingExchange === TRADING_EXCHANGES.ORDNET &&
+            wallets.length === 0
+          ) {
+            return;
+          }
           hasFetchedFloorPriceRef.current = true;
           try {
-            const floorPriceSats = await getFloorPrice(collectionSymbol, true);
+            const floorPriceSats =
+              tradingExchange === TRADING_EXCHANGES.ORDNET
+                ? await ordNetTrading.getFloorPrice(collectionSymbol, true, {
+                    wallet: wallets[0],
+                    wallets,
+                    network,
+                  })
+                : await getFloorPrice(collectionSymbol, true);
             if (floorPriceSats) {
               // Convert from sats to BTC
               const floorPriceBTC = floorPriceSats / 100000000;
@@ -377,7 +383,15 @@ const AutoTradeInner = () => {
     };
 
     fetchFloorPriceForRangeTrading();
-  }, [tradingMode, selectedCollection, tradePrice, addConsoleLog]);
+  }, [
+    tradingMode,
+    tradingExchange,
+    selectedCollection,
+    tradePrice,
+    addConsoleLog,
+    wallets,
+    network,
+  ]);
 
   // Sync refs with state for range trading
   useEffect(() => {
@@ -604,7 +618,11 @@ const AutoTradeInner = () => {
       setIsTrading(true);
       // Initialize pending purchases ref
       pendingPurchasesRef.current = pendingPurchases;
-      addConsoleLog('Auto-trading started');
+      if (tradingExchange === TRADING_EXCHANGES.ORDNET) {
+        addConsoleLog('Auto-trading started on ord.net');
+      } else {
+        addConsoleLog('Auto-trading started');
+      }
 
       if (tradingMode === 'bid-accept-bids') {
         setIsTrading(false);
@@ -648,6 +666,7 @@ const AutoTradeInner = () => {
             addConsoleLog,
             useFees,
             prepDelay,
+            exchange: tradingExchange,
             isStopRequested: () => tradingStopRequestedRef.current,
           });
 
@@ -728,6 +747,7 @@ const AutoTradeInner = () => {
             addConsoleLog,
             useFees,
             prepDelay,
+            exchange: tradingExchange,
             isStopRequested: () => tradingStopRequestedRef.current,
           });
 
@@ -783,6 +803,7 @@ const AutoTradeInner = () => {
             addConsoleLog,
             useCustomPrice: useCustomSellPrice,
             customPrice: customPriceSats,
+            exchange: tradingExchange,
           });
 
           const itemsListed = sellResult.itemsListed || 0;
@@ -859,6 +880,7 @@ const AutoTradeInner = () => {
             addConsoleLog,
             useFees,
             prepDelay,
+            exchange: tradingExchange,
             isStopRequested: () => tradingStopRequestedRef.current,
           });
 
@@ -908,6 +930,7 @@ const AutoTradeInner = () => {
         useFees,
         tradePrice: tradePriceSats,
         prepDelay,
+        exchange: tradingExchange,
         updatePendingPurchases: (newPending) => {
           setPendingPurchases(newPending);
           pendingPurchasesRef.current = newPending;
@@ -993,6 +1016,7 @@ const AutoTradeInner = () => {
                 addConsoleLog,
                 useFees,
                 prepDelay,
+                exchange: tradingExchange,
                 isStopRequested: () => tradingStopRequestedRef.current,
               });
 
@@ -1036,6 +1060,7 @@ const AutoTradeInner = () => {
             // null for delta neutral (floor); range trading sets random/fixed sats each tick
             tradePrice: currentTradePriceSats,
             prepDelay,
+            exchange: tradingExchange,
             updatePendingPurchases: (newPending) => {
               setPendingPurchases(newPending);
               pendingPurchasesRef.current = newPending;
@@ -1356,6 +1381,34 @@ const AutoTradeInner = () => {
           >
             {/* Trading Mode Selection */}
             <div className="auto-trade-controls">
+              <div className="auto-trade-control-group">
+                <label>Exchange:</label>
+                <div className="auto-trade-radio-group">
+                  <label className="auto-trade-radio-label">
+                    <input
+                      type="radio"
+                      name="tradingExchange"
+                      value={TRADING_EXCHANGES.SATFLOW}
+                      checked={tradingExchange === TRADING_EXCHANGES.SATFLOW}
+                      onChange={(e) => setTradingExchange(e.target.value)}
+                      disabled={isTrading}
+                    />
+                    <span>Satflow</span>
+                  </label>
+                  <label className="auto-trade-radio-label">
+                    <input
+                      type="radio"
+                      name="tradingExchange"
+                      value={TRADING_EXCHANGES.ORDNET}
+                      checked={tradingExchange === TRADING_EXCHANGES.ORDNET}
+                      onChange={(e) => setTradingExchange(e.target.value)}
+                      disabled={isTrading}
+                    />
+                    <span>ord.net</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="auto-trade-control-group">
                 <label>Trading Mode:</label>
                 <div className="auto-trade-radio-group">
@@ -2070,31 +2123,6 @@ const AutoTradeInner = () => {
                   >
                     Send 1% of each purchase price to fee receiver address
                   </p>
-                  <label
-                    className="auto-trade-checkbox-label"
-                    style={{ marginTop: '12px', marginLeft: '0' }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={strictFeeOrdinalCheck}
-                      onChange={(e) => {
-                        const on = e.target.checked;
-                        setStrictFeeOrdinalCheck(on);
-                        try {
-                          if (typeof window !== 'undefined') {
-                            window.localStorage.setItem(
-                              'fine-trading-fee-ordinal-check-strict',
-                              on ? '1' : '0'
-                            );
-                          }
-                        } catch {
-                          /* ignore */
-                        }
-                      }}
-                      disabled={isTrading}
-                    />
-                    <span>Strict fee UTXO check (ordinals.com)</span>
-                  </label>
                   <p
                     style={{
                       fontSize: '0.85rem',
@@ -2103,10 +2131,10 @@ const AutoTradeInner = () => {
                       marginLeft: '24px',
                     }}
                   >
-                    When on, each fee input is verified to have no inscriptions
-                    (may wait on indexer). When off, fees send ASAP using
-                    purchase change / wallet UTXOs without that check (risk of
-                    spending an inscription UTXO).
+                    Fee inputs are always checked against the UniSat inscription
+                    index and are only spent when confirmed to have no
+                    inscriptions or rune payloads. Small purchases still send
+                    the minimum relay-safe fee output.
                   </p>
                 </div>
 

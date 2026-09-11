@@ -21,7 +21,41 @@ import {
   prepareSecurePurchase,
   completeSecurePurchase,
 } from './autoTradingUtils';
+import * as ordNetTrading from './ordNetTradingUtils';
 import { getMempoolTxUrl } from './mempoolProvider';
+import { estimateAutoTradePurchaseCost } from './tradingFeeUtils';
+
+export const TRADING_EXCHANGES = {
+  SATFLOW: 'satflow',
+  ORDNET: 'ordnet',
+};
+
+const isOrdNetExchange = (exchange) => exchange === TRADING_EXCHANGES.ORDNET;
+
+const satflowTrading = {
+  listOrdinalWithProxyWallet,
+  delistOrdinalWithProxyWallet,
+  getFloorPrice,
+  fetchWalletOrdinals,
+  fetchWalletBalance,
+  getTokenId,
+  hasPendingTransaction,
+  getInscriptionId,
+  fetchCollectionItems,
+  checkPurchaseConfirmed,
+  checkTransactionConfirmed,
+  sendTradingFee,
+  prepareSecurePurchase,
+  completeSecurePurchase,
+};
+
+const getTradingApi = (exchange) =>
+  isOrdNetExchange(exchange)
+    ? { ...satflowTrading, ...ordNetTrading }
+    : satflowTrading;
+
+const getExchangeLabel = (exchange) =>
+  isOrdNetExchange(exchange) ? 'ord.net' : 'Satflow';
 
 /**
  * Process all wallet items: list if needed, buy from next wallet
@@ -67,7 +101,9 @@ export const processWalletItems = async ({
   tradePrice = null,
   isStopRequested = null,
   prepDelay = 3000,
+  exchange = TRADING_EXCHANGES.SATFLOW,
 }) => {
+  const api = getTradingApi(exchange);
   if (typeof isStopRequested === 'function' && isStopRequested()) {
     return {
       itemsListed: 0,
@@ -106,7 +142,11 @@ export const processWalletItems = async ({
   // Get trade price (use custom tradePrice if provided, otherwise use floor price)
   let tradePriceToUse = tradePrice;
   if (!tradePriceToUse) {
-    const floorPrice = await getFloorPrice(collectionSymbol, true);
+    const floorPrice = await api.getFloorPrice(collectionSymbol, true, {
+      wallet: wallets[0],
+      wallets,
+      network,
+    });
     if (!floorPrice) {
       addConsoleLog('⚠ Could not determine floor price');
       return {
@@ -138,10 +178,11 @@ export const processWalletItems = async ({
     if (typeof isStopRequested === 'function' && isStopRequested()) break;
     try {
       // Fetch items owned by this wallet (bypass cache for real-time data)
-      const items = await fetchWalletOrdinals(
+      const items = await api.fetchWalletOrdinals(
         wallet.address,
         collectionSymbol,
-        true // bypass cache
+        true, // bypass cache
+        { wallet, wallets, network }
       );
 
       if (items.length === 0) {
@@ -186,17 +227,20 @@ export const processWalletItems = async ({
               `  ${action} item #${item.inscriptionNumber || tokenId.slice(0, 8)} at ${(tradePriceToUse / 100000000).toFixed(8)} BTC...`
             );
 
-            const listResult = await listOrdinalWithProxyWallet(
+            const listResult = await api.listOrdinalWithProxyWallet(
               item,
               tradePriceToUse,
               wallet,
-              network
+              network,
+              { collectionSymbol, selectedCollection }
             );
 
             if (listResult.success) {
               const inscriptionId = getInscriptionId(item);
               const magicEdenLink = inscriptionId
-                ? `https://magiceden.us/ordinals/item-details/${inscriptionId}`
+                ? isOrdNetExchange(exchange)
+                  ? `https://ord.net/inscription/${inscriptionId}`
+                  : `https://magiceden.us/ordinals/item-details/${inscriptionId}`
                 : null;
 
               addConsoleLog(
@@ -211,7 +255,9 @@ export const processWalletItems = async ({
                 wallet.address,
                 collectionSymbol,
                 tokenId,
-                15000 // 15 second timeout (after initial 5 second delay)
+                15000, // 15 second timeout (after initial 5 second delay)
+                api,
+                { wallet, wallets, network }
               );
 
               if (isAvailable) {
@@ -260,7 +306,7 @@ export const processWalletItems = async ({
   }
 
   /** Same for delta neutral and range trading — wait after listing before any purchase PSBTs */
-  const POST_LISTING_DELAY_MS = 15000;
+  const POST_LISTING_DELAY_MS = 1000;
   if (buyTasks.length > 0 && itemsListed > 0) {
     const stopped = typeof isStopRequested === 'function' && isStopRequested();
     if (!stopped) {
@@ -308,7 +354,8 @@ export const processWalletItems = async ({
           item,
           sellerWallet,
           wallets,
-          network
+          network,
+          useFees
         );
         if (nextBuyerGuess && nextBuyerGuess === lastSuccessfulBuyerAddress) {
           if (typeof addConsoleLog === 'function') {
@@ -327,7 +374,11 @@ export const processWalletItems = async ({
         wallets,
         network,
         addConsoleLog,
-        isStopRequested
+        isStopRequested,
+        useFees,
+        exchange,
+        collectionSymbol,
+        selectedCollection
       );
 
       if (!result.success) {
@@ -362,13 +413,13 @@ export const processWalletItems = async ({
         completeOptions.signedPaymentPrepPSBT = result.signedPaymentPrepPSBT;
       }
 
-      const completeResult = await completeSecurePurchase(
+      const completeResult = await api.completeSecurePurchase(
         item,
         buyerWallet,
         network,
         addConsoleLog,
         isStopRequested,
-        completeOptions
+        { ...completeOptions, collectionSymbol, selectedCollection }
       );
 
       if (completeResult.success && completeResult.txid) {
@@ -389,7 +440,7 @@ export const processWalletItems = async ({
             itemPrice,
             completeResult.txid,
             network,
-            null
+            addConsoleLog
           );
         }
       } else {
@@ -404,17 +455,19 @@ export const processWalletItems = async ({
         addConsoleLog(
           `  🗑️ Delisting all items in seller wallet #${sellerWallet.index + 1} (no wallets could afford)...`
         );
-        const sellerItems = await fetchWalletOrdinals(
+        const sellerItems = await api.fetchWalletOrdinals(
           sellerWallet.address,
           colSym,
-          true
+          true,
+          { wallet: sellerWallet, wallets, network }
         );
         const listedItems = sellerItems.filter((i) => i.listed);
         for (const listedItem of listedItems) {
-          const dr = await delistOrdinalWithProxyWallet(
+          const dr = await api.delistOrdinalWithProxyWallet(
             listedItem,
             sellerWallet,
-            network
+            network,
+            { collectionSymbol: colSym, selectedCollection }
           );
           if (dr.success) {
             itemsDelisted++;
@@ -449,9 +502,10 @@ export const processWalletItems = async ({
 
         if (txConfirmed) {
           // Transaction confirmed, now check if we own the token
-          const ownershipConfirmed = await checkPurchaseConfirmed(
+          const ownershipConfirmed = await api.checkPurchaseConfirmed(
             pending.tokenId,
-            pending.buyerWalletAddress
+            pending.buyerWalletAddress,
+            { collectionSymbol, wallet: wallets[0], wallets, network }
           );
 
           if (ownershipConfirmed) {
@@ -503,10 +557,11 @@ export const processWalletItems = async ({
 
     for (const wallet of wallets) {
       try {
-        const items = await fetchWalletOrdinals(
+        const items = await api.fetchWalletOrdinals(
           wallet.address,
           collectionSymbol,
-          true // bypass cache
+          true, // bypass cache
+          { wallet, wallets, network }
         );
         totalItems += items.length;
 
@@ -553,10 +608,11 @@ export const processWalletItems = async ({
 
     for (const wallet of wallets) {
       try {
-        const items = await fetchWalletOrdinals(
+        const items = await api.fetchWalletOrdinals(
           wallet.address,
           collectionSymbol,
-          true // bypass cache
+          true, // bypass cache
+          { wallet, wallets, network }
         );
         totalItems += items.length;
 
@@ -627,7 +683,9 @@ const waitForListingAvailable = async (
   walletAddress,
   collectionSymbol,
   tokenId,
-  timeout = 10000
+  timeout = 10000,
+  api = satflowTrading,
+  walletContext = {}
 ) => {
   const startTime = Date.now();
   const pollInterval = 500; // Check every 500ms
@@ -635,10 +693,11 @@ const waitForListingAvailable = async (
   while (Date.now() - startTime < timeout) {
     try {
       // Fetch fresh wallet items
-      const items = await fetchWalletOrdinals(
+      const items = await api.fetchWalletOrdinals(
         walletAddress,
         collectionSymbol,
-        true // bypass cache
+        true, // bypass cache
+        walletContext
       );
 
       // Find the specific item
@@ -668,11 +727,11 @@ const getFirstEligibleBuyerAddress = async (
   item,
   sellerWallet,
   wallets,
-  network
+  network,
+  useFees = true
 ) => {
   const itemPrice = item.listedPrice || 0;
-  const estimatedFee = 0.0001 * 100000000;
-  const totalCost = itemPrice + estimatedFee;
+  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   const startIndex = (sellerWallet.index + 1) % wallets.length;
 
   for (let i = 0; i < wallets.length - 1; i++) {
@@ -697,11 +756,15 @@ const tryPreparePurchaseForItem = async (
   wallets,
   network,
   addConsoleLog,
-  isStopRequested
+  isStopRequested,
+  useFees = true,
+  exchange = TRADING_EXCHANGES.SATFLOW,
+  collectionSymbol = null,
+  selectedCollection = null
 ) => {
+  const api = getTradingApi(exchange);
   const itemPrice = item.listedPrice || 0;
-  const estimatedFee = 0.0001 * 100000000;
-  const totalCost = itemPrice + estimatedFee;
+  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   const tokenId = getTokenId(item);
   const itemId = item.inscriptionNumber || tokenId?.slice(0, 8) || 'Unknown';
   let lastError = '';
@@ -737,12 +800,13 @@ const tryPreparePurchaseForItem = async (
         await new Promise((r) => setTimeout(r, retryDelay));
       }
 
-      const prepareResult = await prepareSecurePurchase(
+      const prepareResult = await api.prepareSecurePurchase(
         item,
         buyerWallet,
         network,
         addConsoleLog,
-        isStopRequested
+        isStopRequested,
+        { collectionSymbol, selectedCollection }
       );
 
       if (prepareResult.success) {
@@ -795,11 +859,15 @@ const tryPreparePurchaseFromFloorForBuyer = async (
   buyerWallet,
   network,
   addConsoleLog,
-  isStopRequested
+  isStopRequested,
+  useFees = true,
+  exchange = TRADING_EXCHANGES.SATFLOW,
+  collectionSymbol = null,
+  selectedCollection = null
 ) => {
+  const api = getTradingApi(exchange);
   const itemPrice = item.listedPrice || 0;
-  const estimatedFee = 0.0001 * 100000000;
-  const totalCost = itemPrice + estimatedFee;
+  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   const tokenId = getTokenId(item);
   const itemId = item.inscriptionNumber || tokenId?.slice(0, 8) || 'Unknown';
   let lastError = '';
@@ -837,12 +905,13 @@ const tryPreparePurchaseFromFloorForBuyer = async (
       return { success: false, error: 'Trading stopped by user' };
     }
 
-    const prepareResult = await prepareSecurePurchase(
+    const prepareResult = await api.prepareSecurePurchase(
       item,
       buyerWallet,
       network,
       addConsoleLog,
-      isStopRequested
+      isStopRequested,
+      { collectionSymbol, selectedCollection }
     );
 
     if (prepareResult.success) {
@@ -887,11 +956,14 @@ const tryPreparePurchaseFromFloor = async (
   wallets,
   network,
   addConsoleLog,
-  isStopRequested
+  isStopRequested,
+  useFees = true,
+  exchange = TRADING_EXCHANGES.SATFLOW,
+  collectionSymbol = null,
+  selectedCollection = null
 ) => {
   const itemPrice = item.listedPrice || 0;
-  const estimatedFee = 0.0001 * 100000000;
-  const totalCost = itemPrice + estimatedFee;
+  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   let lastError = '';
   let hadAnyWithBalance = false;
 
@@ -909,7 +981,11 @@ const tryPreparePurchaseFromFloor = async (
       buyerWallet,
       network,
       addConsoleLog,
-      isStopRequested
+      isStopRequested,
+      useFees,
+      exchange,
+      collectionSymbol,
+      selectedCollection
     );
 
     if (one.success) {
@@ -959,7 +1035,9 @@ export const buyItemsFromFloor = async ({
   useFees = true,
   isStopRequested = null,
   prepDelay = 3000,
+  exchange = TRADING_EXCHANGES.SATFLOW,
 }) => {
+  const api = getTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
     selectedCollection.symbol ||
@@ -976,7 +1054,9 @@ export const buyItemsFromFloor = async ({
   // Fetch floor listings (Satflow activity/listings, cheapest first).
   // Important: listings can be stale ("No available orders"). We paginate so we can
   // skip stale rows without running out of candidates before hitting purchaseAmount.
-  addConsoleLog('📋 Fetching floor listings from Satflow...');
+  addConsoleLog(
+    `📋 Fetching floor listings from ${getExchangeLabel(exchange)}...`
+  );
   const pageSize = Math.min(250, Math.max(50, purchaseAmount * 10));
   let page = 1;
   const addedTokenIds = new Set();
@@ -997,9 +1077,12 @@ export const buyItemsFromFloor = async ({
 
   const fetchNextPage = async () => {
     if (typeof isStopRequested === 'function' && isStopRequested()) return 0;
-    const floorItems = await fetchCollectionItems(collectionSymbol, true, {
+    const floorItems = await api.fetchCollectionItems(collectionSymbol, true, {
       pageSize,
       page,
+      wallet: wallets[0],
+      wallets,
+      network,
     });
     page++;
     if (!Array.isArray(floorItems) || floorItems.length === 0) return 0;
@@ -1087,8 +1170,7 @@ export const buyItemsFromFloor = async ({
     );
 
     if (lastSuccessfulBuyerAddress) {
-      const estimatedFee = 0.0001 * 100000000;
-      const totalCost = itemPrice + estimatedFee;
+      const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
       let nextGuess = null;
       for (const w of wallets) {
         const bal = await fetchWalletBalance(w.address, network);
@@ -1112,7 +1194,11 @@ export const buyItemsFromFloor = async ({
         wallets,
         network,
         addConsoleLog,
-        isStopRequested
+        isStopRequested,
+        useFees,
+        exchange,
+        collectionSymbol,
+        selectedCollection
       );
 
       if (!prepareResult.success) {
@@ -1158,13 +1244,13 @@ export const buyItemsFromFloor = async ({
             prepareResult.signedPaymentPrepPSBT;
         }
 
-        const completeResult = await completeSecurePurchase(
+        const completeResult = await api.completeSecurePurchase(
           item,
           buyerWallet,
           network,
           addConsoleLog,
           isStopRequested,
-          completeOptions
+          { ...completeOptions, collectionSymbol, selectedCollection }
         );
 
         if (completeResult.success && completeResult.txid) {
@@ -1194,7 +1280,7 @@ export const buyItemsFromFloor = async ({
               itemPrice,
               completeResult.txid,
               network,
-              null
+              addConsoleLog
             );
           }
         } else {
@@ -1246,7 +1332,9 @@ export const buyXFromEachWallet = async ({
   useFees = true,
   isStopRequested = null,
   prepDelay = 3000,
+  exchange = TRADING_EXCHANGES.SATFLOW,
 }) => {
+  const api = getTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
     selectedCollection.symbol ||
@@ -1266,10 +1354,15 @@ export const buyXFromEachWallet = async ({
   const walletCount = wallets.length;
   const maxNeeded = perWallet * walletCount;
 
-  addConsoleLog('📋 Fetching floor listings from Satflow (buy per wallet)...');
+  addConsoleLog(
+    `📋 Fetching floor listings from ${getExchangeLabel(exchange)} (buy per wallet)...`
+  );
   const listPageSize = Math.min(250, Math.max(50, maxNeeded * 5));
-  const floorItems = await fetchCollectionItems(collectionSymbol, true, {
+  const floorItems = await api.fetchCollectionItems(collectionSymbol, true, {
     pageSize: listPageSize,
+    wallet: wallets[0],
+    wallets,
+    network,
   });
 
   if (floorItems.length === 0) {
@@ -1376,7 +1469,11 @@ export const buyXFromEachWallet = async ({
           wallet,
           network,
           addConsoleLog,
-          isStopRequested
+          isStopRequested,
+          useFees,
+          exchange,
+          collectionSymbol,
+          selectedCollection
         );
 
         if (!prepareResult.success) {
@@ -1415,13 +1512,13 @@ export const buyXFromEachWallet = async ({
             prepareResult.signedPaymentPrepPSBT;
         }
 
-        const completeResult = await completeSecurePurchase(
+        const completeResult = await api.completeSecurePurchase(
           item,
           buyerWallet,
           network,
           addConsoleLog,
           isStopRequested,
-          completeOptions
+          { ...completeOptions, collectionSymbol, selectedCollection }
         );
 
         if (completeResult.success && completeResult.txid) {
@@ -1453,7 +1550,7 @@ export const buyXFromEachWallet = async ({
               itemPrice,
               completeResult.txid,
               network,
-              null
+              addConsoleLog
             );
           }
 
@@ -1515,7 +1612,9 @@ export const sellXFromEachWallet = async ({
   addConsoleLog,
   useCustomPrice = false,
   customPrice = 0,
+  exchange = TRADING_EXCHANGES.SATFLOW,
 }) => {
+  const api = getTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
     selectedCollection.symbol ||
@@ -1538,7 +1637,11 @@ export const sellXFromEachWallet = async ({
   } else {
     // Get floor price for listing
     addConsoleLog('📋 Fetching floor price...');
-    const floorPrice = await getFloorPrice(collectionSymbol, true);
+    const floorPrice = await api.getFloorPrice(collectionSymbol, true, {
+      wallet: wallets[0],
+      wallets,
+      network,
+    });
 
     if (!floorPrice) {
       addConsoleLog('⚠ Could not determine floor price');
@@ -1556,10 +1659,11 @@ export const sellXFromEachWallet = async ({
   for (const wallet of wallets) {
     try {
       // Fetch items owned by this wallet
-      const items = await fetchWalletOrdinals(
+      const items = await api.fetchWalletOrdinals(
         wallet.address,
         collectionSymbol,
-        true // bypass cache
+        true, // bypass cache
+        { wallet, wallets, network }
       );
 
       if (items.length === 0) {
@@ -1600,17 +1704,20 @@ export const sellXFromEachWallet = async ({
             `  Listing item #${item.inscriptionNumber || tokenId.slice(0, 8)} at ${(listingPrice / 100000000).toFixed(8)} BTC...`
           );
 
-          const listResult = await listOrdinalWithProxyWallet(
+          const listResult = await api.listOrdinalWithProxyWallet(
             item,
             listingPrice,
             wallet,
-            network
+            network,
+            { collectionSymbol, selectedCollection }
           );
 
           if (listResult.success) {
             const inscriptionId = getInscriptionId(item);
             const magicEdenLink = inscriptionId
-              ? `https://magiceden.us/ordinals/item-details/${inscriptionId}`
+              ? isOrdNetExchange(exchange)
+                ? `https://ord.net/inscription/${inscriptionId}`
+                : `https://magiceden.us/ordinals/item-details/${inscriptionId}`
               : null;
 
             addConsoleLog(
