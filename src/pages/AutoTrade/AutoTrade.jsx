@@ -18,6 +18,7 @@ import {
 } from '../../trading/autoTradeEngine';
 import { checkTransactionConfirmed } from '../../trading/chain';
 import { TRADING_EXCHANGES, getTradingApi } from '../../trading/exchanges';
+import { mergePendingPurchases } from '../../trading/pendingPurchases';
 import {
   MEMPOOL_PROVIDERS,
   getMempoolApiProvider,
@@ -33,9 +34,9 @@ const FINE_TRADING_USE_FEES_KEY = 'fine-trading-use-fees';
 
 // Step status icons
 const StepStatus = {
-  PENDING: 'â³',
-  COMPLETE: 'âœ“',
-  IN_PROGRESS: 'âŸ³',
+  PENDING: '⏳',
+  COMPLETE: '✓',
+  IN_PROGRESS: '⟳',
 };
 
 const AutoTrade = () => {
@@ -107,6 +108,9 @@ const AutoTrade = () => {
   const [upperTradePrice, setUpperTradePrice] = useState(0); // Upper trade price for range trading (in BTC)
   const tradingIntervalRef = useRef(null);
   const tradingStopRequestedRef = useRef(false); // Set true when user clicks Stop; checked before setting interval and at each tick
+  // Incremented on every Start and Stop so an older run that is still awaiting
+  // network calls cannot keep trading (or flip isTrading) after Stop -> Start.
+  const tradingRunIdRef = useRef(0);
   const pendingPurchasesRef = useRef([]); // Ref to track latest pending purchases for interval callback
   // Refs for range trading state (to avoid stale closures in interval)
   const usePriceRangeRef = useRef(false);
@@ -501,6 +505,7 @@ const AutoTrade = () => {
     if (isTrading) {
       // Stop trading: set flag first so any in-flight start flow or next tick will see it
       tradingStopRequestedRef.current = true;
+      tradingRunIdRef.current += 1;
       if (tradingIntervalRef.current != null) {
         clearTimeout(tradingIntervalRef.current);
         tradingIntervalRef.current = null;
@@ -511,6 +516,14 @@ const AutoTrade = () => {
     } else {
       // Start trading
       tradingStopRequestedRef.current = false;
+      const runId = ++tradingRunIdRef.current;
+      // True once Stop was clicked or a newer run has started.
+      const isStopped = () =>
+        tradingStopRequestedRef.current || runId !== tradingRunIdRef.current;
+      // Only the current run may switch the Start/Stop button back.
+      const endRun = () => {
+        if (runId === tradingRunIdRef.current) setIsTrading(false);
+      };
       setIsTrading(true);
       // Initialize pending purchases ref
       pendingPurchasesRef.current = pendingPurchases;
@@ -521,7 +534,7 @@ const AutoTrade = () => {
       }
 
       if (tradingMode === 'bid-accept-bids') {
-        setIsTrading(false);
+        endRun();
         addConsoleLog(
           'Use "Open bids for collection" to place or accept bids (auto-trader does not run in this mode).'
         );
@@ -534,7 +547,7 @@ const AutoTrade = () => {
       // Validate
       if (!selectedCollection || activeWallets.length === 0) {
         addConsoleLog('✗ Cannot start trading: Missing collection or wallets');
-        setIsTrading(false);
+        endRun();
         return;
       }
 
@@ -544,7 +557,7 @@ const AutoTrade = () => {
           addConsoleLog(
             '✗ Buy X from each wallet: set at least 1 item per wallet'
           );
-          setIsTrading(false);
+          endRun();
           return;
         }
 
@@ -563,7 +576,7 @@ const AutoTrade = () => {
             useFees,
             prepDelay,
             exchange: tradingExchange,
-            isStopRequested: () => tradingStopRequestedRef.current,
+            isStopRequested: isStopped,
           });
 
           const itemsBought = buyEachResult.itemsBought || 0;
@@ -571,8 +584,12 @@ const AutoTrade = () => {
             buyEachResult.pendingPurchases &&
             buyEachResult.pendingPurchases.length > 0
           ) {
-            setPendingPurchases(buyEachResult.pendingPurchases);
-            pendingPurchasesRef.current = buyEachResult.pendingPurchases;
+            const merged = mergePendingPurchases(
+              pendingPurchasesRef.current,
+              buyEachResult.pendingPurchases
+            );
+            setPendingPurchases(merged);
+            pendingPurchasesRef.current = merged;
           }
 
           if (itemsBought > 0) {
@@ -588,7 +605,7 @@ const AutoTrade = () => {
           addConsoleLog(`✗ Error in buy X per wallet: ${err.message}`);
         }
 
-        setIsTrading(false);
+        endRun();
         return;
       }
 
@@ -600,14 +617,14 @@ const AutoTrade = () => {
             addConsoleLog(
               '✗ Cannot start range trading: Lower and upper prices must be greater than 0'
             );
-            setIsTrading(false);
+            endRun();
             return;
           }
           if (upperTradePrice <= lowerTradePrice) {
             addConsoleLog(
               '✗ Cannot start range trading: Upper price must be higher than lower price'
             );
-            setIsTrading(false);
+            endRun();
             return;
           }
         } else {
@@ -616,7 +633,7 @@ const AutoTrade = () => {
             addConsoleLog(
               '✗ Cannot start range trading: Trade price must be greater than 0'
             );
-            setIsTrading(false);
+            endRun();
             return;
           }
         }
@@ -644,7 +661,7 @@ const AutoTrade = () => {
             useFees,
             prepDelay,
             exchange: tradingExchange,
-            isStopRequested: () => tradingStopRequestedRef.current,
+            isStopRequested: isStopped,
           });
 
           const itemsBought = floorPurchaseResult.itemsBought || 0;
@@ -654,8 +671,12 @@ const AutoTrade = () => {
             floorPurchaseResult.pendingPurchases &&
             floorPurchaseResult.pendingPurchases.length > 0
           ) {
-            setPendingPurchases(floorPurchaseResult.pendingPurchases);
-            pendingPurchasesRef.current = floorPurchaseResult.pendingPurchases;
+            const merged = mergePendingPurchases(
+              pendingPurchasesRef.current,
+              floorPurchaseResult.pendingPurchases
+            );
+            setPendingPurchases(merged);
+            pendingPurchasesRef.current = merged;
           }
 
           if (itemsBought > 0) {
@@ -718,7 +739,7 @@ const AutoTrade = () => {
         }
 
         // Stop trading after listing (sell-x-each is a one-time operation)
-        setIsTrading(false);
+        endRun();
         return;
       }
 
@@ -742,7 +763,7 @@ const AutoTrade = () => {
             addConsoleLog(
               '✗ Invalid price range. Please set valid lower and upper prices.'
             );
-            setIsTrading(false);
+            endRun();
             return;
           }
         } else if (tradePrice > 0) {
@@ -777,7 +798,7 @@ const AutoTrade = () => {
             useFees,
             prepDelay,
             exchange: tradingExchange,
-            isStopRequested: () => tradingStopRequestedRef.current,
+            isStopRequested: isStopped,
           });
 
           const itemsBought = floorPurchaseResult.itemsBought || 0;
@@ -785,8 +806,12 @@ const AutoTrade = () => {
             floorPurchaseResult.pendingPurchases &&
             floorPurchaseResult.pendingPurchases.length > 0
           ) {
-            setPendingPurchases(floorPurchaseResult.pendingPurchases);
-            pendingPurchasesRef.current = floorPurchaseResult.pendingPurchases;
+            const merged = mergePendingPurchases(
+              pendingPurchasesRef.current,
+              floorPurchaseResult.pendingPurchases
+            );
+            setPendingPurchases(merged);
+            pendingPurchasesRef.current = merged;
           }
 
           if (itemsBought > 0) {
@@ -805,8 +830,8 @@ const AutoTrade = () => {
           addConsoleLog('Continuing with items already in wallets...');
         }
 
-        if (tradingStopRequestedRef.current) {
-          setIsTrading(false);
+        if (isStopped()) {
+          endRun();
           addConsoleLog(
             'Auto-trading stopped (stop requested during startup).'
           );
@@ -817,28 +842,35 @@ const AutoTrade = () => {
       }
 
       // Delta neutral + range trading: same processWalletItems (listing fix, delays, sequential buys)
-      const initialResult = await processWalletItems({
-        wallets: activeWallets,
-        selectedCollection,
-        network,
-        addConsoleLog,
-        pendingPurchases,
-        useFees,
-        tradePrice: tradePriceSats,
-        prepDelay,
-        exchange: tradingExchange,
-        updatePendingPurchases: (newPending) => {
-          setPendingPurchases(newPending);
-          pendingPurchasesRef.current = newPending;
-        },
-        isStopRequested: () => tradingStopRequestedRef.current,
-      });
+      let initialResult;
+      try {
+        initialResult = await processWalletItems({
+          wallets: activeWallets,
+          selectedCollection,
+          network,
+          addConsoleLog,
+          pendingPurchases: pendingPurchasesRef.current,
+          useFees,
+          tradePrice: tradePriceSats,
+          prepDelay,
+          exchange: tradingExchange,
+          updatePendingPurchases: (newPending) => {
+            setPendingPurchases(newPending);
+            pendingPurchasesRef.current = newPending;
+          },
+          isStopRequested: isStopped,
+        });
+      } catch (err) {
+        addConsoleLog(`✗ Auto-trading stopped after an error: ${err.message}`);
+        endRun();
+        return;
+      }
 
       if (initialResult.shouldStopTrading) {
         addConsoleLog(
           '\n⏹️ All items delisted and no pending purchases. Stopping auto-trader...'
         );
-        setIsTrading(false);
+        endRun();
         if (tradingIntervalRef.current != null) {
           clearTimeout(tradingIntervalRef.current);
           tradingIntervalRef.current = null;
@@ -847,18 +879,18 @@ const AutoTrade = () => {
       }
 
       // If user clicked Stop during buyItemsFromFloor or initial processWalletItems, do not start the loop
-      if (tradingStopRequestedRef.current) {
-        setIsTrading(false);
+      if (isStopped()) {
+        endRun();
         addConsoleLog('Auto-trading stopped (stop requested during startup).');
         return;
       }
 
       // Use setTimeout chain instead of setInterval so only one cycle runs at a time (no overlapping)
       const scheduleNext = () => {
-        if (tradingStopRequestedRef.current) return;
+        if (isStopped()) return;
         tradingIntervalRef.current = setTimeout(async function runCycle() {
           tradingIntervalRef.current = null;
-          if (tradingStopRequestedRef.current) return;
+          if (isStopped()) return;
           const currentActiveWallets = getActiveWallets();
 
           let currentTradePriceSats = null;
@@ -884,7 +916,7 @@ const AutoTrade = () => {
                 addConsoleLog(
                   '✗ Invalid price range. Please set valid lower and upper prices.'
                 );
-                setIsTrading(false);
+                endRun();
                 return;
               }
             } else if (currentTradePrice > 0) {
@@ -913,7 +945,7 @@ const AutoTrade = () => {
                 useFees,
                 prepDelay,
                 exchange: tradingExchange,
-                isStopRequested: () => tradingStopRequestedRef.current,
+                isStopRequested: isStopped,
               });
 
               const itemsBought = floorPurchaseResult.itemsBought || 0;
@@ -921,9 +953,12 @@ const AutoTrade = () => {
                 floorPurchaseResult.pendingPurchases &&
                 floorPurchaseResult.pendingPurchases.length > 0
               ) {
-                setPendingPurchases(floorPurchaseResult.pendingPurchases);
-                pendingPurchasesRef.current =
-                  floorPurchaseResult.pendingPurchases;
+                const merged = mergePendingPurchases(
+                  pendingPurchasesRef.current,
+                  floorPurchaseResult.pendingPurchases
+                );
+                setPendingPurchases(merged);
+                pendingPurchasesRef.current = merged;
               }
 
               if (itemsBought > 0) {
@@ -942,34 +977,43 @@ const AutoTrade = () => {
               addConsoleLog('Continuing with items already in wallets...');
             }
 
-            if (tradingStopRequestedRef.current) return;
+            if (isStopped()) return;
             await new Promise((resolve) => setTimeout(resolve, 2000));
           }
 
-          const result = await processWalletItems({
-            wallets: currentActiveWallets,
-            selectedCollection,
-            network,
-            addConsoleLog,
-            pendingPurchases: pendingPurchasesRef.current,
-            useFees,
-            // null for delta neutral (floor); range trading sets random/fixed sats each tick
-            tradePrice: currentTradePriceSats,
-            prepDelay,
-            exchange: tradingExchange,
-            updatePendingPurchases: (newPending) => {
-              setPendingPurchases(newPending);
-              pendingPurchasesRef.current = newPending;
-            },
-            isStopRequested: () => tradingStopRequestedRef.current,
-          });
+          let result;
+          try {
+            result = await processWalletItems({
+              wallets: currentActiveWallets,
+              selectedCollection,
+              network,
+              addConsoleLog,
+              pendingPurchases: pendingPurchasesRef.current,
+              useFees,
+              // null for delta neutral (floor); range trading sets random/fixed sats each tick
+              tradePrice: currentTradePriceSats,
+              prepDelay,
+              exchange: tradingExchange,
+              updatePendingPurchases: (newPending) => {
+                setPendingPurchases(newPending);
+                pendingPurchasesRef.current = newPending;
+              },
+              isStopRequested: isStopped,
+            });
+          } catch (err) {
+            addConsoleLog(
+              `✗ Auto-trading stopped after an error: ${err.message}`
+            );
+            endRun();
+            return;
+          }
 
-          if (tradingStopRequestedRef.current) return;
+          if (isStopped()) return;
           if (result.shouldStopTrading) {
             addConsoleLog(
               '\n⏹️ All items delisted and no pending purchases. Stopping auto-trader...'
             );
-            setIsTrading(false);
+            endRun();
             return;
           }
           scheduleNext();
@@ -979,9 +1023,12 @@ const AutoTrade = () => {
     }
   };
 
-  // Cleanup on unmount
+  // Cleanup on unmount: end the run so an in-flight cycle does not schedule
+  // more trading after the page is gone.
   useEffect(() => {
     return () => {
+      tradingStopRequestedRef.current = true;
+      tradingRunIdRef.current += 1;
       if (tradingIntervalRef.current != null) {
         clearTimeout(tradingIntervalRef.current);
       }
@@ -1159,12 +1206,12 @@ const AutoTrade = () => {
             </button>
             {stepStatuses[3] === StepStatus.IN_PROGRESS && (
               <div style={{ marginTop: '16px', color: '#ed8936' }}>
-                â³ Waiting for transaction confirmation...
+                ⏳ Waiting for transaction confirmation...
               </div>
             )}
             {stepStatuses[3] === StepStatus.COMPLETE && (
               <div style={{ marginTop: '16px', color: '#48bb78' }}>
-                âœ“ Dispatch transactions confirmed!
+                ✓ Dispatch transactions confirmed!
               </div>
             )}
             <Dispatch
