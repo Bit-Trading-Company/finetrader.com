@@ -188,11 +188,11 @@ const Inscriptions = ({ glEventHub }) => {
   };
 
   const getMimeTypeIcon = (mimeType) => {
-    if (mimeType?.startsWith('image/')) return 'ðŸ–¼ï¸';
-    if (mimeType?.startsWith('text/')) return 'ðŸ“„';
-    if (mimeType?.includes('json')) return 'ðŸ“‹';
-    if (mimeType?.includes('html')) return 'ðŸŒ';
-    return 'ðŸ“„';
+    if (mimeType?.startsWith('image/')) return '🖼️';
+    if (mimeType?.startsWith('text/')) return '📄';
+    if (mimeType?.includes('json')) return '📋';
+    if (mimeType?.includes('html')) return '🌐';
+    return '📄';
   };
 
   const copyToClipboard = async (text) => {
