@@ -281,8 +281,11 @@ const WalletConsolidator = () => {
       network,
       feeRate,
       addLog,
+      // Keyed by address: `index` is the position within activeWallets, which
+      // differs from the full wallet list when a custom subset is used.
       onWalletComplete: (index, result) => {
-        setWalletStatuses((prev) => ({ ...prev, [index]: result }));
+        const key = activeWallets[index]?.address ?? index;
+        setWalletStatuses((prev) => ({ ...prev, [key]: result }));
       },
       isStopRequested: () => stopRequestedRef.current,
     });
@@ -651,7 +654,7 @@ const WalletConsolidator = () => {
                       </button>
                     </div>
                     {wallets.map((wallet, i) => {
-                      const status = walletStatuses[i];
+                      const status = walletStatuses[wallet.address];
                       return (
                         <label
                           key={i}
