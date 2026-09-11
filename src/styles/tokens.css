@@ -1,5 +1,6 @@
 /*
- * Design tokens: the app's color palette as CSS custom properties.
+ * Design tokens: the app's color palette and font stacks as CSS custom
+ * properties.
  *
  * Names follow the Tailwind v1 scale the existing styles were written with;
  * colors outside that palette are named by hue. Stylesheets reference them as
@@ -32,4 +33,15 @@
   --color-green-600: #38a169;
   --color-green-700: #2f855a;
   --color-blue-600: #3182ce;
+  /*
+ Font stacks: body text, and the Mix Doodle display font used for page titles
+ */
+  --font-family-app:
+    monospace, 'Mix Doodle', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
+  --font-family-display:
+    'Mix Doodle', monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
 }

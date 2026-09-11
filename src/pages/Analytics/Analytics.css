@@ -9,7 +9,7 @@ body:has(.analytics-container) {
 }
 
 /* Reset all global styles from index.css when analytics is active */
-body:has(.analytics-container) * {
+body:has(.analytics-container) :where(:not(.ds-root, .ds-root *)) {
   font-family:
     monospace,
     'Mix Doodle',
@@ -26,7 +26,7 @@ body:has(.analytics-container) * {
     sans-serif !important;
 }
 
-body:has(.analytics-container) p {
+body:has(.analytics-container) p:where(:not(.ds-root *)) {
   color: inherit !important;
 }
 
@@ -233,8 +233,7 @@ body:has(.analytics-container) p {
 
 .analytics-dropdown-header,
 .analytics-sidebar .component-header,
-.analytics-content .component-header,
-.component-header {
+.analytics-content .component-header {
   font-family: 'Oliver-Regular', serif;
 }
 
@@ -264,6 +263,7 @@ body:has(.analytics-container) p {
   background-clip: text;
   letter-spacing: 1px;
   font-size: 36px;
+  text-align: center;
 }
 
 .analytics-header-separator {
@@ -849,21 +849,6 @@ body:has(.analytics-container) p {
 }
 
 .analytics-container .wallet-details-tooltip {
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: var(--color-navy-900);
-  border: 1px solid var(--color-gray-700);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  padding: 16px;
-  min-width: 400px;
-  position: fixed;
-  z-index: 10000;
-}
-
-.wallet-details-tooltip {
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;

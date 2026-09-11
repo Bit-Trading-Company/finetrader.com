@@ -9,7 +9,7 @@ body:has(.dashboard-container) {
 }
 
 /* Reset all global styles from index.css when Dashboard is active */
-body:has(.dashboard-container) * {
+body:has(.dashboard-container) :where(:not(.ds-root, .ds-root *)) {
   font-family:
     monospace,
     'Mix Doodle',
@@ -26,7 +26,7 @@ body:has(.dashboard-container) * {
     sans-serif !important;
 }
 
-body:has(.dashboard-container) p {
+body:has(.dashboard-container) p:where(:not(.ds-root *)) {
   color: inherit !important;
 }
 
@@ -231,8 +231,7 @@ body:has(.dashboard-container) p {
 
 .dashboard-dropdown-header,
 .dashboard-sidebar .component-header,
-.dashboard-content .component-header,
-.component-header {
+.dashboard-content .component-header {
   font-family: 'Oliver-Regular', serif;
 }
 
@@ -262,6 +261,7 @@ body:has(.dashboard-container) p {
   background-clip: text;
   letter-spacing: 1px;
   font-size: 36px;
+  text-align: center;
 }
 
 .dashboard-header-separator {
@@ -845,21 +845,6 @@ body:has(.dashboard-container) p {
 }
 
 .dashboard-container .wallet-details-tooltip {
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: var(--color-navy-900);
-  border: 1px solid var(--color-gray-700);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  padding: 16px;
-  min-width: 400px;
-  position: fixed;
-  z-index: 10000;
-}
-
-.wallet-details-tooltip {
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;

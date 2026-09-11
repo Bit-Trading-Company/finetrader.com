@@ -77,6 +77,11 @@ const SatflowStats = () => {
             fontSize: '24px',
             fontWeight: 600,
             marginBottom: '8px',
+            // Previously inherited from the Splash page's global h1 rule.
+            fontFamily: 'var(--font-family-display)',
+            color: 'orange',
+            textAlign: 'center',
+            letterSpacing: '0.4vw',
           }}
         >
           Satflow Collection Stats
