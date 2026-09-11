@@ -32,20 +32,20 @@
       "destination": "/api/satflow?op=activity-bids"
     },
     {
-      "source": "/api/satflow-create-psbt-non-custodial-bid-deposit",
-      "destination": "/api/satflow?op=create-psbt-non-custodial-bid-deposit"
-    },
-    {
-      "source": "/api/satflow-bid-place",
-      "destination": "/api/satflow?op=bid-place"
-    },
-    {
       "source": "/api/satflow-item",
       "destination": "/api/satflow?op=item"
     },
     {
+      "source": "/api/satflow-create-psbt-non-custodial-bid-deposit",
+      "destination": "/api/satflow?op=create-psbt-non-custodial-bid-deposit"
+    },
+    {
       "source": "/api/satflow-setup-utxos",
       "destination": "/api/satflow?op=setup-utxos"
+    },
+    {
+      "source": "/api/satflow-bid-place",
+      "destination": "/api/satflow?op=bid-place"
     },
     {
       "source": "/api/satflow-intent-secure-purchase",
@@ -56,20 +56,56 @@
       "destination": "/api/satflow?op=intent-satflow-purchase"
     },
     {
-      "source": "/api/satflow-list",
-      "destination": "/api/satflow?op=list"
-    },
-    {
       "source": "/api/satflow-intent-sell",
       "destination": "/api/satflow?op=intent-sell"
+    },
+    {
+      "source": "/api/satflow-list",
+      "destination": "/api/satflow?op=list"
     },
     {
       "source": "/api/satflow-purchase-broadcast",
       "destination": "/api/satflow?op=purchase-broadcast"
     },
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/proxy",
+      "destination": "/api/magiceden?op=runes"
+    },
+    {
+      "source": "/api/magiceden-psbt",
+      "destination": "/api/magiceden?op=psbt"
+    },
+    {
+      "source": "/api/wallet-tokens",
+      "destination": "/api/magiceden?op=wallet-tokens"
+    },
+    {
+      "source": "/api/collections",
+      "destination": "/api/magiceden?op=collections"
+    },
+    {
+      "source": "/api/collection-items",
+      "destination": "/api/magiceden?op=collection-items"
+    },
+    {
+      "source": "/api/search-collections",
+      "destination": "/api/magiceden?op=search-collections"
+    },
+    {
+      "source": "/api/collection-offers",
+      "destination": "/api/magiceden?op=collection-offers"
+    },
+    {
+      "source": "/api/collection-offers-psbt",
+      "destination": "/api/magiceden?op=collection-offers-psbt"
+    },
+    {
+      "source": "/api/collection-offers-fulfill",
+      "destination": "/api/magiceden?op=collection-offers-fulfill"
+    },
+    {
+      "source": "/api/collection-offers-fulfill-submit",
+      "destination": "/api/magiceden?op=collection-offers-fulfill-submit"
     }
   ]
 }

@@ -52,9 +52,10 @@ const InscriptionsInner = ({ glEventHub }) => {
         const response = await fetch(apiUrl, {
           headers: {
             Accept: 'application/json',
-            'x-hiro-api-key':
-              process.env.REACT_APP_HIRO_API_KEY ||
-              'ca15c2c127ea127678259d5947cf07fd',
+            // Optional: Hiro serves unauthenticated requests at lower rate limits.
+            ...(process.env.REACT_APP_HIRO_API_KEY
+              ? { 'x-hiro-api-key': process.env.REACT_APP_HIRO_API_KEY }
+              : {}),
           },
         });
 

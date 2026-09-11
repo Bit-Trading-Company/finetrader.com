@@ -6,15 +6,13 @@ import {
   getMempoolTxHexUrl,
   getMempoolTxUrl,
 } from './mempoolProvider';
+import { buildUnisatProxyUrl } from './unisatProxy';
 
 // Dust threshold - outputs below this are unspendable
 const DUST_THRESHOLD = 546;
 
 // Fee rate constants (sat/vbyte)
 const DEFAULT_FEE_RATE = 10;
-
-// Unisat open API (for ordinal/inscription detection)
-const UNISAT_INDEXER_BASE = 'https://open-api.unisat.io/v1/indexer';
 
 // Taproot tx size estimates (vbytes)
 // Overhead: 10.5 vbytes, P2TR input: ~57.5 vbytes, P2TR output: ~43 vbytes
@@ -58,20 +56,18 @@ export const fetchUtxos = async (address, network = 'mainnet') => {
 };
 
 /**
- * Query Unisat indexer for inscription info on a specific UTXO.
- * Returns true if the UTXO has inscriptions (i.e., is an "ordinal" UTXO).
- *
- * Endpoint:
- *   https://open-api.unisat.io/v1/indexer/utxo/{txid}/{vout}
+ * Query the UniSat indexer (via the /api/unisat proxy) for inscription info on
+ * a specific UTXO. Returns true if the UTXO has inscriptions (i.e., is an
+ * "ordinal" UTXO).
  *
  * @param {string} txid
  * @param {number} vout
  * @returns {Promise<boolean>}
  */
 const utxoHasInscriptions = async (txid, vout) => {
-  const url = `${UNISAT_INDEXER_BASE}/utxo/${encodeURIComponent(
-    String(txid)
-  )}/${encodeURIComponent(String(vout))}`;
+  const url = buildUnisatProxyUrl(
+    `utxo/${encodeURIComponent(String(txid))}/${encodeURIComponent(String(vout))}`
+  );
 
   const res = await fetch(url, {
     method: 'GET',

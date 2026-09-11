@@ -12,7 +12,7 @@ cp .env.example .env   # then add your API keys
 npm start
 ```
 
-The app opens at [http://localhost:3000](http://localhost:3000). `npm start` runs the CRA dev server (via CRACO) with hot reload, and `src/setupProxy.js` serves the same `/api/*` routes the Vercel functions serve in production.
+The app opens at [http://localhost:3000](http://localhost:3000). `npm start` runs the CRA dev server (via CRACO) with hot reload, and `src/setupProxy.js` mounts the same `/api/*` handlers the Vercel functions use in production.
 
 For a production build locally:
 
@@ -26,21 +26,22 @@ Copy `.env.example` to `.env` and fill in the values:
 
 | Variable | Required | Description |
 |---|---|---|
-| `MAGIC_EDEN_API_KEY` | Recommended | Magic Eden API key — [get one here](https://magiceden.io/developers) |
-| `UNISAT_API_KEY` | Recommended | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/) |
-| `SATFLOW_API_KEY` | Vercel only | Satflow API key for serverless proxy routes (set in Vercel project env) |
+| `SATFLOW_API_KEY` | Yes | Satflow API key used by every `/api/satflow-*` route |
+| `MAGIC_EDEN_API_KEY` | Yes | Magic Eden API key — [get one here](https://magiceden.io/developers) |
+| `UNISAT_API_KEY` | Yes | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/) |
+| `REACT_APP_HIRO_API_KEY` | Optional | Hiro API key for the inscriptions panel. Embedded in the browser bundle, so treat it as public |
 
-Without API keys, unauthenticated requests may be rate-limited or return 403.
+API keys are only read on the server (`server/`): from `.env` during development and from the Vercel project settings in production. Without them, upstream requests are unauthenticated and usually fail with 401/403/429.
 
 ## Deployment (Vercel)
 
 This project deploys to Vercel:
 
-- `vercel.json` configures the build output (`build/`) and API rewrites for Satflow routes
-- `api/` contains serverless functions that proxy marketplace APIs and keep keys server-side
+- `vercel.json` configures the build output (`build/`) and rewrites the public `/api/*` URLs onto the functions in `api/`
+- `api/` holds one-line function entrypoints; the handlers live in `server/`
 - `npm run build` produces the static frontend
 
-Deploy by connecting the repo to Vercel. Set `MAGIC_EDEN_API_KEY`, `UNISAT_API_KEY`, and `SATFLOW_API_KEY` in the Vercel project environment settings.
+Deploy by connecting the repo to Vercel. Set `SATFLOW_API_KEY`, `MAGIC_EDEN_API_KEY`, and `UNISAT_API_KEY` in the Vercel project environment settings.
 
 ## Routes
 
@@ -59,12 +60,14 @@ Deploy by connecting the repo to Vercel. Set `MAGIC_EDEN_API_KEY`, `UNISAT_API_K
 
 ```
 finetrader.com/
-├── api/                  # Vercel serverless functions (marketplace API proxies)
-│   ├── satflow.js        # Consolidated Satflow router (bids, listings, PSBTs, etc.)
-│   ├── unisat.js         # UniSat Open API proxy
-│   ├── magiceden-psbt.js # Magic Eden PSBT endpoints
-│   ├── collections.js    # Collection data
-│   └── ...
+├── api/                  # Vercel function entrypoints (one line each; logic in server/)
+├── server/               # API handlers shared by Vercel (api/) and the dev server (src/setupProxy.js)
+│   ├── routes.js         # Public /api route table (a test keeps it in sync with vercel.json)
+│   ├── satflow.js        # Satflow v1 API + tRPC handlers (?op=...)
+│   ├── magiceden.js      # Magic Eden handlers (?op=...)
+│   ├── unisat.js         # UniSat indexer proxy
+│   ├── ordnet.js         # ord.net proxy
+│   └── lib/              # HTTP relay/validation, env-only API keys, TTL cache
 ├── docs/reference/       # Upstream API specs (Satflow OpenAPI)
 ├── public/               # Static assets served as-is (index.html, favicon, manifest)
 ├── src/
@@ -78,7 +81,7 @@ finetrader.com/
 │   ├── assets/           # Images, fonts, SVGs
 │   ├── App.js            # Route definitions
 │   ├── index.js          # App entry point + wallet providers
-│   └── setupProxy.js     # Dev-only API proxy (mirrors Vercel /api routes locally)
+│   └── setupProxy.js     # Dev server: mounts server/ handlers on /api/*
 ├── craco.config.js       # Webpack/Jest overrides (Node polyfills, ESM transforms)
 └── vercel.json           # Vercel build config + API rewrites
 ```
@@ -95,8 +98,8 @@ finetrader.com/
   - `extractorUtils.js` — inscription UTXO extraction
   - `consolidatorUtils.js` — wallet UTXO consolidation
   - `mempoolProvider.js` — mempool API abstraction
-  - `apiClient.js` — frontend API client
-- **`api/`** — Server-side proxies used in production on Vercel. In development, `setupProxy.js` routes the same `/api/*` paths to external services.
+  - `apiClient.js` — Magic Eden runes client (via `/api/proxy`)
+  - `unisatProxy.js` — `/api/unisat` URL builder
 
 ## Scripts
 
@@ -104,9 +107,9 @@ finetrader.com/
 |---|---|
 | `npm start` | Start dev server (CRACO + hot reload) |
 | `npm run build` | Production build to `./build` |
-| `npm test` | Run tests (Jest) |
+| `npm test` | Run tests (Jest; `src/` and `server/`) |
 | `npm run test:ci` | CI test run with coverage |
-| `npm run lint` | ESLint check |
+| `npm run lint` | ESLint check (`src/`, `api/`, `server/`) |
 | `npm run lint:fix` | ESLint auto-fix |
 | `npm run format` | Prettier format |
 

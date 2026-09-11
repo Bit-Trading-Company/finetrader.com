@@ -388,24 +388,15 @@ const BuyOrdinalInner = ({
         useUnconfirmedUTXO: false,
       };
 
-      const isProduction =
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1';
-      const apiUrl = isProduction
-        ? '/api/magiceden-psbt?endpoint=get_sweeping'
-        : 'https://api-mainnet.magiceden.us/v2/ord/btc/psbt/get_sweeping';
+      // Magic Eden is always called through the same-origin proxy
+      // (server/magiceden.js); browsers cannot call magiceden.us directly.
+      const apiUrl = '/api/magiceden-psbt?endpoint=get_sweeping';
 
       const fetchResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           accept: 'application/json, text/plain, */*',
           'content-type': 'application/json;charset=UTF-8',
-          ...(isProduction
-            ? {}
-            : {
-                origin: 'https://magiceden.us',
-                referer: 'https://magiceden.us/',
-              }),
         },
         body: JSON.stringify(payload),
       });
@@ -545,21 +536,13 @@ const BuyOrdinalInner = ({
         walletSource: connectedWallet?.toLowerCase() || 'unisat',
       };
 
-      const purchaseApiUrl = isProduction
-        ? '/api/magiceden-psbt?endpoint=sweeping'
-        : 'https://api-mainnet.magiceden.us/v2/ord/btc/psbt/sweeping';
+      const purchaseApiUrl = '/api/magiceden-psbt?endpoint=sweeping';
 
       const purchaseResponse = await fetch(purchaseApiUrl, {
         method: 'POST',
         headers: {
           accept: 'application/json, text/plain, */*',
           'content-type': 'application/json;charset=UTF-8',
-          ...(isProduction
-            ? {}
-            : {
-                origin: 'https://magiceden.us',
-                referer: 'https://magiceden.us/',
-              }),
         },
         body: JSON.stringify(purchasePayload),
       });

@@ -6,20 +6,9 @@ import {
   getMempoolTxUrl,
 } from './mempoolProvider';
 import { estimateConsolidationFee, fetchUtxos } from './consolidatorUtils';
+import { buildUnisatProxyUrl } from './unisatProxy';
 
 const DUST_THRESHOLD = 546;
-
-/** Same-origin proxy (dev: setupProxy, prod: /api/unisat.js) — avoids browser CORS to UniSat. */
-const buildUnisatProxyUrl = (indexerPath, query = {}) => {
-  const params = new URLSearchParams();
-  params.set('path', String(indexerPath).replace(/^\/+/, ''));
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== '') {
-      params.set(key, String(value));
-    }
-  }
-  return `/api/unisat?${params.toString()}`;
-};
 
 const utxoHasInscriptions = async (txid, vout) => {
   const url = buildUnisatProxyUrl(

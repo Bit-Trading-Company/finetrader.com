@@ -21,6 +21,7 @@ import {
   calculateTradingFeeAmount,
   TRADING_FEE_RECEIVER_ADDRESS,
 } from './tradingFeeUtils';
+import { buildUnisatProxyUrl } from './unisatProxy';
 
 /**
  * Get token ID from ordinal - tries multiple possible field names
@@ -1993,17 +1994,6 @@ export const sendTradingFee = async (
 
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-    const buildUnisatProxyUrl = (indexerPath, query = {}) => {
-      const params = new URLSearchParams();
-      params.set('path', String(indexerPath).replace(/^\/+/, ''));
-      for (const [key, value] of Object.entries(query)) {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, String(value));
-        }
-      }
-      return `/api/unisat?${params.toString()}`;
-    };
-
     const normalizeOutpointKey = (txid, vout) => {
       const tx = txid == null ? '' : String(txid).trim();
       const idx = Number(vout);
@@ -2849,24 +2839,15 @@ export const delistOrdinalWithProxyWallet = async (
       throw new Error('Could not get wallet address or public key');
     }
 
-    const isProduction =
-      window.location.hostname !== 'localhost' &&
-      window.location.hostname !== '127.0.0.1';
-    const getPsbtUrl = isProduction
-      ? `/api/magiceden-psbt?endpoint=delist&tokenId=${encodeURIComponent(tokenId)}&publicKey=${encodeURIComponent(publicKey)}`
-      : `https://api-mainnet.magiceden.us/v2/ord/btc/psbt/delist?tokenId=${encodeURIComponent(tokenId)}&publicKey=${encodeURIComponent(publicKey)}`;
+    // NOTE: /api/magiceden-psbt does not allow `delist`, so this request fails
+    // in every environment. See docs/KNOWN_ISSUES.md before enabling it.
+    const getPsbtUrl = `/api/magiceden-psbt?endpoint=delist&tokenId=${encodeURIComponent(tokenId)}&publicKey=${encodeURIComponent(publicKey)}`;
 
     // Step 1: Fetch delist PSBT
     const fetchResponse = await fetch(getPsbtUrl, {
       method: 'GET',
       headers: {
         accept: 'application/json, text/plain, */*',
-        ...(isProduction
-          ? {}
-          : {
-              origin: 'https://magiceden.us',
-              referer: 'https://magiceden.us/',
-            }),
       },
     });
 
@@ -2930,22 +2911,13 @@ export const delistOrdinalWithProxyWallet = async (
       publicKey: publicKey,
     };
 
-    const delistApiUrl = isProduction
-      ? '/api/magiceden-psbt?endpoint=delist'
-      : 'https://api-mainnet.magiceden.us/v2/ord/btc/psbt/delist';
+    const delistApiUrl = '/api/magiceden-psbt?endpoint=delist';
 
     const delistHeaders = {
       accept: 'application/json, text/plain, */*',
       'content-type': 'application/json',
-      ...(isProduction
-        ? {
-            'cache-control': 'no-cache',
-            pragma: 'no-cache',
-          }
-        : {
-            origin: 'https://magiceden.us',
-            referer: 'https://magiceden.us/',
-          }),
+      'cache-control': 'no-cache',
+      pragma: 'no-cache',
     };
 
     const delistResponse = await fetch(delistApiUrl, {

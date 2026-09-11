@@ -779,10 +779,6 @@ const CollectionOfferModalInner = ({
       const priceSats = selectedOffer.price?.amount || 0;
 
       // Step 1: Fetch fulfill PSBT
-      const isProduction =
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1';
-
       const fulfillPayload = {
         offers: {
           [selectedOffer.id]: {
@@ -799,21 +795,15 @@ const CollectionOfferModalInner = ({
         takerWalletSource: connectedWallet?.toLowerCase() || 'unisat',
       };
 
-      const fulfillPsbtUrl = isProduction
-        ? '/api/collection-offers-fulfill'
-        : 'https://api-mainnet.magiceden.us/v2/ord/btc/collection-offers/psbt/fulfill';
+      // Magic Eden is always called through the same-origin proxy
+      // (server/magiceden.js); browsers cannot call magiceden.us directly.
+      const fulfillPsbtUrl = '/api/collection-offers-fulfill';
 
       const fulfillPsbtResponse = await fetch(fulfillPsbtUrl, {
         method: 'POST',
         headers: {
           accept: 'application/json, text/plain, */*',
           'content-type': 'application/json',
-          ...(isProduction
-            ? {}
-            : {
-                origin: 'https://magiceden.us',
-                referer: 'https://magiceden.us/',
-              }),
         },
         body: JSON.stringify(fulfillPayload),
       });
@@ -955,21 +945,13 @@ const CollectionOfferModalInner = ({
         takerPaymentAddressType: takerPaymentAddressType,
       };
 
-      const submitFulfillUrl = isProduction
-        ? '/api/collection-offers-fulfill-submit'
-        : 'https://api-mainnet.magiceden.us/v2/ord/btc/collection-offers/psbt/fulfill/submit';
+      const submitFulfillUrl = '/api/collection-offers-fulfill-submit';
 
       const submitFulfillResponse = await fetch(submitFulfillUrl, {
         method: 'POST',
         headers: {
           accept: 'application/json, text/plain, */*',
           'content-type': 'application/json',
-          ...(isProduction
-            ? {}
-            : {
-                origin: 'https://magiceden.us',
-                referer: 'https://magiceden.us/',
-              }),
         },
         body: JSON.stringify(submitFulfillPayload),
       });
