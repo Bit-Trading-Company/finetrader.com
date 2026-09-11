@@ -243,42 +243,39 @@ const OrdinalExtractor = () => {
 
       // Connected wallet scan
       if (includeConnectedWallet && connectedAddress?.ordinals) {
-        tasks.push(
-          (async () => {
-            const addr = connectedAddress.ordinals;
-            addLog(`Scanning connected wallet for inscription UTXOs...`);
-            const utxos = await fetchAllInscriptionUtxos(addr, {
-              pageSize: 16,
-            });
-            map[`connected:${addr}`] = { address: addr, utxos };
-            addLog(
-              `Found ${utxos.length} inscription UTXO(s) in connected wallet.`
-            );
-          })()
-        );
+        tasks.push(async () => {
+          const addr = connectedAddress.ordinals;
+          addLog(`Scanning connected wallet for inscription UTXOs...`);
+          const utxos = await fetchAllInscriptionUtxos(addr, {
+            pageSize: 16,
+          });
+          map[`connected:${addr}`] = { address: addr, utxos };
+          addLog(
+            `Found ${utxos.length} inscription UTXO(s) in connected wallet.`
+          );
+        });
       }
 
       // Proxy wallets scan
       const activeProxyWallets = getActiveProxyWallets();
       for (const w of activeProxyWallets) {
-        tasks.push(
-          (async () => {
-            addLog(
-              `Scanning proxy wallet ${w.address.slice(0, 8)}... for inscription UTXOs...`
-            );
-            const utxos = await fetchAllInscriptionUtxos(w.address, {
-              pageSize: 16,
-            });
-            map[`proxy:${w.address}`] = { address: w.address, utxos };
-            addLog(
-              `Found ${utxos.length} inscription UTXO(s) in proxy wallet ${w.address.slice(0, 8)}...`
-            );
-          })()
-        );
+        tasks.push(async () => {
+          addLog(
+            `Scanning proxy wallet ${w.address.slice(0, 8)}... for inscription UTXOs...`
+          );
+          const utxos = await fetchAllInscriptionUtxos(w.address, {
+            pageSize: 16,
+          });
+          map[`proxy:${w.address}`] = { address: w.address, utxos };
+          addLog(
+            `Found ${utxos.length} inscription UTXO(s) in proxy wallet ${w.address.slice(0, 8)}...`
+          );
+        });
       }
 
-      // Run sequentially to reduce rate limiting
-      for (const t of tasks) await t;
+      // Run sequentially to reduce rate limiting. Tasks are queued as
+      // functions: invoking them while queueing would start every scan at once.
+      for (const task of tasks) await task();
 
       setInscriptionUtxosByWallet(map);
       // Default selection: select all inscriptions from UTXOs that have exactly 1 inscription.
