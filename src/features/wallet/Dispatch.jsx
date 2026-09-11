@@ -3,11 +3,11 @@ import { Psbt, networks, payments } from 'bitcoinjs-lib';
 import { useOrdConnect, useSign } from '@ordzaar/ord-connect';
 import { useWalletDisconnectState } from './useWalletDisconnectState';
 import {
-  getMempoolAddressUtxoUrl,
   getMempoolTxHexUrl,
   getMempoolBroadcastUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
+import { fetchAddressUtxos } from '../../lib/addressUtxos';
 import { shortenAddress } from '../../lib/format';
 
 /**
@@ -104,25 +104,23 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
 
     setUtxosLoading(true);
     try {
-      const response = await fetch(
-        getMempoolAddressUtxoUrl(paymentsAddress, connectedNetwork || 'mainnet')
+      const data = await fetchAddressUtxos(
+        paymentsAddress,
+        connectedNetwork || 'mainnet'
       );
-      if (response.ok) {
-        const data = await response.json();
-        // Sort by value descending and filter confirmed UTXOs
-        const sortedUtxos = (data || [])
-          .filter((utxo) => utxo.status?.confirmed)
-          .sort((a, b) => b.value - a.value);
-        setUtxos(sortedUtxos);
+      // Sort by value descending and filter confirmed UTXOs
+      const sortedUtxos = data
+        .filter((utxo) => utxo.status?.confirmed)
+        .sort((a, b) => b.value - a.value);
+      setUtxos(sortedUtxos);
 
-        // Auto-select the largest UTXO by default
-        if (sortedUtxos.length > 0) {
-          setSelectedUtxos([sortedUtxos[0]]);
-        }
+      // Auto-select the largest UTXO by default
+      if (sortedUtxos.length > 0) {
+        setSelectedUtxos([sortedUtxos[0]]);
       }
     } catch (err) {
       console.error('Error fetching UTXOs:', err);
-      setError('Failed to fetch UTXOs');
+      setError(`Failed to fetch UTXOs: ${err.message}`);
       setUtxos([]);
     } finally {
       setUtxosLoading(false);

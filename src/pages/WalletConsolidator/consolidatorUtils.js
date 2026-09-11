@@ -1,12 +1,12 @@
 import * as bitcoin from 'bitcoinjs-lib';
 import { signPsbtWithProxyWallet } from '../../lib/bitcoinUtils';
 import {
-  getMempoolAddressUtxoUrl,
   getMempoolBroadcastUrl,
   getMempoolTxHexUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
 import { buildUnisatProxyUrl } from '../../lib/unisatProxy';
+import { fetchAddressUtxos } from '../../lib/addressUtxos';
 
 // Dust threshold - outputs below this are unspendable
 const DUST_THRESHOLD = 546;
@@ -40,20 +40,14 @@ export const estimateConsolidationFee = (
 };
 
 /**
- * Fetch UTXOs for a given address from the mempool API
+ * Fetch UTXOs for a given address: the mempool API, falling back to the UniSat
+ * indexer for wallets with more than 500 unspent outputs (see lib/addressUtxos).
  * @param {string} address - Bitcoin address
  * @param {string} network - Network type
  * @returns {Promise<Array>} Array of UTXO objects
  */
-export const fetchUtxos = async (address, network = 'mainnet') => {
-  const url = getMempoolAddressUtxoUrl(address, network);
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch UTXOs for ${address}: ${response.status}`);
-  }
-  const utxos = await response.json();
-  return Array.isArray(utxos) ? utxos : [];
-};
+export const fetchUtxos = async (address, network = 'mainnet') =>
+  fetchAddressUtxos(address, network);
 
 /**
  * Query the UniSat indexer (via the /api/unisat proxy) for inscription info on
