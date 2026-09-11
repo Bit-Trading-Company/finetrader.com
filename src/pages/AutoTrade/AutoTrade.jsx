@@ -5,12 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import {
-  useOrdConnect,
-  OrdConnectProvider,
-  Chain,
-  Wallet,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
 import { useConnect } from '../../features/wallet/useConnect.ts';
 import {
   useBitprint,
@@ -38,49 +33,12 @@ import {
   setMempoolApiProvider,
   getMempoolProviderLabel,
 } from '../../lib/mempoolProvider';
-import leather_icon from '../../assets/images/svg/leather.svg';
-import magic_icon from '../../assets/images/svg/magic_icon.svg';
-import okx_icon from '../../assets/images/svg/okx.svg';
-import unisat_icon from '../../assets/images/svg/unisat.svg';
-import xverse_icon from '../../assets/images/svg/xverse-icon.svg';
 import background_6 from '../../assets/images/png/backgrounds/background_6.PNG';
 import './AutoTrade.css';
+import { useEventHub } from '../../lib/eventHub';
+import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
 
 const FINE_TRADING_USE_FEES_KEY = 'fine-trading-use-fees';
-
-// Wallet list configuration
-const CONNECT_WALLET_LIST = [
-  {
-    wallet: Wallet.OKX,
-    icon: okx_icon,
-    order: 1,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.UNISAT,
-    icon: unisat_icon,
-    order: 2,
-    chains: [Chain.BITCOIN, Chain.FRACTAL_BITCOIN],
-  },
-  {
-    wallet: Wallet.XVERSE,
-    icon: xverse_icon,
-    order: 3,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.MAGICEDEN,
-    icon: magic_icon,
-    order: 4,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.LEATHER,
-    icon: leather_icon,
-    order: 5,
-    chains: [Chain.BITCOIN],
-  },
-];
 
 // Step status icons
 const StepStatus = {
@@ -208,25 +166,7 @@ const AutoTradeInner = () => {
   // Removed unused state - simplified logic doesn't need these anymore
 
   // Create a shared event hub
-  const glEventHub = useMemo(() => {
-    const events = {};
-    return {
-      on: (event, handler) => {
-        if (!events[event]) events[event] = [];
-        events[event].push(handler);
-      },
-      off: (event, handler) => {
-        if (events[event]) {
-          events[event] = events[event].filter((h) => h !== handler);
-        }
-      },
-      emit: (event, data) => {
-        if (events[event]) {
-          events[event].forEach((handler) => handler(data));
-        }
-      },
-    };
-  }, []);
+  const glEventHub = useEventHub();
 
   // Add console log (defined early so it can be used in useEffect hooks)
   const addConsoleLog = useCallback((message, link = null) => {

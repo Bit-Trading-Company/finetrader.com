@@ -7,6 +7,7 @@ import {
   generateAddressFromPublicKey,
 } from '../../lib/bitcoinUtils';
 import { fetchWalletOrdinals } from '../../trading/autoTradingUtils';
+import { formatSatsAsBtc, formatCompactNumber } from '../../lib/format';
 
 // Inner component that uses the hooks
 const SellOrdinalsInner = ({ glEventHub }) => {
@@ -248,23 +249,6 @@ const SellOrdinalsInner = ({ glEventHub }) => {
     setUseProxyWallet(useProxy);
   };
 
-  // Format price - converts sats to BTC for display
-  const formatPrice = (priceInSats) => {
-    if (!priceInSats && priceInSats !== 0) return 'N/A';
-    // Convert sats to BTC (divide by 100000000)
-    const btcPrice = priceInSats / 100000000;
-    return btcPrice.toFixed(8);
-  };
-
-  // Format number
-  const formatNumber = (num) => {
-    if (!num && num !== 0) return 'N/A';
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
-    return num.toString();
-  };
-
   if (!isWalletConnected) {
     return (
       <div className="collection-details-container">
@@ -437,7 +421,7 @@ const SellOrdinalsInner = ({ glEventHub }) => {
 
                   {item.listed && item.listedPrice && (
                     <div className="collection-details-price">
-                      {formatPrice(item.listedPrice)} BTC
+                      {formatSatsAsBtc(item.listedPrice)} BTC
                     </div>
                   )}
 
@@ -447,7 +431,7 @@ const SellOrdinalsInner = ({ glEventHub }) => {
                         Inscription:
                       </span>
                       <span className="collection-details-meta-value">
-                        {formatNumber(item.inscriptionNumber) || 'N/A'}
+                        {formatCompactNumber(item.inscriptionNumber) || 'N/A'}
                       </span>
                     </div>
 

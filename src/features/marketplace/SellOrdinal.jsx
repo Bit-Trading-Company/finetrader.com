@@ -13,6 +13,8 @@ import {
   generateAddressFromPublicKey,
   deriveAddressFromPrivateKey,
 } from '../../lib/bitcoinUtils';
+import { truncateMiddle, formatSatsAsBtc } from '../../lib/format';
+import { hexToBase64 } from '../../lib/encoding';
 
 // Expose bitcoin library to window for debugging
 if (typeof window !== 'undefined') {
@@ -399,17 +401,6 @@ const SellOrdinalInner = ({
         );
       }
 
-      const hexToBase64 = (hex) => {
-        const bytes = new Uint8Array(
-          hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
-        );
-        return btoa(
-          Array.from(bytes)
-            .map((byte) => String.fromCharCode(byte))
-            .join('')
-        );
-      };
-
       let unsignedListingPsbtB64 = unsignedListingBase64;
       if (
         unsignedListingBase64.length > 0 &&
@@ -588,21 +579,6 @@ const SellOrdinalInner = ({
     }
   };
 
-  // Format price - converts sats to BTC for display
-  const formatPrice = (priceInSats) => {
-    if (!priceInSats && priceInSats !== 0) return 'N/A';
-    // Convert sats to BTC (divide by 100000000)
-    const btcPrice = priceInSats / 100000000;
-    return btcPrice.toFixed(8);
-  };
-
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
-  };
-
   const handleWalletSourceChange = (useProxy) => {
     setUseProxyWallet(useProxy);
   };
@@ -696,7 +672,7 @@ const SellOrdinalInner = ({
                       <span style={{ fontWeight: '500', color: '#e2e8f0' }}>
                         Token ID:
                       </span>{' '}
-                      {formatString(getTokenId(selectedOrdinal) || '')}
+                      {truncateMiddle(getTokenId(selectedOrdinal) || '')}
                     </div>
                     {selectedOrdinal.listed && (
                       <div>
@@ -704,7 +680,7 @@ const SellOrdinalInner = ({
                           Currently Listed:
                         </span>{' '}
                         <span style={{ color: '#ed8936', fontWeight: '600' }}>
-                          {formatPrice(selectedOrdinal.listedPrice)} BTC
+                          {formatSatsAsBtc(selectedOrdinal.listedPrice)} BTC
                         </span>
                       </div>
                     )}
@@ -780,7 +756,7 @@ const SellOrdinalInner = ({
                       marginTop: '4px',
                     }}
                   >
-                    ≈ {formatPrice(parseFloat(priceInSats) || 0)} BTC
+                    ≈ {formatSatsAsBtc(parseFloat(priceInSats) || 0)} BTC
                   </p>
                 )}
               </div>
@@ -818,11 +794,11 @@ const SellOrdinalInner = ({
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Address:</span>{' '}
-                        {formatString(getActiveWalletInfo().address || '')}
+                        {truncateMiddle(getActiveWalletInfo().address || '')}
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Public Key:</span>{' '}
-                        {formatString(selectedWallet.publicKey || '')}
+                        {truncateMiddle(selectedWallet.publicKey || '')}
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Network:</span>{' '}
@@ -833,7 +809,7 @@ const SellOrdinalInner = ({
                     <>
                       <div>
                         <span style={{ fontWeight: '500' }}>Address:</span>{' '}
-                        {formatString(getActiveWalletInfo().address || '')}
+                        {truncateMiddle(getActiveWalletInfo().address || '')}
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Format:</span>{' '}
@@ -955,7 +931,7 @@ const SellOrdinalInner = ({
                       <span style={{ fontWeight: '500', color: '#e2e8f0' }}>
                         Price:
                       </span>{' '}
-                      {formatPrice(getListingResponse.price)} BTC
+                      {formatSatsAsBtc(getListingResponse.price)} BTC
                     </div>
                   </div>
                 </div>

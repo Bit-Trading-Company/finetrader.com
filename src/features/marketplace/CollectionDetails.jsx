@@ -4,6 +4,7 @@ import {
   fetchSatflowActivityListings,
   enrichSatflowListingItemForDisplay,
 } from '../../trading/autoTradingUtils';
+import { formatSatsAsBtc, formatCompactNumber } from '../../lib/format';
 
 const ENRICH_CONCURRENCY = 6;
 
@@ -108,20 +109,6 @@ const CollectionDetails = ({ glEventHub, selectedCollection }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
   const canGoPrev = page > 1;
   const canGoNext = page < totalPages;
-
-  const formatPrice = (priceInSats) => {
-    if (!priceInSats && priceInSats !== 0) return 'N/A';
-    const btcPrice = priceInSats / 100000000;
-    return btcPrice.toFixed(8);
-  };
-
-  const formatNumber = (num) => {
-    if (!num && num !== 0) return 'N/A';
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
-    return num.toString();
-  };
 
   const handleOpenBuyOrdinal = (item) => {
     if (!item?.listed || !item?.listedPrice) return;
@@ -348,7 +335,7 @@ const CollectionDetails = ({ glEventHub, selectedCollection }) => {
 
                   {item.listed && item.listedPrice != null && (
                     <div className="collection-details-price">
-                      {formatPrice(item.listedPrice)} BTC
+                      {formatSatsAsBtc(item.listedPrice)} BTC
                     </div>
                   )}
 
@@ -358,7 +345,7 @@ const CollectionDetails = ({ glEventHub, selectedCollection }) => {
                         Inscription:
                       </span>
                       <span className="collection-details-meta-value">
-                        {formatNumber(item.inscriptionNumber) || 'N/A'}
+                        {formatCompactNumber(item.inscriptionNumber) || 'N/A'}
                       </span>
                     </div>
 
@@ -390,7 +377,7 @@ const CollectionDetails = ({ glEventHub, selectedCollection }) => {
                           Value:
                         </span>
                         <span className="collection-details-meta-value">
-                          {formatNumber(item.outputValue)} sats
+                          {formatCompactNumber(item.outputValue)} sats
                         </span>
                       </div>
                     )}

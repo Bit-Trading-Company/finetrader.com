@@ -1,16 +1,5 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
-import {
-  useOrdConnect,
-  OrdConnectProvider,
-  Chain,
-  Wallet,
-} from '@ordzaar/ord-connect';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
 import { useConnect } from '../../features/wallet/useConnect.ts';
 import {
   useBitprint,
@@ -29,41 +18,10 @@ import {
   setMempoolApiProvider,
   getMempoolProviderLabel,
 } from '../../lib/mempoolProvider';
-import leather_icon from '../../assets/images/svg/leather.svg';
-import magic_icon from '../../assets/images/svg/magic_icon.svg';
-import okx_icon from '../../assets/images/svg/okx.svg';
-import unisat_icon from '../../assets/images/svg/unisat.svg';
-import xverse_icon from '../../assets/images/svg/xverse-icon.svg';
 import background_8 from '../../assets/images/png/backgrounds/background_8.PNG';
 import './WalletConsolidator.css';
-
-const CONNECT_WALLET_LIST = [
-  { wallet: Wallet.OKX, icon: okx_icon, order: 1, chains: [Chain.BITCOIN] },
-  {
-    wallet: Wallet.UNISAT,
-    icon: unisat_icon,
-    order: 2,
-    chains: [Chain.BITCOIN, Chain.FRACTAL_BITCOIN],
-  },
-  {
-    wallet: Wallet.XVERSE,
-    icon: xverse_icon,
-    order: 3,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.MAGICEDEN,
-    icon: magic_icon,
-    order: 4,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.LEATHER,
-    icon: leather_icon,
-    order: 5,
-    chains: [Chain.BITCOIN],
-  },
-];
+import { useEventHub } from '../../lib/eventHub';
+import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
 
 const StepStatus = {
   PENDING: null,
@@ -126,22 +84,7 @@ const WalletConsolidatorInner = () => {
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
 
   // Event hub for WalletManagement communication
-  const glEventHub = useMemo(() => {
-    const events = {};
-    return {
-      on: (event, handler) => {
-        if (!events[event]) events[event] = [];
-        events[event].push(handler);
-      },
-      off: (event, handler) => {
-        if (events[event])
-          events[event] = events[event].filter((h) => h !== handler);
-      },
-      emit: (event, data) => {
-        if (events[event]) events[event].forEach((handler) => handler(data));
-      },
-    };
-  }, []);
+  const glEventHub = useEventHub();
 
   const addLog = useCallback((message, link = null) => {
     setConsoleLogs((prev) => {

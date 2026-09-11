@@ -7,6 +7,7 @@ import {
 } from '@ordzaar/ord-connect';
 import WalletStatus from '../wallet/WalletStatus';
 import { useWalletDisconnectState } from '../wallet/useWalletDisconnectState';
+import { truncateMiddle } from '../../lib/format';
 
 // Inner component that uses the hooks
 const CreatePSBTInner = ({ glEventHub }) => {
@@ -519,12 +520,6 @@ const CreatePSBTInner = ({ glEventHub }) => {
   };
 
   // Function to format address or public key (first and last 7 characters)
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
-  };
 
   return (
     <div className="create-psbt-container">
@@ -550,7 +545,7 @@ const CreatePSBTInner = ({ glEventHub }) => {
           <div className="wallet-info-grid">
             <div className="wallet-info-item">
               <strong>Address:</strong>{' '}
-              {formatString(connectedAddress.ordinals)}
+              {truncateMiddle(connectedAddress.ordinals)}
             </div>
             <div className="wallet-info-item">
               <strong>Format:</strong> {connectedFormat.ordinals}

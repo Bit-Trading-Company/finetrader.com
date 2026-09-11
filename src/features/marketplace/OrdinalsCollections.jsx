@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatCompactNumber } from '../../lib/format';
 
 const OrdinalsCollections = ({ glEventHub }) => {
   const [collections, setCollections] = useState([]);
@@ -54,15 +55,6 @@ const OrdinalsCollections = ({ glEventHub }) => {
 
   const handleRefresh = () => {
     fetchCollections();
-  };
-
-  // Format large numbers
-  const formatNumber = (num) => {
-    if (!num && num !== 0) return 'N/A';
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
-    return num.toString();
   };
 
   // Format percentage
@@ -369,7 +361,9 @@ const OrdinalsCollections = ({ glEventHub }) => {
                           Total Volume
                         </div>
                         <div className="collections-detail-value">
-                          {formatNumber(parseFloat(collection.totalVol || 0))}{' '}
+                          {formatCompactNumber(
+                            parseFloat(collection.totalVol || 0)
+                          )}{' '}
                           BTC
                         </div>
                       </div>
@@ -379,7 +373,7 @@ const OrdinalsCollections = ({ glEventHub }) => {
                         </div>
                         <div className="collections-detail-value">
                           {collection.fp != null
-                            ? `${formatNumber(collection.fp)} BTC`
+                            ? `${formatCompactNumber(collection.fp)} BTC`
                             : 'N/A'}
                         </div>
                       </div>
@@ -388,7 +382,7 @@ const OrdinalsCollections = ({ glEventHub }) => {
                           Total Items
                         </div>
                         <div className="collections-detail-value">
-                          {formatNumber(collection.totalSupply || 0)}
+                          {formatCompactNumber(collection.totalSupply || 0)}
                         </div>
                       </div>
                       <div className="collections-detail-item">
@@ -468,7 +462,9 @@ const OrdinalsCollections = ({ glEventHub }) => {
                     <div className="collections-detail-item">
                       <div className="collections-detail-label">Volume 24h</div>
                       <div className="collections-detail-value">
-                        {formatNumber(collection.vol1d ?? collection.vol ?? 0)}
+                        {formatCompactNumber(
+                          collection.vol1d ?? collection.vol ?? 0
+                        )}
                         {collection.currency && ` ${collection.currency}`}
                       </div>
                       {collection.vol1dChangePercent !== undefined &&
@@ -483,7 +479,7 @@ const OrdinalsCollections = ({ glEventHub }) => {
                     <div className="collections-detail-item">
                       <div className="collections-detail-label">Volume 7d</div>
                       <div className="collections-detail-value">
-                        {formatNumber(collection.vol7d || 0)}
+                        {formatCompactNumber(collection.vol7d || 0)}
                         {collection.currency && ` ${collection.currency}`}
                       </div>
                       {collection.vol7dChangePercent !== undefined &&
@@ -498,7 +494,7 @@ const OrdinalsCollections = ({ glEventHub }) => {
                     <div className="collections-detail-item">
                       <div className="collections-detail-label">Volume 30d</div>
                       <div className="collections-detail-value">
-                        {formatNumber(collection.vol30d || 0)}
+                        {formatCompactNumber(collection.vol30d || 0)}
                         {collection.currency && ` ${collection.currency}`}
                       </div>
                       {collection.vol30dChangePercent !== undefined &&
@@ -515,7 +511,7 @@ const OrdinalsCollections = ({ glEventHub }) => {
                         Total Volume
                       </div>
                       <div className="collections-detail-value">
-                        {formatNumber(
+                        {formatCompactNumber(
                           collection.totalVol ??
                             collection.vol30d ??
                             collection.vol7d ??

@@ -12,6 +12,7 @@ import {
   getMempoolBroadcastUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
+import { shortenAddress } from '../../lib/format';
 
 /**
  * Detect Bitcoin address format from address string
@@ -654,11 +655,6 @@ const DispatchInner = ({ isOpen, onClose, proxyWallets }) => {
     }
   };
 
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  };
-
   const formatBTC = (sats) => {
     if (!sats) return '0.00000000';
     return (sats / 100000000).toFixed(8);
@@ -931,7 +927,7 @@ const DispatchInner = ({ isOpen, onClose, proxyWallets }) => {
                             </div>
                           </div>
                           <div className="dispatch-wallet-address">
-                            {formatAddress(wallet.address)}
+                            {shortenAddress(wallet.address)}
                           </div>
                         </div>
                       );

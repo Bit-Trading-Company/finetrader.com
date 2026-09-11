@@ -1,51 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  useOrdConnect,
-  Chain,
-  Wallet,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, Chain, OrdConnectProvider } from '@ordzaar/ord-connect';
 import { useConnect } from './useConnect.ts';
 import { useBitprint, BitprintProvider } from './bitprint.tsx';
-import leather_icon from '../../assets/images/svg/leather.svg';
-import magic_icon from '../../assets/images/svg/magic_icon.svg';
-import okx_icon from '../../assets/images/svg/okx.svg';
-import unisat_icon from '../../assets/images/svg/unisat.svg';
-import xverse_icon from '../../assets/images/svg/xverse-icon.svg';
-
-// Wallet list configuration
-const CONNECT_WALLET_LIST = [
-  {
-    wallet: Wallet.OKX,
-    icon: okx_icon,
-    order: 1,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.UNISAT,
-    icon: unisat_icon,
-    order: 2,
-    chains: [Chain.BITCOIN, Chain.FRACTAL_BITCOIN],
-  },
-  {
-    wallet: Wallet.XVERSE,
-    icon: xverse_icon,
-    order: 3,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.MAGICEDEN,
-    icon: magic_icon,
-    order: 4,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.LEATHER,
-    icon: leather_icon,
-    order: 5,
-    chains: [Chain.BITCOIN],
-  },
-];
+import { truncateMiddle } from '../../lib/format';
+import { CONNECT_WALLET_LIST } from './walletOptions';
 
 // Chain tabs configuration (currently unused but kept for future use)
 // const CONNECT_TABS_DATA_LIST = [
@@ -214,12 +172,6 @@ const WalletConnectInner = ({ glEventHub }) => {
   }, [glEventHub, disconnectWallet]);
 
   // Function to format address or public key (first and last 7 characters)
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
-  };
 
   // Handle network change
   const handleNetworkChange = async (event) => {
@@ -385,10 +337,10 @@ const WalletConnectInner = ({ glEventHub }) => {
 
               <div className="wallet-info-section">
                 <p className="wallet-info-text">
-                  Address: {formatString(connectedAddress.ordinals)}
+                  Address: {truncateMiddle(connectedAddress.ordinals)}
                 </p>
                 <p className="wallet-info-text">
-                  Public Key: {formatString(connectedPublicKey.ordinals)}
+                  Public Key: {truncateMiddle(connectedPublicKey.ordinals)}
                 </p>
                 <p className="wallet-info-text">
                   Format: {connectedFormat.ordinals}
@@ -488,7 +440,7 @@ const WalletConnectInner = ({ glEventHub }) => {
               </div>
               <div className="wallet-address-list">
                 <p className="wallet-address-item">
-                  {formatString(connectedAddress.ordinals)}
+                  {truncateMiddle(connectedAddress.ordinals)}
                 </p>
               </div>
             </div>

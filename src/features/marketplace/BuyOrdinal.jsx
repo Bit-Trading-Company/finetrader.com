@@ -11,6 +11,7 @@ import {
   prepareSecurePurchase,
   completeSecurePurchase,
 } from '../../trading/autoTradingUtils';
+import { truncateMiddle, formatSatsAsBtc } from '../../lib/format';
 
 const isSatflowMarketplaceListing = (ordinal) =>
   Boolean(ordinal && (ordinal._satflowListing || ordinal._satflowRaw));
@@ -326,21 +327,6 @@ const BuyOrdinalInner = ({
     }
   };
 
-  // Format price - converts sats to BTC for display
-  const formatPrice = (priceInSats) => {
-    if (!priceInSats && priceInSats !== 0) return 'N/A';
-    // Convert sats to BTC (divide by 100000000)
-    const btcPrice = priceInSats / 100000000;
-    return btcPrice.toFixed(8);
-  };
-
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
-  };
-
   const handleWalletSourceChange = (useProxy) => {
     setUseProxyWallet(useProxy);
   };
@@ -440,7 +426,7 @@ const BuyOrdinalInner = ({
                         Price:
                       </span>{' '}
                       <span style={{ color: '#ed8936', fontWeight: '600' }}>
-                        {formatPrice(selectedOrdinal.listedPrice)} BTC
+                        {formatSatsAsBtc(selectedOrdinal.listedPrice)} BTC
                       </span>
                     </div>
                     <div>
@@ -453,7 +439,7 @@ const BuyOrdinalInner = ({
                       <span style={{ fontWeight: '500', color: '#e2e8f0' }}>
                         Token ID:
                       </span>{' '}
-                      {formatString(getTokenId(selectedOrdinal) || '')}
+                      {truncateMiddle(getTokenId(selectedOrdinal) || '')}
                     </div>
                   </div>
                 </div>
@@ -507,11 +493,11 @@ const BuyOrdinalInner = ({
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Address:</span>{' '}
-                        {formatString(getActiveWalletInfo().address || '')}
+                        {truncateMiddle(getActiveWalletInfo().address || '')}
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Public Key:</span>{' '}
-                        {formatString(selectedWallet.publicKey || '')}
+                        {truncateMiddle(selectedWallet.publicKey || '')}
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Network:</span>{' '}
@@ -522,7 +508,7 @@ const BuyOrdinalInner = ({
                     <>
                       <div>
                         <span style={{ fontWeight: '500' }}>Address:</span>{' '}
-                        {formatString(getActiveWalletInfo().address || '')}
+                        {truncateMiddle(getActiveWalletInfo().address || '')}
                       </div>
                       <div>
                         <span style={{ fontWeight: '500' }}>Format:</span>{' '}
@@ -626,7 +612,7 @@ const BuyOrdinalInner = ({
                           textDecoration: 'none',
                         }}
                       >
-                        {formatString(purchaseResponse.fundsPreparationTxid)}
+                        {truncateMiddle(purchaseResponse.fundsPreparationTxid)}
                       </a>
                     </div>
                   )}

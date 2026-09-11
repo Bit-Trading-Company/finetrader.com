@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import OrdinalsCollections from './OrdinalsCollections';
 import CollectionDetails from './CollectionDetails';
 import BuyOrdinal from './BuyOrdinal';
 import SellOrdinals from './SellOrdinals';
 import SellOrdinal from './SellOrdinal';
 import NavigationTree from './NavigationTree';
+import { useEventHub } from '../../lib/eventHub';
 
 const FineBuyer = ({ glEventHub: glEventHubProp }) => {
   const [selectedCollection, setSelectedCollection] = useState(null);
@@ -12,29 +13,7 @@ const FineBuyer = ({ glEventHub: glEventHubProp }) => {
   const [mode, setMode] = useState('buy'); // 'buy' or 'sell'
 
   // Use provided event hub or create a fallback one
-  const glEventHub = useMemo(() => {
-    if (glEventHubProp) {
-      return glEventHubProp;
-    }
-    // Fallback: create a simple event emitter if none provided
-    const events = {};
-    return {
-      on: (event, handler) => {
-        if (!events[event]) events[event] = [];
-        events[event].push(handler);
-      },
-      off: (event, handler) => {
-        if (events[event]) {
-          events[event] = events[event].filter((h) => h !== handler);
-        }
-      },
-      emit: (event, data) => {
-        if (events[event]) {
-          events[event].forEach((handler) => handler(data));
-        }
-      },
-    };
-  }, [glEventHubProp]);
+  const glEventHub = useEventHub(glEventHubProp);
 
   // Listen for collection selection
   useEffect(() => {

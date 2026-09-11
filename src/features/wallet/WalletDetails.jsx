@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import WalletStatus from './WalletStatus';
 import { getMempoolAddressUrl } from '../../lib/mempoolProvider';
+import { shortenAddress } from '../../lib/format';
 
 const WalletDetails = ({
   glEventHub,
@@ -111,11 +112,6 @@ const WalletDetails = ({
       .catch(() => {
         // Failed to copy to clipboard
       });
-  };
-
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
   };
 
   return (
@@ -400,7 +396,7 @@ const WalletDetails = ({
                   color: '#e2e8f0',
                 }}
               >
-                {formatAddress(selectedWallet.publicKey)}
+                {shortenAddress(selectedWallet.publicKey)}
                 <button
                   onClick={() => copyToClipboard(selectedWallet.publicKey)}
                   style={{
@@ -487,7 +483,7 @@ const WalletDetails = ({
                     userSelect: blurPrivateKey ? 'none' : undefined,
                   }}
                 >
-                  {formatAddress(selectedWallet.privateKey)}
+                  {shortenAddress(selectedWallet.privateKey)}
                 </span>
                 <button
                   onClick={() => copyToClipboard(selectedWallet.privateKey)}

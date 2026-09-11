@@ -11,6 +11,7 @@ import {
   getMempoolBroadcastUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
+import { truncateMiddle } from '../../lib/format';
 
 // Inner component that uses the hooks
 const SignPSBTInner = ({ glEventHub }) => {
@@ -226,12 +227,6 @@ const SignPSBTInner = ({ glEventHub }) => {
   };
 
   // Function to format address or public key (first and last 7 characters)
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
-  };
 
   return (
     <div className="sign-psbt-container component-container">
@@ -297,7 +292,7 @@ const SignPSBTInner = ({ glEventHub }) => {
               >
                 <div>
                   <span style={{ fontWeight: '500' }}>Address:</span>{' '}
-                  {formatString(connectedAddress.ordinals)}
+                  {truncateMiddle(connectedAddress.ordinals)}
                 </div>
                 <div>
                   <span style={{ fontWeight: '500' }}>Format:</span>{' '}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
 import { useWalletDisconnectState } from './useWalletDisconnectState';
+import { shortenAddress } from '../../lib/format';
 
 // Inner component that uses the hooks
 const WalletStatusInner = ({
@@ -103,11 +104,6 @@ const WalletStatusInner = ({
     setConnectionState(newConnectionState);
   }, [connectedAddress, isDisconnected]);
 
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  };
-
   const handleToggleChange = (newUseProxyWallet) => {
     setUseProxyWallet(newUseProxyWallet);
     if (onWalletSourceChange) {
@@ -169,7 +165,7 @@ const WalletStatusInner = ({
                 fontFamily: 'monospace',
               }}
             >
-              {formatAddress(connectionState.address)}
+              {shortenAddress(connectionState.address)}
             </p>
           )}
         </div>

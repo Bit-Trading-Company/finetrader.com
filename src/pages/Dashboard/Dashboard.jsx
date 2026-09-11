@@ -1,12 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import WalletManagement from '../../features/wallet/WalletManagement';
 import FineBuyer from '../../features/marketplace/FineBuyer';
-import {
-  useOrdConnect,
-  OrdConnectProvider,
-  Chain,
-  Wallet,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
 import { useConnect } from '../../features/wallet/useConnect.ts';
 import {
   useBitprint,
@@ -14,45 +9,9 @@ import {
 } from '../../features/wallet/bitprint.tsx';
 import './Dashboard.css';
 import lineImage from '../../assets/images/png/line.png';
-import leather_icon from '../../assets/images/svg/leather.svg';
-import magic_icon from '../../assets/images/svg/magic_icon.svg';
-import okx_icon from '../../assets/images/svg/okx.svg';
-import unisat_icon from '../../assets/images/svg/unisat.svg';
-import xverse_icon from '../../assets/images/svg/xverse-icon.svg';
-
-// Wallet list configuration
-const CONNECT_WALLET_LIST = [
-  {
-    wallet: Wallet.OKX,
-    icon: okx_icon,
-    order: 1,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.UNISAT,
-    icon: unisat_icon,
-    order: 2,
-    chains: [Chain.BITCOIN, Chain.FRACTAL_BITCOIN],
-  },
-  {
-    wallet: Wallet.XVERSE,
-    icon: xverse_icon,
-    order: 3,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.MAGICEDEN,
-    icon: magic_icon,
-    order: 4,
-    chains: [Chain.BITCOIN],
-  },
-  {
-    wallet: Wallet.LEATHER,
-    icon: leather_icon,
-    order: 5,
-    chains: [Chain.BITCOIN],
-  },
-];
+import { truncateMiddle, shortenAddress } from '../../lib/format';
+import { useEventHub } from '../../lib/eventHub';
+import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
 
 // Inner component that uses the hooks
 const DashboardInner = () => {
@@ -61,25 +20,7 @@ const DashboardInner = () => {
   const dropdownRef = useRef(null);
 
   // Create a shared event hub for WalletManagement and FineBuyer
-  const glEventHub = useMemo(() => {
-    const events = {};
-    return {
-      on: (event, handler) => {
-        if (!events[event]) events[event] = [];
-        events[event].push(handler);
-      },
-      off: (event, handler) => {
-        if (events[event]) {
-          events[event] = events[event].filter((h) => h !== handler);
-        }
-      },
-      emit: (event, data) => {
-        if (events[event]) {
-          events[event].forEach((handler) => handler(data));
-        }
-      },
-    };
-  }, []);
+  const glEventHub = useEventHub();
 
   const {
     network,
@@ -179,20 +120,6 @@ const DashboardInner = () => {
     }
   };
 
-  // Format address
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  };
-
-  // Format string for display
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
-  };
-
   // Handle network change
   const handleNetworkChange = async (event) => {
     const selectedNetwork = event.target.value;
@@ -219,7 +146,7 @@ const DashboardInner = () => {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
                 {isWalletConnected
-                  ? formatAddress(connectedAddress.ordinals)
+                  ? shortenAddress(connectedAddress.ordinals)
                   : 'Connect'}
               </button>
 
@@ -267,7 +194,7 @@ const DashboardInner = () => {
                         <div className="dashboard-info-row">
                           <span className="dashboard-info-label">Address:</span>
                           <span className="dashboard-info-value">
-                            {formatString(connectedAddress.ordinals)}
+                            {truncateMiddle(connectedAddress.ordinals)}
                           </span>
                         </div>
                         <div className="dashboard-info-row">
@@ -275,7 +202,7 @@ const DashboardInner = () => {
                             Public Key:
                           </span>
                           <span className="dashboard-info-value">
-                            {formatString(connectedPublicKey.ordinals)}
+                            {truncateMiddle(connectedPublicKey.ordinals)}
                           </span>
                         </div>
                         <div className="dashboard-info-row">

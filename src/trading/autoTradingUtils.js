@@ -22,6 +22,7 @@ import {
   TRADING_FEE_RECEIVER_ADDRESS,
 } from './tradingFeeUtils';
 import { buildUnisatProxyUrl } from '../lib/unisatProxy';
+import { hexToBase64 } from '../lib/encoding';
 
 /**
  * Get token ID from ordinal - tries multiple possible field names
@@ -1030,18 +1031,6 @@ export const createDummyUtxoAndWait = async (
     };
   }
 };
-
-/** Helper: hex string to base64 for PSBT signing */
-function hexToBase64(hexStr) {
-  const bytes = new Uint8Array(
-    hexStr.match(/.{1,2}/g).map((b) => parseInt(b, 16))
-  );
-  return btoa(
-    Array.from(bytes)
-      .map((byte) => String.fromCharCode(byte))
-      .join('')
-  );
-}
 
 /** Helper: base64 string to hex (broadcast API may expect hex for PSBTs) */
 function base64ToHex(base64Str) {

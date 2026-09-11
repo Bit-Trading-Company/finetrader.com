@@ -7,6 +7,7 @@ import {
 import { generateDeterministicWallets } from '../../lib/bitcoinUtils';
 import Dispatch from './Dispatch';
 import WalletDetails from './WalletDetails';
+import { shortenAddress } from '../../lib/format';
 
 // Inner component that uses the hooks
 const WalletManagementInner = ({ glEventHub }) => {
@@ -206,11 +207,6 @@ const WalletManagementInner = ({ glEventHub }) => {
     }
   };
 
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  };
-
   return (
     <div className="wallet-management-container">
       <div className="wallet-management-wrapper">
@@ -237,7 +233,7 @@ const WalletManagementInner = ({ glEventHub }) => {
             </p>
             {connectionState.isConnected && connectionState.address && (
               <p className="wallet-connection-address">
-                {formatAddress(connectionState.address)}
+                {shortenAddress(connectionState.address)}
               </p>
             )}
           </div>
@@ -253,7 +249,7 @@ const WalletManagementInner = ({ glEventHub }) => {
           <div>
             <div className="wallet-connected-info">
               <p className="wallet-connected-address">
-                Connected: {formatAddress(connectedAddress.ordinals)}
+                Connected: {shortenAddress(connectedAddress.ordinals)}
               </p>
 
               <div className="wallet-count-controls">
@@ -386,7 +382,7 @@ const WalletManagementInner = ({ glEventHub }) => {
                           Wallet #{wallet.index + 1}
                         </div>
                         <div className="wallet-generated-address">
-                          {formatAddress(wallet.address)}
+                          {shortenAddress(wallet.address)}
                         </div>
                       </button>
                     ))}

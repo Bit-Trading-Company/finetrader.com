@@ -12,6 +12,8 @@ import {
   generateAddressFromPublicKey,
 } from '../../lib/bitcoinUtils';
 import { fetchSatflowCollectionBids } from '../../trading/autoTradingUtils';
+import { truncateMiddle, formatSatsAsBtc } from '../../lib/format';
+import { hexToBase64 } from '../../lib/encoding';
 
 /** Price in sats from a Satflow activity/bids row */
 const getSatflowBidPriceSats = (bid) => {
@@ -457,16 +459,6 @@ const CollectionOfferModalInner = ({
         if (result && result.base64) {
           signedPsbtValue = result.base64;
         } else if (result && result.hex) {
-          const hexToBase64 = (hex) => {
-            const bytes = new Uint8Array(
-              hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
-            );
-            return btoa(
-              Array.from(bytes)
-                .map((byte) => String.fromCharCode(byte))
-                .join('')
-            );
-          };
           signedPsbtValue = hexToBase64(result.hex);
         } else {
           throw new Error('Failed to sign PSBT - no result returned');
@@ -548,19 +540,6 @@ const CollectionOfferModalInner = ({
       setIsSigning(false);
       setIsSubmitting(false);
     }
-  };
-
-  const formatPrice = (priceInSats) => {
-    if (!priceInSats && priceInSats !== 0) return 'N/A';
-    const btcPrice = priceInSats / 100000000;
-    return btcPrice.toFixed(8);
-  };
-
-  const formatString = (str) => {
-    if (str && str.length > 14) {
-      return `${str.slice(0, 7)}...${str.slice(-7)}`;
-    }
-    return str || '';
   };
 
   const handleWalletSourceChange = (useProxy) => {
@@ -766,7 +745,7 @@ const CollectionOfferModalInner = ({
                             marginBottom: '6px',
                           }}
                         >
-                          {formatPrice(priceSats)} BTC
+                          {formatSatsAsBtc(priceSats)} BTC
                         </div>
                         <div style={{ fontSize: '11px', color: '#a0aec0' }}>
                           <strong style={{ color: '#e2e8f0' }}>Bidder: </strong>
@@ -776,7 +755,7 @@ const CollectionOfferModalInner = ({
                           <strong style={{ color: '#e2e8f0' }}>
                             Activity id:{' '}
                           </strong>
-                          {formatString(offer.id || '')}
+                          {truncateMiddle(offer.id || '')}
                         </div>
                         <div style={{ fontSize: '11px', color: '#a0aec0' }}>
                           <strong style={{ color: '#e2e8f0' }}>Expiry: </strong>
@@ -788,7 +767,7 @@ const CollectionOfferModalInner = ({
                           </strong>
                           {typeof inscriptionId === 'string' &&
                           inscriptionId.length > 20
-                            ? formatString(inscriptionId)
+                            ? truncateMiddle(inscriptionId)
                             : inscriptionId}
                         </div>
                         {attr && (
@@ -960,7 +939,7 @@ const CollectionOfferModalInner = ({
               <div>
                 Price:{' '}
                 <strong>
-                  {formatPrice(getSatflowBidPriceSats(selectedOffer))}
+                  {formatSatsAsBtc(getSatflowBidPriceSats(selectedOffer))}
                 </strong>{' '}
                 BTC
               </div>

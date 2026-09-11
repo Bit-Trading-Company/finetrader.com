@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -19,6 +19,8 @@ import {
   getMempoolApiProvider,
   setMempoolApiProvider,
 } from '../../lib/mempoolProvider';
+import { shortenAddress } from '../../lib/format';
+import { useEventHub } from '../../lib/eventHub';
 
 // Component to display wallet analytics including transactions and balance history
 const WalletAnalytics = ({
@@ -69,29 +71,7 @@ const WalletAnalytics = ({
   }, [mempoolProvider, network, handleMempoolProviderChange]);
 
   // Use provided event hub or create a fallback one
-  const glEventHub = useMemo(() => {
-    if (glEventHubProp) {
-      return glEventHubProp;
-    }
-    // Fallback: create a simple event emitter if none provided
-    const events = {};
-    return {
-      on: (event, handler) => {
-        if (!events[event]) events[event] = [];
-        events[event].push(handler);
-      },
-      off: (event, handler) => {
-        if (events[event]) {
-          events[event] = events[event].filter((h) => h !== handler);
-        }
-      },
-      emit: (event, data) => {
-        if (events[event]) {
-          events[event].forEach((handler) => handler(data));
-        }
-      },
-    };
-  }, [glEventHubProp]);
+  const glEventHub = useEventHub(glEventHubProp);
 
   // Process transactions and calculate balance history over time
   // Memoized with useCallback since it's a pure function with no dependencies
@@ -308,12 +288,6 @@ const WalletAnalytics = ({
     }
   }, [glEventHub]);
 
-  // Format address for display
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  };
-
   // Format satoshis to BTC
   const formatBTC = (sats) => {
     return (sats / 100000000).toFixed(8);
@@ -353,7 +327,7 @@ const WalletAnalytics = ({
                 Wallet Address:
               </span>
               <span className="wallet-analytics-summary-value">
-                {formatAddress(
+                {shortenAddress(
                   selectedWallet?.addresses?.p2tr || selectedWallet?.address
                 )}
               </span>
