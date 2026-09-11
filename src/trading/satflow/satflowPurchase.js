@@ -20,9 +20,6 @@ const SATFLOW_DUMMY_UTXO_ERROR = 'Additional dummy UTXOs required to purchase';
 /** localStorage key for pending secure-purchase preps (survives refresh/restart so we don't create duplicate preps) */
 const PENDING_PREPS_STORAGE_KEY = 'fine-trading-pending-secure-preps';
 
-/** Max time to wait for prep tx confirmation (60 min); Bitcoin can take longer in congestion. */
-export const PREP_CONFIRM_TIMEOUT_MS = 60 * 60 * 1000;
-
 function getPendingPrepsFromStorage() {
   try {
     const raw =
@@ -47,38 +44,6 @@ function savePendingPrepsToStorage(preps) {
   }
 }
 
-/** Get pending prep for (inscriptionId, buyerAddress) if any */
-export function getPendingPrep(inscriptionId, buyerAddress) {
-  const key = `${(inscriptionId || '').toLowerCase()}|${(buyerAddress || '').toLowerCase()}`;
-  return (
-    getPendingPrepsFromStorage().find(
-      (p) =>
-        `${(p.inscriptionId || '').toLowerCase()}|${(p.buyerAddress || '').toLowerCase()}` ===
-        key
-    ) || null
-  );
-}
-
-/** Add or replace pending prep (so we don't create another prep after restart) */
-export function addPendingPrep(entry) {
-  const preps = getPendingPrepsFromStorage().filter(
-    (p) =>
-      !(
-        p.inscriptionId === entry.inscriptionId &&
-        p.buyerAddress === entry.buyerAddress
-      )
-  );
-  preps.push({
-    inscriptionId: entry.inscriptionId,
-    buyerAddress: entry.buyerAddress,
-    prepTxid: entry.prepTxid,
-    signedPaymentPrepPSBT: entry.signedPaymentPrepPSBT,
-    intentPayload: entry.intentPayload,
-    timestamp: entry.timestamp ?? Date.now(),
-  });
-  savePendingPrepsToStorage(preps);
-}
-
 /** Remove pending prep after successful purchase or on purpose */
 export function removePendingPrep(inscriptionId, buyerAddress) {
   const preps = getPendingPrepsFromStorage().filter(
@@ -86,47 +51,6 @@ export function removePendingPrep(inscriptionId, buyerAddress) {
       !(p.inscriptionId === inscriptionId && p.buyerAddress === buyerAddress)
   );
   savePendingPrepsToStorage(preps);
-}
-
-/** Wait until all given prep txids are confirmed or timeout. Logs periodically. */
-export async function waitForPrepsToConfirm(prepTxids, options = {}) {
-  const {
-    timeoutMs = PREP_CONFIRM_TIMEOUT_MS,
-    addConsoleLog = null,
-    isStopRequested = null,
-    pollIntervalMs = 5000,
-  } = options;
-  if (!prepTxids || prepTxids.length === 0) return;
-  const set = new Set(prepTxids.filter(Boolean));
-  const start = Date.now();
-  let lastLog = 0;
-  while (set.size > 0 && Date.now() - start < timeoutMs) {
-    if (typeof isStopRequested === 'function' && isStopRequested()) return;
-    for (const txid of set) {
-      const confirmed = await checkTransactionConfirmed(
-        txid,
-        options.network || 'mainnet'
-      );
-      if (confirmed) set.delete(txid);
-    }
-    if (
-      set.size > 0 &&
-      typeof addConsoleLog === 'function' &&
-      Date.now() - lastLog >= 30000
-    ) {
-      const waited = Math.round((Date.now() - start) / 1000);
-      addConsoleLog(
-        `  Waiting for ${set.size} prep tx(s) to confirm... (${waited}s elapsed, timeout ${timeoutMs / 1000}s)`
-      );
-      lastLog = Date.now();
-    }
-    if (set.size > 0) await new Promise((r) => setTimeout(r, pollIntervalMs));
-  }
-  if (set.size > 0 && typeof addConsoleLog === 'function') {
-    addConsoleLog(
-      `  ⚠ ${set.size} prep tx(s) did not confirm within ${timeoutMs / 1000}s. You can wait longer and complete purchases later.`
-    );
-  }
 }
 
 /**

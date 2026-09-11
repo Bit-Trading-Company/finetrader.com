@@ -48,14 +48,10 @@ const Inscriptions = ({ glEventHub }) => {
 
         const apiUrl = `https://api.hiro.so/ordinals/v1/inscriptions?address=${encodeURIComponent(address)}&limit=${pagination.limit}&offset=${offset}&order_by=number&order=desc`;
 
+        // Hiro's public rate limit is enough for this panel; an API key here
+        // would be embedded in the browser bundle.
         const response = await fetch(apiUrl, {
-          headers: {
-            Accept: 'application/json',
-            // Optional: Hiro serves unauthenticated requests at lower rate limits.
-            ...(process.env.REACT_APP_HIRO_API_KEY
-              ? { 'x-hiro-api-key': process.env.REACT_APP_HIRO_API_KEY }
-              : {}),
-          },
+          headers: { Accept: 'application/json' },
         });
 
         if (!response.ok) {

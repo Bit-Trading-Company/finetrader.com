@@ -13,7 +13,8 @@ import {
   sellXFromEachWallet,
   processWalletItems,
 } from '../../../trading/autoTradeEngine';
-import { TRADING_EXCHANGES } from '../../../trading/exchanges';
+import { TRADING_EXCHANGES, getTradingApi } from '../../../trading/exchanges';
+import { selectActiveWallets } from '../../../features/wallet/walletSelection';
 import { mergePendingPurchases } from '../../../trading/pendingPurchases';
 
 export const useAutoTradeRunner = ({
@@ -82,14 +83,10 @@ export const useAutoTradeRunner = ({
 
   // Get active wallets based on settings
   const getActiveWallets = useCallback(() => {
-    let activeWallets = wallets;
-
-    // Filter to selected subset if custom wallet subset is enabled
-    if (useCustomWalletSubset && selectedWalletIndices.size > 0) {
-      activeWallets = wallets.filter((_, index) =>
-        selectedWalletIndices.has(index)
-      );
-    }
+    let activeWallets = selectActiveWallets(wallets, {
+      useCustomSubset: useCustomWalletSubset,
+      selectedIndices: selectedWalletIndices,
+    });
 
     // Randomize wallet order if randomizer is enabled
     if (walletRandomizer && activeWallets.length > 1) {
@@ -126,11 +123,12 @@ export const useAutoTradeRunner = ({
       setIsTrading(true);
       // Initialize pending purchases ref
       pendingPurchasesRef.current = pendingPurchases;
-      if (tradingExchange === TRADING_EXCHANGES.ORDNET) {
-        addConsoleLog('Auto-trading started on ord.net');
-      } else {
-        addConsoleLog('Auto-trading started');
-      }
+      const exchangeApi = getTradingApi(tradingExchange);
+      addConsoleLog(
+        exchangeApi.id === TRADING_EXCHANGES.SATFLOW
+          ? 'Auto-trading started'
+          : `Auto-trading started on ${exchangeApi.label}`
+      );
 
       if (tradingMode === 'bid-accept-bids') {
         endRun();

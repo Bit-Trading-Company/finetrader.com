@@ -19,7 +19,7 @@ import { useTradingConsole } from './hooks/useTradingConsole';
 import { useAutoTradeSettings } from './hooks/useAutoTradeSettings';
 import { useAutoTradeRunner } from './hooks/useAutoTradeRunner';
 import { checkTransactionConfirmed } from '../../trading/chain';
-import { TRADING_EXCHANGES, getTradingApi } from '../../trading/exchanges';
+import { getTradingApi } from '../../trading/exchanges';
 import background_6 from '../../assets/images/png/backgrounds/background_6.PNG';
 import './AutoTrade.css';
 import { useEventHub } from '../../lib/eventHub';
@@ -47,16 +47,6 @@ const AutoTrade = () => {
 
   // Step 2: Wallet Management
   const [wallets, setWallets] = useState([]);
-
-  // Check for wallets in localStorage (from WalletManagement)
-  useEffect(() => {
-    const checkForWallets = () => {
-      // WalletManagement stores selected wallet, but we need all wallets
-      // For now, we'll rely on the wallet-selected event to indicate wallets exist
-      // In a full implementation, WalletManagement would emit a 'wallets-generated' event
-    };
-    checkForWallets();
-  }, []);
 
   // Step 3: Dispatch
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -180,8 +170,10 @@ const AutoTrade = () => {
           selectedCollection.collectionId;
 
         if (collectionSymbol) {
+          // ord.net (and any marketplace that signs in for reads) cannot
+          // answer until a proxy wallet exists.
           if (
-            tradingExchange === TRADING_EXCHANGES.ORDNET &&
+            getTradingApi(tradingExchange).needsWalletForReads &&
             wallets.length === 0
           ) {
             return;

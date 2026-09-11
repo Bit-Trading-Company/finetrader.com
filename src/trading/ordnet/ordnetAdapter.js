@@ -18,6 +18,8 @@ export const ordnetAdapter = {
   id: 'ordnet',
   label: 'ord.net',
   getItemUrl: (inscriptionId) => `https://ord.net/inscription/${inscriptionId}`,
+  // Reads go through a BIP-322 session signed by a proxy wallet.
+  needsWalletForReads: true,
   fetchCollectionItems,
   getFloorPrice,
   fetchWalletOrdinals,

@@ -26,6 +26,9 @@ import { ordnetAdapter } from './ordnet/ordnetAdapter';
  * @property {string} id Value stored in AutoTrade settings (see TRADING_EXCHANGES).
  * @property {string} label Name shown in trading console logs.
  * @property {(inscriptionId: string) => string} getItemUrl Link shown in console logs.
+ * @property {boolean} [needsWalletForReads] True when even read calls (floor
+ *   price, listings) need a signed-in wallet session, as ord.net does. Pages
+ *   skip those reads until a proxy wallet exists.
  * @property {(collectionSymbol: string, bypassCache: boolean, options?: object) => Promise<object[]>} fetchCollectionItems
  *   Collection listings, cheapest first. options may include pageSize / page.
  * @property {(collectionSymbol: string, bypassCache: boolean, options?: object) => Promise<number|null>} getFloorPrice
@@ -53,6 +56,12 @@ export const TRADING_EXCHANGES = {
 };
 
 const ADAPTERS_BY_ID = Object.fromEntries(ADAPTERS.map((a) => [a.id, a]));
+
+/** Exchange choices for the AutoTrade selector, in registry order. */
+export const TRADING_EXCHANGE_OPTIONS = ADAPTERS.map(({ id, label }) => ({
+  id,
+  label,
+}));
 
 /**
  * Adapter for an exchange id. Unknown ids fall back to Satflow, the default

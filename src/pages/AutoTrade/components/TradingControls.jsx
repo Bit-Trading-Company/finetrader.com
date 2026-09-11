@@ -3,7 +3,10 @@
  * and the Start/Stop Trading button.
  */
 import React from 'react';
-import { TRADING_EXCHANGES } from '../../../trading/exchanges';
+import {
+  TRADING_EXCHANGE_OPTIONS,
+  getExchangeLabel,
+} from '../../../trading/exchanges';
 
 const TradingControls = ({
   settings,
@@ -57,28 +60,19 @@ const TradingControls = ({
       <div className="auto-trade-control-group">
         <label>Exchange:</label>
         <div className="auto-trade-radio-group">
-          <label className="auto-trade-radio-label">
-            <input
-              type="radio"
-              name="tradingExchange"
-              value={TRADING_EXCHANGES.SATFLOW}
-              checked={tradingExchange === TRADING_EXCHANGES.SATFLOW}
-              onChange={(e) => setTradingExchange(e.target.value)}
-              disabled={isTrading}
-            />
-            <span>Satflow</span>
-          </label>
-          <label className="auto-trade-radio-label">
-            <input
-              type="radio"
-              name="tradingExchange"
-              value={TRADING_EXCHANGES.ORDNET}
-              checked={tradingExchange === TRADING_EXCHANGES.ORDNET}
-              onChange={(e) => setTradingExchange(e.target.value)}
-              disabled={isTrading}
-            />
-            <span>ord.net</span>
-          </label>
+          {TRADING_EXCHANGE_OPTIONS.map((exchange) => (
+            <label className="auto-trade-radio-label" key={exchange.id}>
+              <input
+                type="radio"
+                name="tradingExchange"
+                value={exchange.id}
+                checked={tradingExchange === exchange.id}
+                onChange={(e) => setTradingExchange(e.target.value)}
+                disabled={isTrading}
+              />
+              <span>{exchange.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
@@ -430,8 +424,9 @@ const TradingControls = ({
                 marginTop: '4px',
               }}
             >
-              Buys the cheapest Satflow listings (same flow as &quot;Buy
-              additional items&quot;), up to {buyXEachAmount} per wallet (~
+              Buys the cheapest {getExchangeLabel(tradingExchange)} listings
+              (same flow as &quot;Buy additional items&quot;), up to{' '}
+              {buyXEachAmount} per wallet (~
               {buyXEachAmount *
                 (useCustomWalletSubset
                   ? selectedWalletIndices.size

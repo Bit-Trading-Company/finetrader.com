@@ -14,6 +14,7 @@ import {
   getMempoolProviderLabel,
 } from '../../lib/mempoolProvider';
 import background_8 from '../../assets/images/png/backgrounds/background_8.PNG';
+import { selectActiveWallets } from '../../features/wallet/walletSelection';
 import './WalletConsolidator.css';
 import { useEventHub } from '../../lib/eventHub';
 import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
@@ -184,15 +185,14 @@ const WalletConsolidator = () => {
     return customAddress.trim();
   };
 
-  const getActiveWallets = useCallback(() => {
-    // An empty custom subset selects no wallets (the page asks the user to
-    // select at least one). It must not widen to every wallet: consolidation
-    // moves funds.
-    if (useCustomWalletSubset) {
-      return wallets.filter((_, i) => selectedWalletIndices.has(i));
-    }
-    return wallets;
-  }, [wallets, useCustomWalletSubset, selectedWalletIndices]);
+  const getActiveWallets = useCallback(
+    () =>
+      selectActiveWallets(wallets, {
+        useCustomSubset: useCustomWalletSubset,
+        selectedIndices: selectedWalletIndices,
+      }),
+    [wallets, useCustomWalletSubset, selectedWalletIndices]
+  );
 
   // Fetch preview balances
   const handleFetchPreview = async () => {

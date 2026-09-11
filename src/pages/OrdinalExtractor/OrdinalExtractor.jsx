@@ -20,6 +20,7 @@ import {
   isValidBitcoinAddress,
 } from '../WalletConsolidator/consolidatorUtils';
 import background_8 from '../../assets/images/png/backgrounds/background_8.PNG';
+import { selectActiveWallets } from '../../features/wallet/walletSelection';
 import '../WalletConsolidator/WalletConsolidator.css';
 import { useEventHub } from '../../lib/eventHub';
 import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
@@ -171,12 +172,14 @@ const OrdinalExtractor = () => {
     }
   };
 
-  const getActiveProxyWallets = useCallback(() => {
-    if (useCustomWalletSubset && selectedWalletIndices.size > 0) {
-      return wallets.filter((_, i) => selectedWalletIndices.has(i));
-    }
-    return wallets;
-  }, [wallets, useCustomWalletSubset, selectedWalletIndices]);
+  const getActiveProxyWallets = useCallback(
+    () =>
+      selectActiveWallets(wallets, {
+        useCustomSubset: useCustomWalletSubset,
+        selectedIndices: selectedWalletIndices,
+      }),
+    [wallets, useCustomWalletSubset, selectedWalletIndices]
+  );
 
   const selectableInscriptions = useMemo(() => {
     const rows = [];
