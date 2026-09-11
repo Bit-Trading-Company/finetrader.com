@@ -184,7 +184,10 @@ const WalletConsolidator = () => {
   };
 
   const getActiveWallets = useCallback(() => {
-    if (useCustomWalletSubset && selectedWalletIndices.size > 0) {
+    // An empty custom subset selects no wallets (the page asks the user to
+    // select at least one). It must not widen to every wallet: consolidation
+    // moves funds.
+    if (useCustomWalletSubset) {
       return wallets.filter((_, i) => selectedWalletIndices.has(i));
     }
     return wallets;
