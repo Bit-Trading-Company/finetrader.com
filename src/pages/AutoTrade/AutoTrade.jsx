@@ -10,6 +10,11 @@ import WalletManagement from '../../features/wallet/WalletManagement';
 import Dispatch from '../../features/wallet/Dispatch';
 import OrdinalsCollections from '../../features/marketplace/OrdinalsCollections';
 import CollectionOfferModal from '../../features/marketplace/CollectionOfferModal';
+import AutoTradeStep from './components/AutoTradeStep';
+import TradingControls from './components/TradingControls';
+import TradingConsole from './components/TradingConsole';
+import AutoTradeSettingsModal from './components/AutoTradeSettingsModal';
+import { FINE_TRADING_USE_FEES_KEY, StepStatus } from './constants';
 import {
   processWalletItems,
   buyItemsFromFloor,
@@ -23,21 +28,11 @@ import {
   MEMPOOL_PROVIDERS,
   getMempoolApiProvider,
   setMempoolApiProvider,
-  getMempoolProviderLabel,
 } from '../../lib/mempoolProvider';
 import background_6 from '../../assets/images/png/backgrounds/background_6.PNG';
 import './AutoTrade.css';
 import { useEventHub } from '../../lib/eventHub';
 import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
-
-const FINE_TRADING_USE_FEES_KEY = 'fine-trading-use-fees';
-
-// Step status icons
-const StepStatus = {
-  PENDING: '⏳',
-  COMPLETE: '✓',
-  IN_PROGRESS: '⟳',
-};
 
 const AutoTrade = () => {
   // Step states
@@ -1070,232 +1065,145 @@ const AutoTrade = () => {
         </button>
 
         {/* Step 1: Connect Wallet */}
-        <div className="auto-trade-step">
-          <div
-            className={`auto-trade-step-header ${
-              currentStep === 1 ? 'active' : ''
-            }`}
-            onClick={() => handleStepClick(1)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className="auto-trade-step-number">1</div>
-            <div className="auto-trade-step-title">Connect Wallet</div>
-            <div className="auto-trade-step-status">
-              <input
-                type="checkbox"
-                checked={stepStatuses[1] === StepStatus.COMPLETE}
-                readOnly
-                className="auto-trade-step-checkbox"
-              />
-            </div>
-          </div>
-          <div
-            className={`auto-trade-step-content ${
-              currentStep === 1 ? 'active' : 'hidden'
-            }`}
-          >
-            {!isWalletConnected ? (
-              <div className="auto-trade-wallet-list">
-                {CONNECT_WALLET_LIST.map((walletItem, i) => (
-                  <button
-                    key={i}
-                    className="auto-trade-wallet-item"
-                    onClick={() => handleConnect(walletItem.wallet)}
-                  >
-                    <img
-                      src={walletItem.icon}
-                      alt={`${walletItem.wallet} icon`}
-                      className="auto-trade-wallet-icon"
-                    />
-                    <span>{walletItem.wallet}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="auto-trade-step-complete">
-                <p>
-                  Wallet connected: {connectedAddress?.ordinals?.slice(0, 8)}
-                  ...
-                </p>
+        <AutoTradeStep
+          number={1}
+          title="Connect Wallet"
+          isActive={currentStep === 1}
+          isComplete={stepStatuses[1] === StepStatus.COMPLETE}
+          onSelect={() => handleStepClick(1)}
+        >
+          {!isWalletConnected ? (
+            <div className="auto-trade-wallet-list">
+              {CONNECT_WALLET_LIST.map((walletItem, i) => (
                 <button
-                  onClick={handleDisconnect}
-                  className="auto-trade-button"
-                  style={{ marginTop: '8px' }}
+                  key={i}
+                  className="auto-trade-wallet-item"
+                  onClick={() => handleConnect(walletItem.wallet)}
                 >
-                  Disconnect Wallet
+                  <img
+                    src={walletItem.icon}
+                    alt={`${walletItem.wallet} icon`}
+                    className="auto-trade-wallet-icon"
+                  />
+                  <span>{walletItem.wallet}</span>
                 </button>
-              </div>
-            )}
-          </div>
-        </div>
+              ))}
+            </div>
+          ) : (
+            <div className="auto-trade-step-complete">
+              <p>
+                Wallet connected: {connectedAddress?.ordinals?.slice(0, 8)}
+                ...
+              </p>
+              <button
+                onClick={handleDisconnect}
+                className="auto-trade-button"
+                style={{ marginTop: '8px' }}
+              >
+                Disconnect Wallet
+              </button>
+            </div>
+          )}
+        </AutoTradeStep>
 
         {/* Step 2: Create Fine Trading Wallets */}
-        <div className="auto-trade-step">
-          <div
-            className={`auto-trade-step-header ${
-              currentStep === 2 ? 'active' : ''
-            }`}
-            onClick={() => handleStepClick(2)}
-            style={{ cursor: 'pointer' }}
+        <AutoTradeStep
+          number={2}
+          title="Create Fine Trading Wallets"
+          isActive={currentStep === 2}
+          isComplete={stepStatuses[2] === StepStatus.COMPLETE}
+          onSelect={() => handleStepClick(2)}
+        >
+          <WalletManagement glEventHub={glEventHub} />
+          {stepStatuses[2] === StepStatus.COMPLETE && (
+            <button
+              onClick={() => setCurrentStep(3)}
+              className="auto-trade-button"
+              style={{ marginTop: '16px' }}
+            >
+              Continue to Step 3
+            </button>
+          )}
+        </AutoTradeStep>
+
+        {/* Step 3: Dispatch BTC */}
+        <AutoTradeStep
+          number={3}
+          title="Dispatch BTC"
+          isActive={currentStep === 3}
+          isComplete={stepStatuses[3] === StepStatus.COMPLETE}
+          onSelect={() => handleStepClick(3)}
+        >
+          <p style={{ color: '#a0aec0', marginBottom: '16px' }}>
+            Dispatch BTC to your proxy wallets. Transactions will be monitored
+            for confirmation.
+          </p>
+          <button
+            onClick={() => setShowDispatchModal(true)}
+            className="auto-trade-button"
           >
-            <div className="auto-trade-step-number">2</div>
-            <div className="auto-trade-step-title">
-              Create Fine Trading Wallets
+            Open Dispatch Modal
+          </button>
+          {stepStatuses[3] === StepStatus.IN_PROGRESS && (
+            <div style={{ marginTop: '16px', color: '#ed8936' }}>
+              ⏳ Waiting for transaction confirmation...
             </div>
-            <div className="auto-trade-step-status">
-              <input
-                type="checkbox"
-                checked={stepStatuses[2] === StepStatus.COMPLETE}
-                readOnly
-                className="auto-trade-step-checkbox"
-              />
+          )}
+          {stepStatuses[3] === StepStatus.COMPLETE && (
+            <div style={{ marginTop: '16px', color: '#48bb78' }}>
+              ✓ Dispatch transactions confirmed!
             </div>
-          </div>
-          <div
-            className={`auto-trade-step-content ${
-              currentStep === 2 ? 'active' : 'hidden'
-            }`}
-          >
-            <WalletManagement glEventHub={glEventHub} />
-            {stepStatuses[2] === StepStatus.COMPLETE && (
+          )}
+          <Dispatch
+            isOpen={showDispatchModal}
+            onClose={() => setShowDispatchModal(false)}
+            proxyWallets={wallets}
+          />
+        </AutoTradeStep>
+
+        {/* Step 4: Select Collection */}
+        <AutoTradeStep
+          number={4}
+          title="Select Collection to Trade"
+          isActive={currentStep === 4}
+          isComplete={stepStatuses[4] === StepStatus.COMPLETE}
+          onSelect={() => handleStepClick(4)}
+        >
+          <OrdinalsCollections glEventHub={glEventHub} />
+          {selectedCollection && (
+            <div className="auto-trade-selected-collection">
+              <h3>Selected Collection:</h3>
+              <p>
+                {selectedCollection.name || selectedCollection.collectionSymbol}
+              </p>
+              {selectedCollection.image && (
+                <img
+                  src={selectedCollection.image}
+                  alt={selectedCollection.name}
+                  className="auto-trade-collection-image"
+                />
+              )}
               <button
-                onClick={() => setCurrentStep(3)}
+                onClick={() => setCurrentStep(5)}
                 className="auto-trade-button"
                 style={{ marginTop: '16px' }}
               >
-                Continue to Step 3
+                Continue to Step 5
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Step 3: Dispatch BTC */}
-        <div className="auto-trade-step">
-          <div
-            className={`auto-trade-step-header ${
-              currentStep === 3 ? 'active' : ''
-            }`}
-            onClick={() => handleStepClick(3)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className="auto-trade-step-number">3</div>
-            <div className="auto-trade-step-title">Dispatch BTC</div>
-            <div className="auto-trade-step-status">
-              <input
-                type="checkbox"
-                checked={stepStatuses[3] === StepStatus.COMPLETE}
-                readOnly
-                className="auto-trade-step-checkbox"
-              />
             </div>
-          </div>
-          <div
-            className={`auto-trade-step-content ${
-              currentStep === 3 ? 'active' : 'hidden'
-            }`}
-          >
-            <p style={{ color: '#a0aec0', marginBottom: '16px' }}>
-              Dispatch BTC to your proxy wallets. Transactions will be monitored
-              for confirmation.
-            </p>
-            <button
-              onClick={() => setShowDispatchModal(true)}
-              className="auto-trade-button"
-            >
-              Open Dispatch Modal
-            </button>
-            {stepStatuses[3] === StepStatus.IN_PROGRESS && (
-              <div style={{ marginTop: '16px', color: '#ed8936' }}>
-                ⏳ Waiting for transaction confirmation...
-              </div>
-            )}
-            {stepStatuses[3] === StepStatus.COMPLETE && (
-              <div style={{ marginTop: '16px', color: '#48bb78' }}>
-                ✓ Dispatch transactions confirmed!
-              </div>
-            )}
-            <Dispatch
-              isOpen={showDispatchModal}
-              onClose={() => setShowDispatchModal(false)}
-              proxyWallets={wallets}
-            />
-          </div>
-        </div>
-
-        {/* Step 4: Select Collection */}
-        <div className="auto-trade-step">
-          <div
-            className={`auto-trade-step-header ${
-              currentStep === 4 ? 'active' : ''
-            }`}
-            onClick={() => handleStepClick(4)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className="auto-trade-step-number">4</div>
-            <div className="auto-trade-step-title">
-              Select Collection to Trade
-            </div>
-            <div className="auto-trade-step-status">
-              <input
-                type="checkbox"
-                checked={stepStatuses[4] === StepStatus.COMPLETE}
-                readOnly
-                className="auto-trade-step-checkbox"
-              />
-            </div>
-          </div>
-          <div
-            className={`auto-trade-step-content ${
-              currentStep === 4 ? 'active' : 'hidden'
-            }`}
-          >
-            <OrdinalsCollections glEventHub={glEventHub} />
-            {selectedCollection && (
-              <div className="auto-trade-selected-collection">
-                <h3>Selected Collection:</h3>
-                <p>
-                  {selectedCollection.name ||
-                    selectedCollection.collectionSymbol}
-                </p>
-                {selectedCollection.image && (
-                  <img
-                    src={selectedCollection.image}
-                    alt={selectedCollection.name}
-                    className="auto-trade-collection-image"
-                  />
-                )}
-                <button
-                  onClick={() => setCurrentStep(5)}
-                  className="auto-trade-button"
-                  style={{ marginTop: '16px' }}
-                >
-                  Continue to Step 5
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+          )}
+        </AutoTradeStep>
 
         {/* Step 5: Start Auto-Trading */}
-        <div className="auto-trade-step">
-          <div
-            className={`auto-trade-step-header ${
-              currentStep === 5 ? 'active' : ''
-            }`}
-            onClick={() => handleStepClick(5)}
-            style={{ cursor: 'pointer', position: 'relative' }}
-          >
-            <div className="auto-trade-step-number">5</div>
-            <div className="auto-trade-step-title">Start Auto Trading</div>
-            <div className="auto-trade-step-status">
-              <input
-                type="checkbox"
-                checked={stepStatuses[5] === StepStatus.COMPLETE}
-                readOnly
-                className="auto-trade-step-checkbox"
-              />
-            </div>
-            {/* Settings Button - Top Right */}
+        <AutoTradeStep
+          number={5}
+          title="Start Auto Trading"
+          isActive={currentStep === 5}
+          isComplete={stepStatuses[5] === StepStatus.COMPLETE}
+          onSelect={() => handleStepClick(5)}
+          headerStyle={{ position: 'relative' }}
+          headerExtra={
+            // Settings button (top right of the step header)
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1316,918 +1224,75 @@ const AutoTrade = () => {
             >
               ⚙️
             </button>
-          </div>
-          <div
-            className={`auto-trade-step-content ${
-              currentStep === 5 ? 'active' : 'hidden'
-            }`}
-          >
-            {/* Trading Mode Selection */}
-            <div className="auto-trade-controls">
-              <div className="auto-trade-control-group">
-                <label>Exchange:</label>
-                <div className="auto-trade-radio-group">
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingExchange"
-                      value={TRADING_EXCHANGES.SATFLOW}
-                      checked={tradingExchange === TRADING_EXCHANGES.SATFLOW}
-                      onChange={(e) => setTradingExchange(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>Satflow</span>
-                  </label>
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingExchange"
-                      value={TRADING_EXCHANGES.ORDNET}
-                      checked={tradingExchange === TRADING_EXCHANGES.ORDNET}
-                      onChange={(e) => setTradingExchange(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>ord.net</span>
-                  </label>
-                </div>
-              </div>
+          }
+        >
+          {/* Trading Mode Selection */}
+          <TradingControls
+            tradingExchange={tradingExchange}
+            setTradingExchange={setTradingExchange}
+            isTrading={isTrading}
+            tradingMode={tradingMode}
+            setTradingMode={setTradingMode}
+            timerHours={timerHours}
+            setTimerHours={setTimerHours}
+            timerMinutes={timerMinutes}
+            setTimerMinutes={setTimerMinutes}
+            timerSeconds={timerSeconds}
+            setTimerSeconds={setTimerSeconds}
+            timerIntervalSeconds={timerIntervalSeconds}
+            selectedCollectionSlug={selectedCollectionSlug}
+            setShowCollectionOfferModal={setShowCollectionOfferModal}
+            usePriceRange={usePriceRange}
+            setUsePriceRange={setUsePriceRange}
+            tradePrice={tradePrice}
+            setTradePrice={setTradePrice}
+            lowerTradePrice={lowerTradePrice}
+            setLowerTradePrice={setLowerTradePrice}
+            upperTradePrice={upperTradePrice}
+            setUpperTradePrice={setUpperTradePrice}
+            buyXEachAmount={buyXEachAmount}
+            setBuyXEachAmount={setBuyXEachAmount}
+            useCustomWalletSubset={useCustomWalletSubset}
+            selectedWalletIndices={selectedWalletIndices}
+            wallets={wallets}
+            sellXAmount={sellXAmount}
+            setSellXAmount={setSellXAmount}
+            useCustomSellPrice={useCustomSellPrice}
+            setUseCustomSellPrice={setUseCustomSellPrice}
+            customSellPrice={customSellPrice}
+            setCustomSellPrice={setCustomSellPrice}
+            buyAdditionalItems={buyAdditionalItems}
+            setBuyAdditionalItems={setBuyAdditionalItems}
+            setPurchaseAmount={setPurchaseAmount}
+            setBuyItemsEveryTick={setBuyItemsEveryTick}
+            purchaseAmount={purchaseAmount}
+            buyItemsEveryTick={buyItemsEveryTick}
+            handleStartTrading={handleStartTrading}
+            selectedCollection={selectedCollection}
+          />
 
-              <div className="auto-trade-control-group">
-                <label>Trading Mode:</label>
-                <div className="auto-trade-radio-group">
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="auto-buy-sell"
-                      checked={tradingMode === 'auto-buy-sell'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>Delta neutral trading</span>
-                  </label>
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="range-trading"
-                      checked={tradingMode === 'range-trading'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>Range trading</span>
-                  </label>
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="buy-x-each"
-                      checked={tradingMode === 'buy-x-each'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>Buy X from each wallet</span>
-                  </label>
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="sell-x-each"
-                      checked={tradingMode === 'sell-x-each'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>Sell X from each wallet</span>
-                  </label>
-                  <label className="auto-trade-radio-label">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="bid-accept-bids"
-                      checked={tradingMode === 'bid-accept-bids'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={isTrading}
-                    />
-                    <span>Bid / accept bids</span>
-                  </label>
-                  {/* <label className="auto-trade-radio-label disabled">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="delta-neutral"
-                      checked={tradingMode === 'delta-neutral'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={true}
-                    />
-                    <span>Delta neutral trading</span>
-                  </label> */}
-                  <label className="auto-trade-radio-label disabled">
-                    <input
-                      type="radio"
-                      name="tradingMode"
-                      value="auto-fill"
-                      checked={tradingMode === 'auto-fill'}
-                      onChange={(e) => setTradingMode(e.target.value)}
-                      disabled={true}
-                    />
-                    <span>Auto fill order-book</span>
-                  </label>
-                </div>
-              </div>
-
-              {tradingMode !== 'bid-accept-bids' && (
-                <div className="auto-trade-control-group">
-                  <label>Timer:</label>
-                  <div
-                    style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <input
-                        type="number"
-                        value={timerHours}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          setTimerHours(isNaN(value) ? 0 : Math.max(0, value));
-                        }}
-                        disabled={isTrading}
-                        min="0"
-                        style={{ width: '90px' }}
-                      />
-                      <span style={{ color: '#a0aec0' }}>hours</span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <input
-                        type="number"
-                        value={timerMinutes}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          setTimerMinutes(
-                            isNaN(value) ? 0 : Math.max(0, value)
-                          );
-                        }}
-                        disabled={isTrading}
-                        min="0"
-                        style={{ width: '90px' }}
-                      />
-                      <span style={{ color: '#a0aec0' }}>minutes</span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <input
-                        type="number"
-                        value={timerSeconds}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          setTimerSeconds(
-                            isNaN(value) ? 0 : Math.max(0, value)
-                          );
-                        }}
-                        disabled={isTrading}
-                        min="0"
-                        style={{ width: '90px' }}
-                      />
-                      <span style={{ color: '#a0aec0' }}>seconds</span>
-                    </div>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '6px',
-                    }}
-                  >
-                    Tick interval: {timerIntervalSeconds}s
-                  </p>
-                </div>
-              )}
-              {tradingMode === 'bid-accept-bids' && (
-                <div className="auto-trade-control-group">
-                  <button
-                    type="button"
-                    className="auto-trade-button"
-                    disabled={!selectedCollectionSlug || isTrading}
-                    onClick={() => setShowCollectionOfferModal(true)}
-                  >
-                    Open bids for collection
-                  </button>
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '8px',
-                    }}
-                  >
-                    Place collection bids or accept incoming bids (Satflow).
-                    Select a collection in step 4 first.
-                  </p>
-                </div>
-              )}
-              {tradingMode === 'range-trading' && (
-                <>
-                  <div className="auto-trade-control-group">
-                    <label className="auto-trade-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={usePriceRange}
-                        onChange={(e) => setUsePriceRange(e.target.checked)}
-                        disabled={isTrading}
-                      />
-                      <span>Use price range</span>
-                    </label>
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#a0aec0',
-                        marginTop: '4px',
-                        marginLeft: '24px',
-                      }}
-                    >
-                      {usePriceRange
-                        ? 'Trade at random price between lower and upper bounds'
-                        : 'Trade at a fixed price'}
-                    </p>
-                  </div>
-                  {!usePriceRange ? (
-                    <div className="auto-trade-control-group">
-                      <label>Trade Price (BTC):</label>
-                      <input
-                        type="number"
-                        value={tradePrice}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          setTradePrice(isNaN(value) ? 0 : Math.max(0, value));
-                        }}
-                        disabled={isTrading}
-                        min="0"
-                        step="0.00000001"
-                      />
-                      <p
-                        style={{
-                          fontSize: '0.85rem',
-                          color: '#a0aec0',
-                          marginTop: '4px',
-                        }}
-                      >
-                        Items will be bought and sold at this price (defaults to
-                        floor price)
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="auto-trade-control-group">
-                      <label>Trade Price Range (BTC):</label>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '16px',
-                          alignItems: 'flex-start',
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <label
-                            style={{
-                              display: 'block',
-                              marginBottom: '4px',
-                              fontSize: '0.9rem',
-                            }}
-                          >
-                            Lower
-                          </label>
-                          <input
-                            type="number"
-                            value={lowerTradePrice}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value);
-                              const newLower = isNaN(value)
-                                ? 0
-                                : Math.max(0, value);
-                              setLowerTradePrice(newLower);
-                              // Ensure upper is always higher
-                              if (upperTradePrice <= newLower) {
-                                setUpperTradePrice(newLower * 1.01); // Set to 1% above if invalid
-                              }
-                            }}
-                            disabled={isTrading}
-                            min="0"
-                            step="0.00000001"
-                            style={{ width: '90%' }}
-                          />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label
-                            style={{
-                              display: 'block',
-                              marginBottom: '4px',
-                              fontSize: '0.9rem',
-                            }}
-                          >
-                            Upper
-                          </label>
-                          <input
-                            type="number"
-                            value={upperTradePrice}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value);
-                              const newUpper = isNaN(value)
-                                ? 0
-                                : Math.max(0, value);
-                              // Ensure upper is always higher than lower
-                              if (newUpper > lowerTradePrice) {
-                                setUpperTradePrice(newUpper);
-                              } else {
-                                // If invalid, set to lower + 1%
-                                setUpperTradePrice(lowerTradePrice * 1.01);
-                              }
-                            }}
-                            disabled={isTrading}
-                            min={lowerTradePrice * 1.00000001} // Ensure it's always higher
-                            step="0.00000001"
-                            style={{ width: '90%' }}
-                          />
-                        </div>
-                      </div>
-                      <p
-                        style={{
-                          fontSize: '0.85rem',
-                          color: '#a0aec0',
-                          marginTop: '4px',
-                        }}
-                      >
-                        Trade at random price between lower and upper bounds
-                        (defaults to floor price - floor price + 10%)
-                      </p>
-                      {upperTradePrice <= lowerTradePrice && (
-                        <p
-                          style={{
-                            fontSize: '0.85rem',
-                            color: '#fc8181',
-                            marginTop: '4px',
-                          }}
-                        >
-                          ⚠ Upper price must be higher than lower price
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-              {tradingMode === 'buy-x-each' && (
-                <>
-                  <div className="auto-trade-control-group">
-                    <label style={{ display: 'block', marginBottom: '4px' }}>
-                      Floor items to buy per wallet:
-                    </label>
-                    <input
-                      type="number"
-                      value={buyXEachAmount}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        setBuyXEachAmount(
-                          isNaN(value) ? 1 : Math.max(1, value)
-                        );
-                      }}
-                      disabled={isTrading}
-                      min="1"
-                    />
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#a0aec0',
-                        marginTop: '4px',
-                      }}
-                    >
-                      Buys the cheapest Satflow listings (same flow as &quot;Buy
-                      additional items&quot;), up to {buyXEachAmount} per wallet
-                      (~
-                      {buyXEachAmount *
-                        (useCustomWalletSubset
-                          ? selectedWalletIndices.size
-                          : wallets.length)}{' '}
-                      max if all succeed). Stops when done; does not start
-                      auto-trading.
-                    </p>
-                  </div>
-                </>
-              )}
-              {tradingMode === 'sell-x-each' && (
-                <>
-                  <div className="auto-trade-control-group">
-                    <label style={{ display: 'block', marginBottom: '4px' }}>
-                      Items to list from each wallet:
-                    </label>
-                    <input
-                      type="number"
-                      value={sellXAmount}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value);
-                        setSellXAmount(isNaN(value) ? 1 : Math.max(1, value));
-                      }}
-                      disabled={isTrading}
-                      min="1"
-                    />
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#a0aec0',
-                        marginTop: '4px',
-                      }}
-                    >
-                      List up to {sellXAmount} item(s) from each wallet (or all
-                      available if less)
-                    </p>
-                  </div>
-                  <div className="auto-trade-control-group">
-                    <label className="auto-trade-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={useCustomSellPrice}
-                        onChange={(e) =>
-                          setUseCustomSellPrice(e.target.checked)
-                        }
-                        disabled={isTrading}
-                      />
-                      <span>Use custom listing price</span>
-                    </label>
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#a0aec0',
-                        marginTop: '4px',
-                        marginLeft: '24px',
-                      }}
-                    >
-                      {useCustomSellPrice
-                        ? 'List items at custom price'
-                        : 'List items at floor price (auto-fetched)'}
-                    </p>
-                  </div>
-                  {useCustomSellPrice && (
-                    <div className="auto-trade-control-group">
-                      <label>Custom Listing Price (BTC):</label>
-                      <input
-                        type="number"
-                        value={customSellPrice}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          setCustomSellPrice(
-                            isNaN(value) ? 0 : Math.max(0, value)
-                          );
-                        }}
-                        disabled={isTrading}
-                        min="0"
-                        step="0.00000001"
-                      />
-                      <p
-                        style={{
-                          fontSize: '0.85rem',
-                          color: '#a0aec0',
-                          marginTop: '4px',
-                        }}
-                      >
-                        Items will be listed at this price (in BTC)
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-              {tradingMode !== 'sell-x-each' &&
-                tradingMode !== 'buy-x-each' &&
-                tradingMode !== 'bid-accept-bids' && (
-                  <div className="auto-trade-control-group">
-                    <label className="auto-trade-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={buyAdditionalItems}
-                        onChange={(e) => {
-                          setBuyAdditionalItems(e.target.checked);
-                          if (!e.target.checked) {
-                            setPurchaseAmount(0);
-                            setBuyItemsEveryTick(false);
-                          }
-                        }}
-                        disabled={isTrading}
-                      />
-                      <span>Buy additional items</span>
-                    </label>
-                    {buyAdditionalItems && (
-                      <div style={{ marginTop: '12px' }}>
-                        <label
-                          style={{ display: 'block', marginBottom: '4px' }}
-                        >
-                          Number of items to buy:
-                        </label>
-                        <input
-                          type="number"
-                          value={purchaseAmount}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            setPurchaseAmount(
-                              isNaN(value) ? 0 : Math.max(0, value)
-                            );
-                          }}
-                          disabled={isTrading}
-                          min="0"
-                        />
-                        <p
-                          style={{
-                            fontSize: '0.85rem',
-                            color: '#a0aec0',
-                            marginTop: '4px',
-                          }}
-                        >
-                          Total items to trade: {purchaseAmount} + owned items
-                        </p>
-
-                        <label
-                          className="auto-trade-checkbox-label"
-                          style={{ marginTop: '12px' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={buyItemsEveryTick}
-                            onChange={(e) =>
-                              setBuyItemsEveryTick(e.target.checked)
-                            }
-                            disabled={isTrading || !buyAdditionalItems}
-                          />
-                          <span>Buy items every tick</span>
-                        </label>
-                        <p
-                          style={{
-                            fontSize: '0.85rem',
-                            color: '#a0aec0',
-                            marginTop: '4px',
-                            marginLeft: '24px',
-                          }}
-                        >
-                          When enabled, the auto-trader will attempt to buy the
-                          above amount from floor on every timer tick (instead
-                          of only at startup).
-                        </p>
-                      </div>
-                    )}
-                    {!buyAdditionalItems && (
-                      <p
-                        style={{
-                          fontSize: '0.85rem',
-                          color: '#a0aec0',
-                          marginTop: '4px',
-                        }}
-                      >
-                        Will only trade items already owned by proxy wallets
-                      </p>
-                    )}
-                  </div>
-                )}
-              <button
-                onClick={handleStartTrading}
-                className={`auto-trade-button ${isTrading ? 'stop' : 'start'}`}
-                disabled={
-                  !selectedCollection ||
-                  wallets.length === 0 ||
-                  (useCustomWalletSubset && selectedWalletIndices.size === 0) ||
-                  (tradingMode === 'range-trading' &&
-                    ((usePriceRange &&
-                      (lowerTradePrice <= 0 ||
-                        upperTradePrice <= 0 ||
-                        upperTradePrice <= lowerTradePrice)) ||
-                      (!usePriceRange && tradePrice <= 0))) ||
-                  (tradingMode === 'sell-x-each' &&
-                    useCustomSellPrice &&
-                    customSellPrice <= 0) ||
-                  (tradingMode === 'buy-x-each' && buyXEachAmount < 1) ||
-                  tradingMode === 'bid-accept-bids'
-                }
-              >
-                {isTrading ? 'Stop Trading' : 'Start Trading'}
-              </button>
-            </div>
-
-            <div className="auto-trade-console">
-              <h3>Console Output</h3>
-              <div className="auto-trade-console-logs" ref={consoleRef}>
-                {consoleLogs.length === 0 ? (
-                  <p className="auto-trade-console-empty">No logs yet...</p>
-                ) : (
-                  consoleLogs.map((log, index) => (
-                    <div key={index} className="auto-trade-console-log">
-                      <span className="auto-trade-console-time">
-                        {log.timestamp}
-                      </span>
-                      <span className="auto-trade-console-message">
-                        {log.message}
-                      </span>
-                      {log.link && (
-                        <a
-                          href={log.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="auto-trade-console-link"
-                        >
-                          {log.link.includes('/inscription/')
-                            ? 'View Item'
-                            : 'View Transaction'}
-                        </a>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+          <TradingConsole consoleRef={consoleRef} consoleLogs={consoleLogs} />
+        </AutoTradeStep>
 
         {/* Settings Modal */}
         {showSettingsModal && (
-          <div
-            className="auto-trade-modal-overlay"
-            onClick={() => setShowSettingsModal(false)}
-          >
-            <div
-              className="auto-trade-modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="auto-trade-modal-header">
-                <h2>Auto-Trading Settings</h2>
-                <button
-                  className="auto-trade-modal-close"
-                  onClick={() => setShowSettingsModal(false)}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="auto-trade-modal-body">
-                {/* Mempool API Provider Setting */}
-                <div className="auto-trade-settings-group">
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Mempool API provider
-                  </label>
-                  <div className="auto-trade-radio-group">
-                    <label className="auto-trade-radio-label">
-                      <input
-                        type="radio"
-                        name="mempoolProvider"
-                        value={MEMPOOL_PROVIDERS.MEMPOOL_SPACE}
-                        checked={
-                          mempoolProvider === MEMPOOL_PROVIDERS.MEMPOOL_SPACE
-                        }
-                        onChange={() =>
-                          handleMempoolProviderChange(
-                            MEMPOOL_PROVIDERS.MEMPOOL_SPACE
-                          )
-                        }
-                        disabled={isTrading}
-                      />
-                      <span>mempool.space (default)</span>
-                    </label>
-                    <label className="auto-trade-radio-label">
-                      <input
-                        type="radio"
-                        name="mempoolProvider"
-                        value={MEMPOOL_PROVIDERS.BLOCKSTREAM}
-                        checked={
-                          mempoolProvider === MEMPOOL_PROVIDERS.BLOCKSTREAM
-                        }
-                        onChange={() =>
-                          handleMempoolProviderChange(
-                            MEMPOOL_PROVIDERS.BLOCKSTREAM
-                          )
-                        }
-                        disabled={isTrading}
-                      />
-                      <span>blockstream.info</span>
-                    </label>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '4px',
-                      marginLeft: '4px',
-                    }}
-                  >
-                    Current: {getMempoolProviderLabel(mempoolProvider)}
-                  </p>
-                </div>
-
-                {/* Use Fees Setting */}
-                <div className="auto-trade-settings-group">
-                  <label className="auto-trade-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={useFees}
-                      onChange={(e) => {
-                        const on = e.target.checked;
-                        setUseFees(on);
-                        try {
-                          if (typeof window !== 'undefined') {
-                            window.localStorage.setItem(
-                              FINE_TRADING_USE_FEES_KEY,
-                              on ? '1' : '0'
-                            );
-                          }
-                        } catch {
-                          /* ignore */
-                        }
-                      }}
-                      disabled={isTrading}
-                    />
-                    <span>Use fees</span>
-                  </label>
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '4px',
-                      marginLeft: '24px',
-                    }}
-                  >
-                    Send 1% of each purchase price to fee receiver address
-                  </p>
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '4px',
-                      marginLeft: '24px',
-                    }}
-                  >
-                    Fee inputs are always checked against the UniSat inscription
-                    index and are only spent when confirmed to have no
-                    inscriptions or rune payloads. Small purchases still send
-                    the minimum relay-safe fee output.
-                  </p>
-                </div>
-
-                {/* Prep Delay Setting */}
-                <div
-                  className="auto-trade-settings-group"
-                  style={{ marginTop: '20px' }}
-                >
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Purchase prep delay (seconds)
-                  </label>
-                  <input
-                    type="number"
-                    value={prepDelay / 1000}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      const delayMs = isNaN(value)
-                        ? 3000
-                        : Math.max(1, Math.min(10, value)) * 1000;
-                      setPrepDelay(delayMs);
-                    }}
-                    disabled={isTrading}
-                    min="1"
-                    max="10"
-                    step="0.5"
-                    style={{ width: '100px' }}
-                  />
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '4px',
-                      marginLeft: '4px',
-                    }}
-                  >
-                    Delay between purchase preparations to prevent UTXO
-                    conflicts (1-10 seconds, default: 3s)
-                  </p>
-                </div>
-
-                {/* Custom Wallet Subset Selection */}
-                <div
-                  className="auto-trade-settings-group"
-                  style={{ marginTop: '20px' }}
-                >
-                  <label className="auto-trade-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={useCustomWalletSubset}
-                      onChange={(e) => {
-                        setUseCustomWalletSubset(e.target.checked);
-                        if (!e.target.checked) {
-                          // Reset to all wallets selected when disabled
-                          setSelectedWalletIndices(
-                            new Set(wallets.map((_, index) => index))
-                          );
-                        }
-                      }}
-                      disabled={isTrading || wallets.length === 0}
-                    />
-                    <span>Custom wallet subset selection</span>
-                  </label>
-                  {useCustomWalletSubset && wallets.length > 0 && (
-                    <div
-                      className="auto-trade-wallet-selection"
-                      style={{ marginTop: '12px', marginLeft: '24px' }}
-                    >
-                      {wallets.map((wallet, index) => (
-                        <label
-                          key={index}
-                          className="auto-trade-checkbox-label"
-                          style={{ display: 'block', marginBottom: '8px' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedWalletIndices.has(index)}
-                            onChange={(e) => {
-                              const newIndices = new Set(selectedWalletIndices);
-                              if (e.target.checked) {
-                                newIndices.add(index);
-                              } else {
-                                newIndices.delete(index);
-                              }
-                              setSelectedWalletIndices(newIndices);
-                            }}
-                            disabled={isTrading}
-                          />
-                          <span>
-                            Wallet #{index + 1}: {wallet.address.slice(0, 8)}...
-                            {wallet.address.slice(-6)}
-                          </span>
-                        </label>
-                      ))}
-                      {selectedWalletIndices.size === 0 && (
-                        <p
-                          style={{
-                            color: '#fc8181',
-                            fontSize: '0.875rem',
-                            marginTop: '8px',
-                          }}
-                        >
-                          ⚠ At least one wallet must be selected
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Wallet Randomizer */}
-                <div
-                  className="auto-trade-settings-group"
-                  style={{ marginTop: '20px' }}
-                >
-                  <label className="auto-trade-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={walletRandomizer}
-                      onChange={(e) => setWalletRandomizer(e.target.checked)}
-                      disabled={isTrading}
-                    />
-                    <span>Wallet randomizer</span>
-                  </label>
-                  <p
-                    style={{
-                      fontSize: '0.85rem',
-                      color: '#a0aec0',
-                      marginTop: '4px',
-                      marginLeft: '24px',
-                    }}
-                  >
-                    Randomize wallet order each auto-trading cycle
-                  </p>
-                </div>
-              </div>
-              <div className="auto-trade-modal-footer">
-                <button
-                  className="auto-trade-button"
-                  onClick={() => setShowSettingsModal(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
+          <AutoTradeSettingsModal
+            onClose={() => setShowSettingsModal(false)}
+            mempoolProvider={mempoolProvider}
+            handleMempoolProviderChange={handleMempoolProviderChange}
+            isTrading={isTrading}
+            useFees={useFees}
+            setUseFees={setUseFees}
+            prepDelay={prepDelay}
+            setPrepDelay={setPrepDelay}
+            useCustomWalletSubset={useCustomWalletSubset}
+            setUseCustomWalletSubset={setUseCustomWalletSubset}
+            setSelectedWalletIndices={setSelectedWalletIndices}
+            wallets={wallets}
+            selectedWalletIndices={selectedWalletIndices}
+            walletRandomizer={walletRandomizer}
+            setWalletRandomizer={setWalletRandomizer}
+          />
         )}
 
         <CollectionOfferModal
