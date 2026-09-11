@@ -11,6 +11,9 @@ import App from './app/App';
 import { BrowserRouter } from 'react-router-dom';
 import { OrdConnectProvider } from '@ordzaar/ord-connect';
 import ErrorBoundary from './app/ErrorBoundary';
+// Global design tokens and fonts (used by every stylesheet).
+import './styles/tokens.css';
+import './styles/fonts.css';
 
 // AGGRESSIVELY block MetaMask from interfering with Bitcoin app
 // This is a Bitcoin-only application and should not use Ethereum wallets

@@ -1,0 +1,18 @@
+/*
+ * App fonts, declared once for every page.
+ */
+@font-face {
+  font-family: 'Mix Doodle';
+  src: url('../assets/fonts/Mix-Doodle.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oliver-Regular';
+  src: url('../assets/fonts/Oliver-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

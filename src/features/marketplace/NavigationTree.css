@@ -57,9 +57,9 @@
 }
 
 .navigation-tree-back-button {
-  background: #4a5568;
-  color: #e2e8f0;
-  border: 1px solid #4a5568;
+  background: var(--color-gray-700);
+  color: var(--color-gray-300);
+  border: 1px solid var(--color-gray-700);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 12px;
@@ -83,9 +83,9 @@
 }
 
 .navigation-tree-back-button:hover {
-  background: #2d3748;
-  border-color: #ed8936;
-  color: #ed8936;
+  background: var(--color-gray-800);
+  border-color: var(--color-orange-500);
+  color: var(--color-orange-500);
 }
 
 .navigation-tree-back-button:focus {
@@ -122,7 +122,7 @@
   height: 24px;
   border-radius: 12px;
   border: none;
-  background-color: #4a5568;
+  background-color: var(--color-gray-700);
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s ease;
@@ -131,11 +131,11 @@
 }
 
 .navigation-tree-toggle-button:hover {
-  background-color: #2d3748;
+  background-color: var(--color-gray-800);
 }
 
 .navigation-tree-toggle-button:active {
-  background-color: #ed8936;
+  background-color: var(--color-orange-500);
 }
 .navigation-tree-toggle-slider {
   width: 18px;
@@ -153,7 +153,7 @@
 }
 
 .navigation-tree-toggle-button.active {
-  background-color: #ed8936;
+  background-color: var(--color-orange-500);
 }
 
 .navigation-tree-toggle-button.active:hover {

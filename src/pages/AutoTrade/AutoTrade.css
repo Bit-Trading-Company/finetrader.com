@@ -40,7 +40,7 @@ body {
   text-align: center;
   font-size: 2.5rem;
   font-weight: 700;
-  color: #f7fafc;
+  color: var(--color-gray-100);
   margin-bottom: 20px;
   text-shadow:
     3px 3px 6px rgba(0, 0, 0, 0.8),
@@ -48,9 +48,9 @@ body {
 }
 
 .auto-trade-step {
-  background: #2d3748;
+  background: var(--color-gray-800);
   border-radius: 12px;
-  border: 1px solid #4a5568;
+  border: 1px solid var(--color-gray-700);
   overflow: hidden;
   transition: all 0.3s ease;
   box-shadow:
@@ -59,7 +59,7 @@ body {
 }
 
 .auto-trade-step:hover {
-  border-color: #ed8936;
+  border-color: var(--color-orange-500);
   box-shadow: 0 4px 12px rgba(237, 137, 54, 0.2);
 }
 
@@ -73,12 +73,12 @@ body {
 }
 
 .auto-trade-step-header:hover {
-  background-color: #374151;
+  background-color: var(--color-cool-gray-700);
 }
 
 .auto-trade-step-header.active {
-  background-color: #374151;
-  border-bottom: 2px solid #ed8936;
+  background-color: var(--color-cool-gray-700);
+  border-bottom: 2px solid var(--color-orange-500);
 }
 
 .auto-trade-step-number {
@@ -88,23 +88,23 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #4a5568;
-  color: #f7fafc;
+  background: var(--color-gray-700);
+  color: var(--color-gray-100);
   font-weight: 600;
   font-size: 1.2rem;
   flex-shrink: 0;
 }
 
 .auto-trade-step-header.active .auto-trade-step-number {
-  background: #ed8936;
-  color: #1a202c;
+  background: var(--color-orange-500);
+  color: var(--color-gray-900);
 }
 
 .auto-trade-step-title {
   flex: 1;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #f7fafc;
+  color: var(--color-gray-100);
 }
 
 .auto-trade-step-status {
@@ -120,14 +120,14 @@ body {
   width: 24px;
   height: 24px;
   cursor: default;
-  accent-color: #48bb78;
+  accent-color: var(--color-green-500);
   flex-shrink: 0;
 }
 
 .auto-trade-step-content {
   padding: 24px;
-  background: #1a202c;
-  border-top: 1px solid #4a5568;
+  background: var(--color-gray-900);
+  border-top: 1px solid var(--color-gray-700);
   transition: all 0.3s ease;
 }
 
@@ -151,17 +151,17 @@ body {
   align-items: center;
   gap: 8px;
   padding: 16px;
-  background: #2d3748;
-  border: 1px solid #4a5568;
+  background: var(--color-gray-800);
+  border: 1px solid var(--color-gray-700);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  color: #e2e8f0;
+  color: var(--color-gray-300);
 }
 
 .auto-trade-wallet-item:hover {
-  background: #374151;
-  border-color: #ed8936;
+  background: var(--color-cool-gray-700);
+  border-color: var(--color-orange-500);
   transform: translateY(-2px);
 }
 
@@ -173,16 +173,16 @@ body {
 
 .auto-trade-step-complete {
   padding: 16px;
-  background: #2d3748;
+  background: var(--color-gray-800);
   border-radius: 8px;
-  border: 1px solid #48bb78;
-  color: #c6f6d5;
+  border: 1px solid var(--color-green-500);
+  color: var(--color-green-200);
   text-align: center;
 }
 
 .auto-trade-button {
   padding: 12px 24px;
-  background: #ed8936;
+  background: var(--color-orange-500);
   color: white;
   border: none;
   border-radius: 8px;
@@ -193,7 +193,7 @@ body {
 }
 
 .auto-trade-button:hover:not(:disabled) {
-  background: #dd6b20;
+  background: var(--color-orange-600);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(237, 137, 54, 0.4);
 }
@@ -204,11 +204,11 @@ body {
 }
 
 .auto-trade-button.start {
-  background: #48bb78;
+  background: var(--color-green-500);
 }
 
 .auto-trade-button.start:hover:not(:disabled) {
-  background: #38a169;
+  background: var(--color-green-600);
 }
 
 .auto-trade-button.stop {
@@ -216,7 +216,7 @@ body {
 }
 
 .auto-trade-button.stop:hover:not(:disabled) {
-  background: #e53e3e;
+  background: var(--color-red-600);
 }
 
 .auto-trade-controls {
@@ -233,17 +233,17 @@ body {
 }
 
 .auto-trade-control-group label {
-  color: #e2e8f0;
+  color: var(--color-gray-300);
   font-weight: 500;
   font-size: 0.9rem;
 }
 
 .auto-trade-control-group input {
   padding: 10px 12px;
-  background: #2d3748;
-  border: 1px solid #4a5568;
+  background: var(--color-gray-800);
+  border: 1px solid var(--color-gray-700);
   border-radius: 6px;
-  color: #f7fafc;
+  color: var(--color-gray-100);
   font-size: 1rem;
 }
 
@@ -263,7 +263,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #e2e8f0;
+  color: var(--color-gray-300);
   font-size: 0.9rem;
   cursor: pointer;
   padding: 8px;
@@ -272,7 +272,7 @@ body {
 }
 
 .auto-trade-radio-label:hover:not(.disabled) {
-  background-color: #2d3748;
+  background-color: var(--color-gray-800);
 }
 
 .auto-trade-radio-label.disabled {
@@ -282,7 +282,7 @@ body {
 
 .auto-trade-radio-label input[type='radio'] {
   cursor: pointer;
-  accent-color: #ed8936;
+  accent-color: var(--color-orange-500);
 }
 
 .auto-trade-radio-label.disabled input[type='radio'] {
@@ -292,18 +292,18 @@ body {
 .auto-trade-selected-collection {
   margin-top: 20px;
   padding: 16px;
-  background: #2d3748;
+  background: var(--color-gray-800);
   border-radius: 8px;
-  border: 1px solid #4a5568;
+  border: 1px solid var(--color-gray-700);
 }
 
 .auto-trade-selected-collection h3 {
-  color: #f7fafc;
+  color: var(--color-gray-100);
   margin-bottom: 12px;
 }
 
 .auto-trade-selected-collection p {
-  color: #e2e8f0;
+  color: var(--color-gray-300);
   margin-bottom: 12px;
 }
 
@@ -316,8 +316,8 @@ body {
 
 .auto-trade-console {
   margin-top: 24px;
-  background: #1a202c;
-  border: 1px solid #4a5568;
+  background: var(--color-gray-900);
+  border: 1px solid var(--color-gray-700);
   border-radius: 8px;
   padding: 16px;
   max-height: 400px;
@@ -325,7 +325,7 @@ body {
 }
 
 .auto-trade-console h3 {
-  color: #f7fafc;
+  color: var(--color-gray-100);
   margin-bottom: 12px;
   font-size: 1.1rem;
 }
@@ -337,7 +337,7 @@ body {
 }
 
 .auto-trade-console-empty {
-  color: #a0aec0;
+  color: var(--color-gray-500);
   font-style: italic;
   text-align: center;
   padding: 20px;
@@ -348,26 +348,26 @@ body {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  background: #2d3748;
+  background: var(--color-gray-800);
   border-radius: 6px;
-  border-left: 3px solid #ed8936;
+  border-left: 3px solid var(--color-orange-500);
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
 }
 
 .auto-trade-console-time {
-  color: #a0aec0;
+  color: var(--color-gray-500);
   font-size: 0.8rem;
   min-width: 80px;
 }
 
 .auto-trade-console-message {
   flex: 1;
-  color: #e2e8f0;
+  color: var(--color-gray-300);
 }
 
 .auto-trade-console-link {
-  color: #3182ce;
+  color: var(--color-blue-600);
   text-decoration: none;
   font-size: 0.85rem;
   transition: color 0.2s;
@@ -384,17 +384,17 @@ body {
 }
 
 .auto-trade-console::-webkit-scrollbar-track {
-  background: #1a202c;
+  background: var(--color-gray-900);
   border-radius: 4px;
 }
 
 .auto-trade-console::-webkit-scrollbar-thumb {
-  background: #4a5568;
+  background: var(--color-gray-700);
   border-radius: 4px;
 }
 
 .auto-trade-console::-webkit-scrollbar-thumb:hover {
-  background: #718096;
+  background: var(--color-gray-600);
 }
 
 /* Responsive design */
@@ -449,7 +449,7 @@ body {
 }
 
 .auto-trade-modal-content {
-  background: #2d3748;
+  background: var(--color-gray-800);
   border-radius: 12px;
   max-width: 600px;
   width: 100%;
@@ -465,20 +465,20 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #4a5568;
+  border-bottom: 1px solid var(--color-gray-700);
 }
 
 .auto-trade-modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #f7fafc;
+  color: var(--color-gray-100);
 }
 
 .auto-trade-modal-close {
   background: transparent;
   border: none;
-  color: #a0aec0;
+  color: var(--color-gray-500);
   font-size: 2rem;
   line-height: 1;
   cursor: pointer;
@@ -493,8 +493,8 @@ body {
 }
 
 .auto-trade-modal-close:hover {
-  background: #4a5568;
-  color: #f7fafc;
+  background: var(--color-gray-700);
+  color: var(--color-gray-100);
 }
 
 .auto-trade-modal-body {
@@ -508,7 +508,7 @@ body {
 }
 
 .auto-trade-wallet-selection {
-  background: #1a202c;
+  background: var(--color-gray-900);
   border-radius: 8px;
   padding: 12px;
   max-height: 300px;
@@ -517,7 +517,7 @@ body {
 
 .auto-trade-modal-footer {
   padding: 20px 24px;
-  border-top: 1px solid #4a5568;
+  border-top: 1px solid var(--color-gray-700);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
