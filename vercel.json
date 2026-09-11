@@ -66,46 +66,6 @@
     {
       "source": "/api/satflow-purchase-broadcast",
       "destination": "/api/satflow?op=purchase-broadcast"
-    },
-    {
-      "source": "/api/proxy",
-      "destination": "/api/magiceden?op=runes"
-    },
-    {
-      "source": "/api/magiceden-psbt",
-      "destination": "/api/magiceden?op=psbt"
-    },
-    {
-      "source": "/api/wallet-tokens",
-      "destination": "/api/magiceden?op=wallet-tokens"
-    },
-    {
-      "source": "/api/collections",
-      "destination": "/api/magiceden?op=collections"
-    },
-    {
-      "source": "/api/collection-items",
-      "destination": "/api/magiceden?op=collection-items"
-    },
-    {
-      "source": "/api/search-collections",
-      "destination": "/api/magiceden?op=search-collections"
-    },
-    {
-      "source": "/api/collection-offers",
-      "destination": "/api/magiceden?op=collection-offers"
-    },
-    {
-      "source": "/api/collection-offers-psbt",
-      "destination": "/api/magiceden?op=collection-offers-psbt"
-    },
-    {
-      "source": "/api/collection-offers-fulfill",
-      "destination": "/api/magiceden?op=collection-offers-fulfill"
-    },
-    {
-      "source": "/api/collection-offers-fulfill-submit",
-      "destination": "/api/magiceden?op=collection-offers-fulfill-submit"
     }
   ]
 }

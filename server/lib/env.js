@@ -48,13 +48,11 @@ const readApiKey = (name) => {
   return key;
 };
 
-const getMagicEdenApiKey = () => readApiKey('MAGIC_EDEN_API_KEY');
 const getSatflowApiKey = () => readApiKey('SATFLOW_API_KEY');
 const getUnisatApiKey = () => readApiKey('UNISAT_API_KEY');
 
 module.exports = {
   normalizeApiKey,
-  getMagicEdenApiKey,
   getSatflowApiKey,
   getUnisatApiKey,
 };

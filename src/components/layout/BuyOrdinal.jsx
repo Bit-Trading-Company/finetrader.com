@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  useOrdConnect,
-  useSign,
-  OrdConnectProvider,
-} from '@ordzaar/ord-connect';
+import { useOrdConnect, OrdConnectProvider } from '@ordzaar/ord-connect';
 import WalletStatus from './WalletStatus';
 import { useWalletDisconnectState } from '../../hooks/useLocalStorage';
 import {
-  signPsbtWithProxyWallet,
   derivePublicKeyFromPrivateKey,
   generateAddressFromPublicKey,
 } from '../../utils/bitcoinUtils';
@@ -26,20 +21,12 @@ const BuyOrdinalInner = ({
   selectedOrdinal: selectedOrdinalProp,
 }) => {
   const [selectedOrdinal, setSelectedOrdinal] = useState(null);
-  const [getSweepingResponse, setGetSweepingResponse] = useState(null);
-  const [unsignedPsbt, setUnsignedPsbt] = useState('');
-  const [signedPsbt, setSignedPsbt] = useState('');
   const [purchaseResponse, setPurchaseResponse] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isFetchingPsbt, setIsFetchingPsbt] = useState(false);
-  const [isSigning, setIsSigning] = useState(false);
-  const [isPurchasing, setIsPurchasing] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState(null);
   const [useProxyWallet, setUseProxyWallet] = useState(false);
-  // Store the wallet info used when fetching PSBT to ensure consistency
-  const [psbtWalletInfo, setPsbtWalletInfo] = useState(null);
 
   const {
     address: connectedAddress,
@@ -49,7 +36,6 @@ const BuyOrdinalInner = ({
     network: connectedNetwork,
   } = useOrdConnect();
 
-  const { sign, error: signError, loading: signLoading } = useSign();
   const isDisconnected = useWalletDisconnectState();
 
   const isWalletConnected =
@@ -58,14 +44,9 @@ const BuyOrdinalInner = ({
   // Helper function to set ordinal and clear previous state
   const setOrdinalAndClearState = (ordinal) => {
     setSelectedOrdinal(ordinal);
-    // Clear previous state when new ordinal is selected
-    setGetSweepingResponse(null);
-    setUnsignedPsbt('');
-    setSignedPsbt('');
     setPurchaseResponse(null);
     setError('');
     setSuccess('');
-    setPsbtWalletInfo(null); // Clear stored wallet info
   };
 
   // Initialize from prop when component mounts or prop changes
@@ -128,41 +109,30 @@ const BuyOrdinalInner = ({
       setUseProxyWallet(true);
     };
 
+    const clearPurchaseState = () => {
+      setSelectedOrdinal(null);
+      setPurchaseResponse(null);
+      setError('');
+      setSuccess('');
+      setSelectedWallet(null);
+      setUseProxyWallet(false);
+      // Clear persisted wallet selection
+      localStorage.removeItem('selected-proxy-wallet');
+    };
+
     // Listen for wallet connection changes
     const handleConnectionChange = (newConnectionState) => {
       console.log('BuyOrdinal: Connection state changed:', newConnectionState);
       // Clear form when wallet disconnects
       if (!newConnectionState.isConnected) {
-        setSelectedOrdinal(null);
-        setGetSweepingResponse(null);
-        setUnsignedPsbt('');
-        setSignedPsbt('');
-        setPurchaseResponse(null);
-        setError('');
-        setSuccess('');
-        setSelectedWallet(null);
-        setUseProxyWallet(false);
-        setPsbtWalletInfo(null);
-        // Clear persisted wallet selection
-        localStorage.removeItem('selected-proxy-wallet');
+        clearPurchaseState();
       }
     };
 
     // Listen for wallet disconnect events
     const handleDisconnect = (disconnectState) => {
       console.log('BuyOrdinal: Wallet disconnected:', disconnectState);
-      setSelectedOrdinal(null);
-      setGetSweepingResponse(null);
-      setUnsignedPsbt('');
-      setSignedPsbt('');
-      setPurchaseResponse(null);
-      setError('');
-      setSuccess('');
-      setSelectedWallet(null);
-      setUseProxyWallet(false);
-      setPsbtWalletInfo(null);
-      // Clear persisted wallet selection
-      localStorage.removeItem('selected-proxy-wallet');
+      clearPurchaseState();
     };
 
     if (glEventHub) {
@@ -181,13 +151,6 @@ const BuyOrdinalInner = ({
       }
     };
   }, [glEventHub]);
-
-  // Handle sign error changes
-  useEffect(() => {
-    if (signError) {
-      setError(signError);
-    }
-  }, [signError]);
 
   // Get the active wallet address and public key (proxy or connected)
   // For proxy wallets, derive the public key from the private key using ECPair
@@ -269,6 +232,8 @@ const BuyOrdinalInner = ({
     );
   };
 
+  // Satflow secure purchase: prepare (optional prep tx) -> purchase -> broadcast,
+  // all signed locally with the selected proxy wallet.
   const runSatflowSecurePurchase = async () => {
     if (!useProxyWallet || !selectedWallet?.privateKey) {
       throw new Error(
@@ -323,13 +288,11 @@ const BuyOrdinalInner = ({
     );
   };
 
-  // Combined handler that runs all three steps sequentially
   const handlePurchaseOrdinal = async () => {
     try {
       setError('');
       setSuccess('');
       setIsProcessingPurchase(true);
-      setIsFetchingPsbt(true);
 
       if (!isWalletConnected) {
         throw new Error('Please connect a wallet first');
@@ -350,248 +313,16 @@ const BuyOrdinalInner = ({
         throw new Error('Selected ordinal is not listed for sale');
       }
 
-      if (isSatflowMarketplaceListing(selectedOrdinal)) {
-        setIsFetchingPsbt(false);
-        setIsSigning(true);
-        setIsPurchasing(true);
-        await runSatflowSecurePurchase();
-        return;
+      if (!isSatflowMarketplaceListing(selectedOrdinal)) {
+        throw new Error('Only Satflow listings can be purchased');
       }
 
-      const { address, publicKey } = getActiveWalletInfo();
-      if (!address || !publicKey) {
-        throw new Error('Could not get wallet address or public key');
-      }
-
-      // Store wallet info for consistency
-      setPsbtWalletInfo({ address, publicKey, useProxyWallet });
-
-      const priceInSats = Math.round(
-        parseFloat(selectedOrdinal.listedPrice) || 0
-      );
-
-      const payload = {
-        buyerAddress: address,
-        buyerPublicKey: publicKey,
-        buyerTokenReceiveAddress: address,
-        buyerTokenReceivePublicKey: publicKey,
-        creatorTipsType: 'none',
-        enableRBFProtection: true,
-        feerateTier: 'halfHourFee',
-        mintRune: false,
-        tokens: [
-          {
-            price: priceInSats,
-            tokenId: tokenId,
-          },
-        ],
-        useUnconfirmedUTXO: false,
-      };
-
-      // Magic Eden is always called through the same-origin proxy
-      // (server/magiceden.js); browsers cannot call magiceden.us directly.
-      const apiUrl = '/api/magiceden-psbt?endpoint=get_sweeping';
-
-      const fetchResponse = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          accept: 'application/json, text/plain, */*',
-          'content-type': 'application/json;charset=UTF-8',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!fetchResponse.ok) {
-        const errorText = await fetchResponse.text();
-        let errorMessage = `HTTP error! status: ${fetchResponse.status}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.error && Array.isArray(errorJson.error)) {
-            const errorMessages = errorJson.error
-              .map((err) => err.message || JSON.stringify(err))
-              .join(', ');
-            errorMessage = errorMessages || errorMessage;
-          } else if (errorJson.error && typeof errorJson.error === 'string') {
-            errorMessage = errorJson.error;
-          } else if (errorJson.message) {
-            errorMessage = errorJson.message;
-          }
-        } catch (e) {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const fetchData = await fetchResponse.json();
-      setGetSweepingResponse(fetchData);
-
-      const unsignedPsbtValue =
-        fetchData.unsignedFundsPreparationPSBTBase64 || '';
-      setUnsignedPsbt(unsignedPsbtValue);
-
-      setIsFetchingPsbt(false);
-      setIsSigning(true);
-
-      // Step 2: Sign PSBT
-      let signedPsbtValue = '';
-      if (useProxyWallet && selectedWallet) {
-        if (!selectedWallet.privateKey) {
-          throw new Error('Proxy wallet private key not available');
-        }
-
-        const currentWalletInfo = getActiveWalletInfo();
-
-        const result = await signPsbtWithProxyWallet(
-          unsignedPsbtValue.trim(),
-          selectedWallet.privateKey,
-          connectedNetwork || 'mainnet',
-          {
-            finalize: true,
-            extractTx: false,
-            expectedPublicKey: selectedWallet.publicKey,
-            walletAddress: currentWalletInfo.address,
-          }
-        );
-
-        if (result && result.base64) {
-          signedPsbtValue = result.base64;
-          setSignedPsbt(signedPsbtValue);
-        } else {
-          throw new Error(
-            'Failed to sign PSBT with proxy wallet - no result returned'
-          );
-        }
-      } else {
-        const walletAddressForSigning = connectedAddress?.ordinals;
-        if (!walletAddressForSigning) {
-          throw new Error('Could not get connected wallet address for signing');
-        }
-
-        const result = await sign(
-          walletAddressForSigning,
-          unsignedPsbtValue.trim(),
-          {
-            finalize: true,
-            extractTx: false,
-          }
-        );
-
-        if (result && result.base64) {
-          signedPsbtValue = result.base64;
-          setSignedPsbt(signedPsbtValue);
-        } else if (result && result.hex) {
-          const hexToBase64 = (hex) => {
-            const bytes = new Uint8Array(
-              hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
-            );
-            return btoa(
-              Array.from(bytes)
-                .map((byte) => String.fromCharCode(byte))
-                .join('')
-            );
-          };
-          signedPsbtValue = hexToBase64(result.hex);
-          setSignedPsbt(signedPsbtValue);
-        } else {
-          throw new Error('Failed to sign PSBT - no result returned');
-        }
-      }
-
-      if (!signedPsbtValue) {
-        throw new Error('Failed to sign PSBT');
-      }
-
-      setIsSigning(false);
-      setIsPurchasing(true);
-
-      // Step 3: Purchase
-
-      const walletAddressToUse = psbtWalletInfo?.address || address;
-      const walletPublicKeyToUse = psbtWalletInfo?.publicKey || publicKey;
-
-      if (!walletAddressToUse || !walletPublicKeyToUse) {
-        throw new Error('Could not get wallet address or public key');
-      }
-
-      const purchasePayload = {
-        buyerAddress: walletAddressToUse,
-        buyerPublicKey: walletPublicKeyToUse,
-        buyerTokenReceiveAddress: walletAddressToUse,
-        conflictOffers: fetchData.conflictOffers || [],
-        creatorTipsType: 'none',
-        dryRun: false,
-        failedTokenIds: fetchData.failedTokenIds || [],
-        feerateTier: 'halfHourFee',
-        kind: 'buying_broadcasted',
-        makerFee: fetchData.makerFee || 0,
-        rbfProtectedTokenIds: fetchData.rbfProtectedTokenIds || [],
-        signature: fetchData.signature || [],
-        signedFundsPreparationPSBTBase64: signedPsbtValue,
-        takerFee: fetchData.takerFee || 0,
-        toSignInputs: fetchData.toSignInputs || [],
-        toSignSigHash: fetchData.toSignSigHash || 1,
-        tokens: fetchData.tokens || [],
-        unsignedFundsPreparationPSBTBase64:
-          fetchData.unsignedFundsPreparationPSBTBase64 || '',
-        walletSource: connectedWallet?.toLowerCase() || 'unisat',
-      };
-
-      const purchaseApiUrl = '/api/magiceden-psbt?endpoint=sweeping';
-
-      const purchaseResponse = await fetch(purchaseApiUrl, {
-        method: 'POST',
-        headers: {
-          accept: 'application/json, text/plain, */*',
-          'content-type': 'application/json;charset=UTF-8',
-        },
-        body: JSON.stringify(purchasePayload),
-      });
-
-      if (!purchaseResponse.ok) {
-        const errorText = await purchaseResponse.text();
-        let errorMessage = `HTTP error! status: ${purchaseResponse.status}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.error && Array.isArray(errorJson.error)) {
-            const errorMessages = errorJson.error
-              .map((err) => err.message || JSON.stringify(err))
-              .join(', ');
-            errorMessage = errorMessages || errorMessage;
-          } else if (errorJson.error && typeof errorJson.error === 'string') {
-            errorMessage = errorJson.error;
-          } else if (errorJson.message) {
-            errorMessage = errorJson.message;
-          }
-        } catch (e) {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const purchaseData = await purchaseResponse.json();
-      setPurchaseResponse(purchaseData);
-      setSuccess(
-        `Purchase successful! Transaction ID: ${purchaseData.fundsPreparationTxid || 'N/A'}`
-      );
+      await runSatflowSecurePurchase();
     } catch (err) {
-      console.error('Error in combined purchase process:', err);
+      console.error('Error in purchase process:', err);
       setError(err.message || 'Failed to process purchase');
     } finally {
       setIsProcessingPurchase(false);
-      setIsFetchingPsbt(false);
-      setIsSigning(false);
-      setIsPurchasing(false);
-    }
-  };
-
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setSuccess('Copied to clipboard!');
-      setTimeout(() => setSuccess(''), 2000);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-      setError('Failed to copy to clipboard');
     }
   };
 
@@ -825,220 +556,27 @@ const BuyOrdinalInner = ({
                 disabled={
                   !selectedOrdinal ||
                   !selectedOrdinal.listed ||
-                  (isSatflowMarketplaceListing(selectedOrdinal) &&
-                    (!useProxyWallet || !selectedWallet?.privateKey)) ||
-                  isProcessingPurchase ||
-                  isFetchingPsbt ||
-                  isSigning ||
-                  isPurchasing ||
-                  signLoading
+                  !isSatflowMarketplaceListing(selectedOrdinal) ||
+                  !useProxyWallet ||
+                  !selectedWallet?.privateKey ||
+                  isProcessingPurchase
                 }
                 style={{
-                  backgroundColor:
-                    isProcessingPurchase ||
-                    isFetchingPsbt ||
-                    isSigning ||
-                    isPurchasing ||
-                    signLoading
-                      ? '#4a5568'
-                      : '#38a169',
+                  backgroundColor: isProcessingPurchase ? '#4a5568' : '#38a169',
                   color: 'white',
                   border: 'none',
                   padding: '10px 16px',
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor:
-                    isProcessingPurchase ||
-                    isFetchingPsbt ||
-                    isSigning ||
-                    isPurchasing ||
-                    signLoading
-                      ? 'not-allowed'
-                      : 'pointer',
+                  cursor: isProcessingPurchase ? 'not-allowed' : 'pointer',
                   transition: 'background-color 0.2s',
                   minWidth: '120px',
                 }}
               >
-                {isProcessingPurchase ||
-                isFetchingPsbt ||
-                isSigning ||
-                isPurchasing
-                  ? isFetchingPsbt
-                    ? 'Fetching PSBT...'
-                    : isSigning
-                      ? 'Signing PSBT...'
-                      : isPurchasing
-                        ? 'Purchasing...'
-                        : 'Processing...'
-                  : 'Purchase'}
+                {isProcessingPurchase ? 'Purchasing...' : 'Purchase'}
               </button>
             </div>
-
-            {/* Get Sweeping Response Info */}
-            {getSweepingResponse && (
-              <div style={{ marginBottom: '20px' }}>
-                <h3
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    marginBottom: '8px',
-                    color: '#f7fafc',
-                  }}
-                >
-                  Purchase Information
-                </h3>
-                <div
-                  style={{
-                    backgroundColor: '#1a202c',
-                    borderRadius: '6px',
-                    padding: '12px',
-                    border: '1px solid #4a5568',
-                    fontSize: '12px',
-                    color: '#a0aec0',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '8px',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                        Maker Fee:
-                      </span>{' '}
-                      {getSweepingResponse.makerFee || 0} sats
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: '500', color: '#e2e8f0' }}>
-                        Taker Fee:
-                      </span>{' '}
-                      {getSweepingResponse.takerFee || 0} sats
-                    </div>
-                  </div>
-                  {getSweepingResponse.rbfProtectedTokenIds &&
-                    getSweepingResponse.rbfProtectedTokenIds.length > 0 && (
-                      <div style={{ marginTop: '8px', color: '#ed8936' }}>
-                        <strong>RBF Protected:</strong>{' '}
-                        {getSweepingResponse.rbfProtectedTokenIds.join(', ')}
-                      </div>
-                    )}
-                </div>
-              </div>
-            )}
-
-            {/* Unsigned PSBT Display - Hidden */}
-            {false && unsignedPsbt && (
-              <div style={{ marginBottom: '20px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '4px',
-                  }}
-                >
-                  <label
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: '#f7fafc',
-                    }}
-                  >
-                    Unsigned PSBT (Base64):
-                  </label>
-                  <button
-                    onClick={() => copyToClipboard(unsignedPsbt)}
-                    style={{
-                      backgroundColor: '#4a5568',
-                      color: 'white',
-                      border: 'none',
-                      padding: '4px 8px',
-                      borderRadius: '3px',
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Copy
-                  </button>
-                </div>
-                <textarea
-                  value={unsignedPsbt}
-                  readOnly
-                  style={{
-                    width: '100%',
-                    minHeight: '80px',
-                    padding: '8px',
-                    backgroundColor: '#1a202c',
-                    border: '1px solid #4a5568',
-                    borderRadius: '4px',
-                    color: '#e2e8f0',
-                    fontSize: '11px',
-                    fontFamily: 'monospace',
-                    resize: 'vertical',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Signed PSBT Display - Hidden */}
-            {false && signedPsbt && (
-              <div style={{ marginBottom: '20px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '4px',
-                  }}
-                >
-                  <label
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: '#f7fafc',
-                    }}
-                  >
-                    Signed PSBT:
-                  </label>
-                  <button
-                    onClick={() => copyToClipboard(signedPsbt)}
-                    style={{
-                      backgroundColor: '#4a5568',
-                      color: 'white',
-                      border: 'none',
-                      padding: '4px 8px',
-                      borderRadius: '3px',
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Copy
-                  </button>
-                </div>
-                <textarea
-                  value={signedPsbt}
-                  readOnly
-                  style={{
-                    width: '100%',
-                    minHeight: '80px',
-                    padding: '8px',
-                    backgroundColor: '#1a202c',
-                    border: '1px solid #4a5568',
-                    borderRadius: '4px',
-                    color: '#e2e8f0',
-                    fontSize: '11px',
-                    fontFamily: 'monospace',
-                    resize: 'vertical',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-            )}
 
             {/* Purchase Response */}
             {purchaseResponse && (

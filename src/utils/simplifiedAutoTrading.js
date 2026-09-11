@@ -57,6 +57,14 @@ const getTradingApi = (exchange) =>
 const getExchangeLabel = (exchange) =>
   isOrdNetExchange(exchange) ? 'ord.net' : 'Satflow';
 
+/** Console-log link for a listed inscription (null when the id is unknown). */
+const getItemLink = (inscriptionId, exchange) => {
+  if (!inscriptionId) return null;
+  return isOrdNetExchange(exchange)
+    ? `https://ord.net/inscription/${inscriptionId}`
+    : `https://ordinals.com/inscription/${inscriptionId}`;
+};
+
 /**
  * Process all wallet items: list if needed, buy from next wallet
  *
@@ -236,16 +244,9 @@ export const processWalletItems = async ({
             );
 
             if (listResult.success) {
-              const inscriptionId = getInscriptionId(item);
-              const magicEdenLink = inscriptionId
-                ? isOrdNetExchange(exchange)
-                  ? `https://ord.net/inscription/${inscriptionId}`
-                  : `https://magiceden.us/ordinals/item-details/${inscriptionId}`
-                : null;
-
               addConsoleLog(
                 `  ✓ Wallet #${wallet.index + 1} listed item #${item.inscriptionNumber || tokenId.slice(0, 8)}`,
-                magicEdenLink
+                getItemLink(getInscriptionId(item), exchange)
               );
               itemsListed++;
 
@@ -676,8 +677,8 @@ export const processWalletItems = async ({
 };
 
 /**
- * Helper: Wait for listing to be available on Magic Eden
- * Polls the wallet-tokens endpoint to check if item is listed
+ * Helper: Wait for a new listing to become visible on the exchange.
+ * Polls the exchange's wallet contents until the item shows as listed.
  */
 const waitForListingAvailable = async (
   walletAddress,
@@ -1713,16 +1714,9 @@ export const sellXFromEachWallet = async ({
           );
 
           if (listResult.success) {
-            const inscriptionId = getInscriptionId(item);
-            const magicEdenLink = inscriptionId
-              ? isOrdNetExchange(exchange)
-                ? `https://ord.net/inscription/${inscriptionId}`
-                : `https://magiceden.us/ordinals/item-details/${inscriptionId}`
-              : null;
-
             addConsoleLog(
               `  ✓ Wallet #${wallet.index + 1} listed item #${item.inscriptionNumber || tokenId.slice(0, 8)}`,
-              magicEdenLink
+              getItemLink(getInscriptionId(item), exchange)
             );
             itemsListed++;
 

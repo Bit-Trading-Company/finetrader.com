@@ -5,8 +5,8 @@ const OrdinalsCollections = ({ glEventHub }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filterTerm, setFilterTerm] = useState(''); // Renamed from searchTerm for clarity
-  const [searchTerm, setSearchTerm] = useState(''); // New search term for Magic Eden search
-  const [searchResults, setSearchResults] = useState([]); // Results from Magic Eden search
+  const [searchTerm, setSearchTerm] = useState(''); // Satflow collection search term
+  const [searchResults, setSearchResults] = useState([]); // Results from Satflow search
   const [isSearchMode, setIsSearchMode] = useState(false); // Track if we're showing search results
   const [searchLoading, setSearchLoading] = useState(false);
   const [params, setParams] = useState({

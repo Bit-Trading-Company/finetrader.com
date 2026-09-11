@@ -6,6 +6,7 @@ import {
   derivePublicKeyFromPrivateKey,
   generateAddressFromPublicKey,
 } from '../../utils/bitcoinUtils';
+import { fetchWalletOrdinals } from '../../utils/autoTradingUtils';
 
 // Inner component that uses the hooks
 const SellOrdinalsInner = ({ glEventHub }) => {
@@ -20,7 +21,6 @@ const SellOrdinalsInner = ({ glEventHub }) => {
   const [useProxyWallet, setUseProxyWallet] = useState(false);
   const [params, setParams] = useState({
     limit: '100',
-    offset: '0',
     showAll: 'true',
   });
   // Ref to track if component has mounted to ensure fresh data on initial load
@@ -192,160 +192,55 @@ const SellOrdinalsInner = ({ glEventHub }) => {
     }
   }, [isWalletConnected, getActiveWalletInfo]);
 
-  // Fetch wallet ordinals
-  const fetchItems = useCallback(
-    async (customParams = {}, forceRefresh = false) => {
-      if (!ownerAddress) {
-        setItems([]);
-        return;
-      }
+  // Fetch the wallet's inscriptions from Satflow wallet contents (always fresh,
+  // so listing state and prices are current).
+  const fetchItems = useCallback(async () => {
+    if (!ownerAddress) {
+      setItems([]);
+      return;
+    }
 
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      try {
-        // Build query params manually
-        const queryParams = new URLSearchParams();
+    try {
+      const walletItems = await fetchWalletOrdinals(ownerAddress, null, true);
+      const visibleItems =
+        params.showAll === 'false'
+          ? walletItems.filter((item) => item.listed)
+          : walletItems;
+      const limit = parseInt(params.limit, 10);
+      setItems(limit > 0 ? visibleItems.slice(0, limit) : visibleItems);
+    } catch (err) {
+      console.error('Error fetching wallet ordinals:', err);
+      setError(err.message || 'Failed to fetch wallet ordinals');
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [ownerAddress, params]);
 
-        // Add required ownerAddress
-        if (ownerAddress) {
-          queryParams.append('ownerAddress', ownerAddress);
-        }
-
-        // Add showAll
-        queryParams.append(
-          'showAll',
-          params.showAll === 'false' ? 'false' : 'true'
-        );
-
-        // Add limit
-        if (params.limit) {
-          queryParams.append('limit', params.limit);
-        }
-
-        // Add offset if provided (and not 0)
-        if (params.offset && params.offset !== '0') {
-          queryParams.append('offset', params.offset);
-        }
-
-        // Add cache-busting timestamp to ensure fresh data when forceRefresh is true
-        // This creates a unique cache key, bypassing the 10-minute cache
-        if (forceRefresh) {
-          queryParams.append('_t', Date.now().toString());
-        }
-
-        // Add custom params
-        if (customParams && Object.keys(customParams).length > 0) {
-          Object.entries(customParams).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-              queryParams.append(key, value.toString());
-            }
-          });
-        }
-
-        // Use API route (works on both localhost and Vercel)
-        const queryString = queryParams.toString();
-        const fetchUrl = `/api/wallet-tokens?${queryString}`;
-
-        console.log('Fetching wallet ordinals:', {
-          ownerAddress,
-          url: fetchUrl,
-          queryString: queryString,
-        });
-
-        const response = await fetch(fetchUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        });
-
-        console.log('Magic Eden Wallet API Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          headers: Object.fromEntries(response.headers.entries()),
-          url: response.url,
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorMessage = `HTTP error! status: ${response.status}`;
-          try {
-            const errorJson = JSON.parse(errorText);
-            // Handle error array format
-            if (errorJson.error && Array.isArray(errorJson.error)) {
-              const errorMessages = errorJson.error
-                .map((err) => err.message || JSON.stringify(err))
-                .join(', ');
-              errorMessage = errorMessages || errorMessage;
-            } else if (errorJson.error && typeof errorJson.error === 'string') {
-              errorMessage = errorJson.error;
-            } else if (errorJson.message) {
-              errorMessage = errorJson.message;
-            } else if (typeof errorJson === 'string') {
-              errorMessage = errorJson;
-            }
-          } catch (e) {
-            errorMessage = errorText || errorMessage;
-          }
-          console.error('API Error Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            url: fetchUrl,
-            error: errorText,
-            parsedError: errorMessage,
-          });
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        console.log('Magic Eden Wallet API Response Data:', {
-          fullResponse: data,
-          itemsCount: data.tokens?.length || 0,
-          itemsArray: data.tokens,
-          firstItem: data.tokens?.[0],
-          responseKeys: Object.keys(data),
-        });
-        // API returns 'tokens'
-        setItems(data.tokens || []);
-      } catch (err) {
-        console.error('Error fetching wallet ordinals:', err);
-        setError(err.message || 'Failed to fetch wallet ordinals');
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [ownerAddress, params]
-  );
-
-  // Fetch when owner address changes - always force refresh to get latest prices
+  // Fetch when owner address changes
   useEffect(() => {
     if (ownerAddress) {
-      // Always fetch with forceRefresh=true to ensure latest prices
-      // This bypasses the 10-minute cache in the API route by adding a timestamp parameter
-      fetchItems({}, true);
+      fetchItems();
       hasMountedRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerAddress]); // Only depend on ownerAddress to avoid unnecessary refetches
 
-  // Fetch fresh data when params change (limit, showAll, etc.)
+  // Fetch fresh data when params change (limit, showAll)
   // Only fetch if component has already mounted and ownerAddress exists
   useEffect(() => {
     if (ownerAddress && hasMountedRef.current) {
-      // Force refresh when params change to get latest prices
-      fetchItems({}, true);
+      fetchItems();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.limit, params.showAll]); // Only depend on params, not fetchItems to avoid loops
 
   // Handle parameter changes
   const handleParamChange = (key, value) => {
-    const newParams = { ...params, [key]: value, offset: '0' }; // Reset offset when other params change
-    setParams(newParams);
+    setParams({ ...params, [key]: value });
   };
 
   // Handle wallet source change (proxy/connected toggle)
@@ -536,6 +431,7 @@ const SellOrdinalsInner = ({ glEventHub }) => {
                   <div className="collection-details-name">
                     {item.meta?.name ||
                       item.displayName ||
+                      item._satflowRaw?.token?.name ||
                       `#${item.inscriptionNumber || 'Unknown'}`}
                   </div>
 
@@ -555,17 +451,6 @@ const SellOrdinalsInner = ({ glEventHub }) => {
                       </span>
                     </div>
 
-                    {item.satRarity && (
-                      <div className="collection-details-meta-item">
-                        <span className="collection-details-meta-label">
-                          Sat Rarity:
-                        </span>
-                        <span className="collection-details-meta-value">
-                          {item.satRarity}
-                        </span>
-                      </div>
-                    )}
-
                     {item.listed && (
                       <div className="collection-details-meta-item">
                         <span className="collection-details-meta-label">
@@ -573,17 +458,6 @@ const SellOrdinalsInner = ({ glEventHub }) => {
                         </span>
                         <span className="collection-details-meta-value listed">
                           Listed
-                        </span>
-                      </div>
-                    )}
-
-                    {item.outputValue && (
-                      <div className="collection-details-meta-item">
-                        <span className="collection-details-meta-label">
-                          Value:
-                        </span>
-                        <span className="collection-details-meta-value">
-                          {formatNumber(item.outputValue)} sats
                         </span>
                       </div>
                     )}

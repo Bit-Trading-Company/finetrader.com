@@ -42,14 +42,13 @@ export const getTokenId = (ordinal) => {
 };
 
 /**
- * Get inscription ID for Magic Eden link
+ * Get inscription ID from an ordinal (used for explorer / marketplace links)
  * @param {Object} ordinal - The ordinal object
  * @returns {string|null} Inscription ID
  */
 export const getInscriptionId = (ordinal) => {
   if (!ordinal) return null;
   return (
-    ordinal.inscriptionId ||
     ordinal.inscriptionId ||
     (ordinal.inscriptionNumber
       ? `${ordinal.txid || ordinal.genesisTransaction || ''}i${ordinal.inscriptionNumber}`
@@ -58,8 +57,8 @@ export const getInscriptionId = (ordinal) => {
 };
 
 /**
- * Fetch specific token by ID to check ownership (no cache)
- * This is more reliable than wallet-tokens for checking purchase status
+ * Fetch a specific token by ID to check ownership (no cache), via the Satflow
+ * item endpoint. More reliable than wallet contents for checking purchase status.
  * @param {string} tokenId - Token inscription ID
  * @returns {Promise<Object|null>} Token object or null
  */
@@ -2808,156 +2807,21 @@ export const fetchWalletBalance = async (address, network = 'mainnet') => {
 };
 
 /**
- * Delist an ordinal using proxy wallet
- * @param {Object} ordinal - The ordinal to delist
- * @param {Object} wallet - Proxy wallet object
- * @param {string} network - Network type
- * @returns {Promise<Object>} Result with success, error
+ * Delist a Satflow listing held by a proxy wallet.
+ *
+ * Not implemented. The previous version called Magic Eden's delist API, which
+ * the app's proxy never allowed (and Magic Eden has since shut down its
+ * ordinals marketplace), so it always failed. It now reports that failure
+ * directly; auto-trade only acts on successful delists, so behavior is
+ * unchanged. ord.net listings are delisted by
+ * ordNetTradingUtils.delistOrdinalWithProxyWallet.
+ *
+ * To implement: Satflow's v1 API exposes POST /cancel
+ * (docs/reference/satflow-openapi.json).
+ *
+ * @returns {Promise<{ success: false, error: string }>}
  */
-export const delistOrdinalWithProxyWallet = async (
-  ordinal,
-  wallet,
-  network = 'mainnet'
-) => {
-  try {
-    const tokenId = getTokenId(ordinal);
-    if (!tokenId) {
-      throw new Error('Could not determine token ID from ordinal');
-    }
-
-    let address, publicKey;
-    try {
-      address = deriveAddressFromPrivateKey(wallet.privateKey, network);
-      publicKey = derivePublicKeyFromPrivateKey(wallet.privateKey, network);
-    } catch (err) {
-      console.error('Error deriving address from private key:', err);
-      address = wallet.address;
-      publicKey = wallet.publicKey;
-    }
-
-    if (!address || !publicKey) {
-      throw new Error('Could not get wallet address or public key');
-    }
-
-    // NOTE: /api/magiceden-psbt does not allow `delist`, so this request fails
-    // in every environment. See docs/KNOWN_ISSUES.md before enabling it.
-    const getPsbtUrl = `/api/magiceden-psbt?endpoint=delist&tokenId=${encodeURIComponent(tokenId)}&publicKey=${encodeURIComponent(publicKey)}`;
-
-    // Step 1: Fetch delist PSBT
-    const fetchResponse = await fetch(getPsbtUrl, {
-      method: 'GET',
-      headers: {
-        accept: 'application/json, text/plain, */*',
-      },
-    });
-
-    if (!fetchResponse.ok) {
-      const errorText = await fetchResponse.text();
-      let errorMessage = `HTTP error! status: ${fetchResponse.status}`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error && Array.isArray(errorJson.error)) {
-          errorMessage =
-            errorJson.error
-              .map((err) => err.message || JSON.stringify(err))
-              .join(', ') || errorMessage;
-        } else if (errorJson.error && typeof errorJson.error === 'string') {
-          errorMessage = errorJson.error;
-        } else if (errorJson.message) {
-          errorMessage = errorJson.message;
-        }
-      } catch (e) {
-        errorMessage = errorText || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-
-    const fetchData = await fetchResponse.json();
-    // Try multiple possible field names for the unsigned PSBT
-    const unsignedDelistPsbt =
-      fetchData.unsignedDelistPSBTBase64 ||
-      fetchData.unsignedPSBTBase64 ||
-      fetchData.delistPSBTBase64 ||
-      fetchData.psbtBase64 ||
-      '';
-
-    if (!unsignedDelistPsbt) {
-      throw new Error('No PSBT returned from delist API');
-    }
-
-    // Step 2: Sign PSBT (don't finalize - let Magic Eden finalize it)
-    const signResult = await signPsbtWithProxyWallet(
-      unsignedDelistPsbt.trim(),
-      wallet.privateKey,
-      network,
-      {
-        finalize: false,
-        extractTx: false,
-        expectedPublicKey: publicKey,
-        walletAddress: address,
-      }
-    );
-
-    if (!signResult || !signResult.base64) {
-      throw new Error('Failed to sign delist PSBT with proxy wallet');
-    }
-
-    const signedDelistPsbt = signResult.base64;
-
-    // Step 3: Submit delist
-    const delistPayload = {
-      signedDelistPSBTBase64: signedDelistPsbt,
-      tokenId: tokenId,
-      publicKey: publicKey,
-    };
-
-    const delistApiUrl = '/api/magiceden-psbt?endpoint=delist';
-
-    const delistHeaders = {
-      accept: 'application/json, text/plain, */*',
-      'content-type': 'application/json',
-      'cache-control': 'no-cache',
-      pragma: 'no-cache',
-    };
-
-    const delistResponse = await fetch(delistApiUrl, {
-      method: 'POST',
-      headers: delistHeaders,
-      body: JSON.stringify(delistPayload),
-    });
-
-    if (!delistResponse.ok) {
-      const errorText = await delistResponse.text();
-      let errorMessage = `HTTP error! status: ${delistResponse.status}`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error && Array.isArray(errorJson.error)) {
-          errorMessage =
-            errorJson.error
-              .map((err) => err.message || JSON.stringify(err))
-              .join(', ') || errorMessage;
-        } else if (errorJson.error && typeof errorJson.error === 'string') {
-          errorMessage = errorJson.error;
-        } else if (errorJson.message) {
-          errorMessage = errorJson.message;
-        }
-      } catch (e) {
-        errorMessage = errorText || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-
-    const delistData = await delistResponse.json();
-
-    return {
-      success: true,
-      data: delistData,
-    };
-  } catch (error) {
-    console.error('Error delisting ordinal:', error);
-    return {
-      success: false,
-      error: error.message || 'Unknown error',
-    };
-  }
-};
+export const delistOrdinalWithProxyWallet = async () => ({
+  success: false,
+  error: 'Delisting Satflow listings is not supported yet',
+});

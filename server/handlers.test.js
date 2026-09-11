@@ -2,7 +2,6 @@
  * @jest-environment node
  */
 const { handleSatflow } = require('./satflow');
-const { handleMagicEden } = require('./magiceden');
 const { handleUnisat } = require('./unisat');
 const { handleOrdnet } = require('./ordnet');
 
@@ -59,7 +58,6 @@ beforeEach(() => {
   process.env = {
     ...originalEnv,
     SATFLOW_API_KEY: 'satflow-test-key',
-    MAGIC_EDEN_API_KEY: 'magic-eden-test-key',
     UNISAT_API_KEY: 'unisat-test-key',
   };
   global.fetch = jest.fn(async () => upstreamResponse({ ok: true }));
@@ -104,6 +102,19 @@ describe('handleSatflow', () => {
     expect(res.body).toEqual({ ok: true });
   });
 
+  it('relays upstream error statuses', async () => {
+    global.fetch.mockResolvedValueOnce(
+      upstreamResponse({ error: 'rate limited' }, { status: 429 })
+    );
+    const res = createResponse();
+    await handleSatflow(
+      request({ query: { op: 'wallet-contents', address: 'bc1p' } }),
+      res
+    );
+    expect(res.statusCode).toBe(429);
+    expect(res.body).toEqual({ error: 'rate limited' });
+  });
+
   it('wraps non-JSON upstream errors so clients can parse them', async () => {
     global.fetch.mockResolvedValueOnce(
       upstreamResponse('<html>Bad gateway</html>', {
@@ -130,59 +141,6 @@ describe('handleSatflow', () => {
       res
     );
     expect(res.statusCode).toBe(400);
-  });
-});
-
-describe('handleMagicEden', () => {
-  it('proxies runes endpoints to the developer API with the API key', async () => {
-    const res = createResponse();
-    await handleMagicEden(
-      request({
-        query: { op: 'runes', endpoint: '/market/DOGGO/info', limit: '1' },
-      }),
-      res
-    );
-    const { url, init } = lastFetch();
-    expect(url).toBe(
-      'https://api-mainnet.magiceden.dev/v2/ord/btc/runes/market/DOGGO/info?limit=1'
-    );
-    expect(init.headers.authorization).toBe('Bearer magic-eden-test-key');
-  });
-
-  it('rejects runes endpoints that escape the runes API', async () => {
-    const res = createResponse();
-    await handleMagicEden(
-      request({ query: { op: 'runes', endpoint: '/../../wallets/tokens' } }),
-      res
-    );
-    expect(res.statusCode).toBe(400);
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('only allows known PSBT endpoints', async () => {
-    const res = createResponse();
-    await handleMagicEden(
-      request({
-        method: 'POST',
-        query: { op: 'psbt', endpoint: 'delist' },
-        body: {},
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(400);
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('relays upstream error statuses instead of converting them to 500', async () => {
-    global.fetch.mockResolvedValueOnce(
-      upstreamResponse({ error: 'rate limited' }, { status: 429 })
-    );
-    const res = createResponse();
-    await handleMagicEden(
-      request({ query: { op: 'wallet-tokens', ownerAddress: 'bc1pnocache' } }),
-      res
-    );
-    expect(res.statusCode).toBe(429);
   });
 });
 

@@ -1997,7 +1997,7 @@ const AutoTradeInner = () => {
                           rel="noopener noreferrer"
                           className="auto-trade-console-link"
                         >
-                          {log.link.includes('magiceden.us')
+                          {log.link.includes('/inscription/')
                             ? 'View Item'
                             : 'View Transaction'}
                         </a>

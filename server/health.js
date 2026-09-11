@@ -13,9 +13,7 @@ async function handleHealth(req, res) {
     message: 'API routes are working correctly',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'unknown',
-    hasApiKey: configured('MAGIC_EDEN_API_KEY'),
     apiKeys: {
-      magicEden: configured('MAGIC_EDEN_API_KEY'),
       satflow: configured('SATFLOW_API_KEY'),
       unisat: configured('UNISAT_API_KEY'),
     },

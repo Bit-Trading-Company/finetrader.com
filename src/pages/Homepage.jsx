@@ -14,10 +14,8 @@ import Inscriptions from '../components/layout/Inscriptions';
 import UTXOs from '../components/layout/UTXOs';
 import SignPSBT from '../components/layout/SignPSBT';
 import WalletConnect from '../components/layout/WalletConnect';
-import RunesManagement from '../components/layout/RunesManagement';
 import OrdinalsCollections from '../components/layout/OrdinalsCollections';
 import CollectionDetails from '../components/layout/CollectionDetails';
-import BuyRune from '../components/layout/BuyRune';
 import BuyOrdinal from '../components/layout/BuyOrdinal';
 import Dispatcher from '../components/layout/Dispatcher';
 import CreatePSBT from '../components/layout/CreatePSBT';
@@ -56,18 +54,6 @@ const Homepage = () => {
                       componentName: 'ordinalsCollections',
                       title: 'Ordinals Collections',
                       id: 'ordinalsCollections',
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'runesManagement',
-                      title: 'Runes Management',
-                      id: 'runesManagement',
-                    },
-                    {
-                      type: 'component',
-                      componentName: 'buyRune',
-                      title: 'Buy Rune',
-                      id: 'buyRune',
                     },
                     {
                       type: 'component',
@@ -250,28 +236,6 @@ const Homepage = () => {
       const root = createRoot(element[0]);
       root.render(
         React.createElement(OrdinalsCollections, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('runesManagement', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(RunesManagement, {
-          glContainer: container,
-          glEventHub: layout.eventHub,
-        })
-      );
-    });
-
-    layout.registerComponent('buyRune', function (container) {
-      const element = container.getElement();
-      const root = createRoot(element[0]);
-      root.render(
-        React.createElement(BuyRune, {
           glContainer: container,
           glEventHub: layout.eventHub,
         })

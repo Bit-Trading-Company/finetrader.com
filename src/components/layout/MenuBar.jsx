@@ -9,7 +9,6 @@ const MenuBar = ({ glEventHub, layout }) => {
     walletDetails: true,
     walletConnect: true,
     inscriptions: true,
-    runesManagement: true,
   });
 
   const handleMenuHover = (menuName) => {
@@ -197,15 +196,6 @@ const MenuBar = ({ glEventHub, layout }) => {
                 Inscriptions
                 <span className="visibility-indicator">
                   {componentVisibility.inscriptions ? '●' : '○'}
-                </span>
-              </div>
-              <div
-                className={`menu-dropdown-item ${componentVisibility.runesManagement ? 'visible' : 'hidden'}`}
-                onClick={() => handleWindowItemClick('runesManagement')}
-              >
-                Runes Management
-                <span className="visibility-indicator">
-                  {componentVisibility.runesManagement ? '●' : '○'}
                 </span>
               </div>
             </div>

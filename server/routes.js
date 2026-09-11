@@ -8,7 +8,6 @@
  * server/routes.test.js fails if this table and vercel.json drift apart.
  */
 const { handleSatflow, SATFLOW_OPERATIONS } = require('./satflow');
-const { handleMagicEden, MAGIC_EDEN_ROUTES } = require('./magiceden');
 const { handleUnisat } = require('./unisat');
 const { handleOrdnet } = require('./ordnet');
 const { handleHealth } = require('./health');
@@ -20,13 +19,7 @@ const DEV_ROUTES = [
     handler: handleSatflow,
     query: { op },
   })),
-  ...Object.entries(MAGIC_EDEN_ROUTES).map(([path, op]) => ({
-    path,
-    handler: handleMagicEden,
-    query: { op },
-  })),
   { path: '/api/satflow', handler: handleSatflow, query: {} },
-  { path: '/api/magiceden', handler: handleMagicEden, query: {} },
   { path: '/api/unisat', handler: handleUnisat, query: {} },
   { path: '/api/ordnet', handler: handleOrdnet, query: {} },
   { path: '/api/health', handler: handleHealth, query: {} },
