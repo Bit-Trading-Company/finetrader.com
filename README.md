@@ -20,6 +20,12 @@ For a production build locally:
 npm run build
 ```
 
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the app, API layer, wallets and trading engine fit together
+- [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) — open problems, including security and fund-safety notes (read before deploying)
+- [docs/ADDING_A_MARKETPLACE.md](docs/ADDING_A_MARKETPLACE.md) — the marketplace adapter contract and steps
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` and fill in the values:
@@ -66,13 +72,15 @@ finetrader.com/
 │   ├── unisat.js         # UniSat indexer proxy
 │   ├── ordnet.js         # ord.net proxy
 │   └── lib/              # HTTP relay/validation, env-only API keys, TTL cache
-├── docs/reference/       # Upstream API specs (Satflow OpenAPI)
+├── docs/                 # Architecture, known issues, adding a marketplace
+│   └── reference/        # Upstream API specs (Satflow OpenAPI)
 ├── public/               # Static assets served as-is (index.html, favicon, manifest)
 ├── src/
-│   ├── index.js          # Entry point: MetaMask guards + root providers
+│   ├── index.js          # Entry point: MetaMask guards, global tokens/fonts, root providers
 │   ├── setupProxy.js     # Dev server: mounts server/ handlers on /api/*
 │   ├── app/              # App shell: routes (App.jsx), ErrorBoundary, theme context
-│   ├── pages/            # One folder per route, with its CSS and page-only helpers
+│   ├── pages/            # One folder per route, with its CSS and page-only helpers, components and hooks
+│   ├── components/       # Shared UI primitives (WizardStep)
 │   ├── features/
 │   │   ├── wallet/       # Wallet connect, proxy wallet generation/selection, funding (Dispatch)
 │   │   ├── marketplace/  # Collection browser, collection bids, manual buy/sell (Satflow)
@@ -80,7 +88,7 @@ finetrader.com/
 │   │   └── explorer/     # Inscription and UTXO explorers (legacy /home workspace)
 │   ├── trading/          # Auto-trade engine + marketplace adapters (Satflow, ord.net)
 │   ├── lib/              # UI-free helpers: keys & PSBT signing, mempool URLs, UniSat proxy URLs
-│   ├── styles/           # global.css (applies app-wide)
+│   ├── styles/           # tokens.css (color palette), fonts.css, global.css; all CSS applies app-wide
 │   └── assets/           # Images, fonts, SVGs
 ├── craco.config.js       # Webpack/Jest overrides (Node polyfills, ESM transforms)
 └── vercel.json           # Vercel build config + API rewrites
@@ -88,7 +96,8 @@ finetrader.com/
 
 ### Key `src/` areas
 
-- **`pages/`** — Route screens wired in `app/App.jsx`. `AutoTrade/` is the core automated trading UI; `Homepage/` is the legacy Golden Layout workspace.
+- **`pages/`** — Route screens wired in `app/App.jsx`. `AutoTrade/` is the core automated trading UI (`components/` for the step UI, `hooks/` for settings, the trading run and the console); `Homepage/` is the legacy Golden Layout workspace.
+- **`components/`** — Shared UI primitives, e.g. `WizardStep` for the AutoTrade, Consolidator and Extractor wizards.
 - **`features/`** — UI shared across pages, grouped by domain (wallet, marketplace, PSBT tools, explorers).
 - **`trading/`** — Business logic for trading:
   - `exchanges.js` — marketplace registry and the `MarketplaceAdapter` contract; `getTradingApi(exchange)` returns an adapter
