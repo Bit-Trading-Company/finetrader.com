@@ -17,6 +17,7 @@ import background_8 from '../../assets/images/png/backgrounds/background_8.PNG';
 import './WalletConsolidator.css';
 import { useEventHub } from '../../lib/eventHub';
 import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
+import WizardStep from '../../components/WizardStep';
 
 const StepStatus = {
   PENDING: null,
@@ -335,534 +336,475 @@ const WalletConsolidator = () => {
         </button>
 
         {/* ── Step 1: Connect Wallet ── */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 1 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(1)}
-          >
-            <div className="consolidator-step-number">1</div>
-            <div className="consolidator-step-title">Connect Wallet</div>
-            <div className="consolidator-step-status">
-              <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[1] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
-              />
-            </div>
-          </div>
-
-          <div
-            className={`consolidator-step-content ${currentStep === 1 ? 'active' : 'hidden'}`}
-          >
-            {!isWalletConnected ? (
-              <div className="consolidator-wallet-list">
-                {CONNECT_WALLET_LIST.map((w, i) => (
-                  <button
-                    key={i}
-                    className="consolidator-wallet-item"
-                    onClick={() => handleConnect(w.wallet)}
-                  >
-                    <img
-                      src={w.icon}
-                      alt={w.wallet}
-                      className="consolidator-wallet-icon"
-                    />
-                    <span>{w.wallet}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="consolidator-connected-info">
-                <p className="consolidator-connected-address">
-                  ✓ Connected: {connectedAddress?.ordinals?.slice(0, 10)}...
-                  {connectedAddress?.ordinals?.slice(-8)}
-                </p>
+        <WizardStep
+          classPrefix="consolidator"
+          number={1}
+          title="Connect Wallet"
+          isActive={currentStep === 1}
+          isComplete={stepStatuses[1] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(1)}
+        >
+          {!isWalletConnected ? (
+            <div className="consolidator-wallet-list">
+              {CONNECT_WALLET_LIST.map((w, i) => (
                 <button
-                  onClick={handleDisconnect}
-                  className="consolidator-btn consolidator-btn--secondary"
+                  key={i}
+                  className="consolidator-wallet-item"
+                  onClick={() => handleConnect(w.wallet)}
                 >
-                  Disconnect
+                  <img
+                    src={w.icon}
+                    alt={w.wallet}
+                    className="consolidator-wallet-icon"
+                  />
+                  <span>{w.wallet}</span>
                 </button>
-                {stepStatuses[1] === StepStatus.COMPLETE && (
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    className="consolidator-btn"
-                  >
-                    Continue to Step 2 →
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+              ))}
+            </div>
+          ) : (
+            <div className="consolidator-connected-info">
+              <p className="consolidator-connected-address">
+                ✓ Connected: {connectedAddress?.ordinals?.slice(0, 10)}...
+                {connectedAddress?.ordinals?.slice(-8)}
+              </p>
+              <button
+                onClick={handleDisconnect}
+                className="consolidator-btn consolidator-btn--secondary"
+              >
+                Disconnect
+              </button>
+              {stepStatuses[1] === StepStatus.COMPLETE && (
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="consolidator-btn"
+                >
+                  Continue to Step 2 →
+                </button>
+              )}
+            </div>
+          )}
+        </WizardStep>
 
         {/* ── Step 2: Load Proxy Wallets ── */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 2 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(2)}
-          >
-            <div className="consolidator-step-number">2</div>
-            <div className="consolidator-step-title">
+        <WizardStep
+          classPrefix="consolidator"
+          number={2}
+          title={
+            <>
               Load Proxy Wallets
               {wallets.length > 0 && (
                 <span className="consolidator-badge">{wallets.length}</span>
               )}
-            </div>
-            <div className="consolidator-step-status">
-              <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[2] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
-              />
-            </div>
-          </div>
-
-          <div
-            className={`consolidator-step-content ${currentStep === 2 ? 'active' : 'hidden'}`}
-          >
-            <WalletManagement glEventHub={glEventHub} />
-            {wallets.length > 0 && (
-              <button
-                onClick={() => setCurrentStep(3)}
-                className="consolidator-btn"
-                style={{ marginTop: '16px' }}
-              >
-                Continue to Step 3 →
-              </button>
-            )}
-          </div>
-        </div>
+            </>
+          }
+          isActive={currentStep === 2}
+          isComplete={stepStatuses[2] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(2)}
+        >
+          <WalletManagement glEventHub={glEventHub} />
+          {wallets.length > 0 && (
+            <button
+              onClick={() => setCurrentStep(3)}
+              className="consolidator-btn"
+              style={{ marginTop: '16px' }}
+            >
+              Continue to Step 3 →
+            </button>
+          )}
+        </WizardStep>
 
         {/* ── Step 3: Set Destination Address ── */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 3 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(3)}
-          >
-            <div className="consolidator-step-number">3</div>
-            <div className="consolidator-step-title">
-              Set Destination Address
-            </div>
-            <div className="consolidator-step-status">
+        <WizardStep
+          classPrefix="consolidator"
+          number={3}
+          title="Set Destination Address"
+          isActive={currentStep === 3}
+          isComplete={stepStatuses[3] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(3)}
+        >
+          <div className="consolidator-destination-section">
+            {/* Use connected wallet option */}
+            <label className="consolidator-radio-label">
               <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[3] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
+                type="radio"
+                name="destMode"
+                checked={useConnectedWallet}
+                onChange={() => {
+                  setUseConnectedWallet(true);
+                  setAddressError('');
+                }}
+                disabled={isConsolidating}
               />
-            </div>
-          </div>
+              <span>Send to connected wallet</span>
+            </label>
+            {useConnectedWallet && connectedAddress?.ordinals && (
+              <div className="consolidator-address-preview">
+                <span className="consolidator-address-label">Address:</span>
+                <span className="consolidator-address-value">
+                  {connectedAddress.ordinals}
+                </span>
+              </div>
+            )}
+            {useConnectedWallet && !isWalletConnected && (
+              <p className="consolidator-hint consolidator-hint--warn">
+                ⚠ No wallet connected. Connect a wallet in Step 1.
+              </p>
+            )}
 
-          <div
-            className={`consolidator-step-content ${currentStep === 3 ? 'active' : 'hidden'}`}
-          >
-            <div className="consolidator-destination-section">
-              {/* Use connected wallet option */}
-              <label className="consolidator-radio-label">
+            {/* Custom address option */}
+            <label
+              className="consolidator-radio-label"
+              style={{ marginTop: '16px' }}
+            >
+              <input
+                type="radio"
+                name="destMode"
+                checked={!useConnectedWallet}
+                onChange={() => setUseConnectedWallet(false)}
+                disabled={isConsolidating}
+              />
+              <span>Use custom address</span>
+            </label>
+            {!useConnectedWallet && (
+              <div className="consolidator-custom-address">
                 <input
-                  type="radio"
-                  name="destMode"
-                  checked={useConnectedWallet}
-                  onChange={() => {
-                    setUseConnectedWallet(true);
+                  type="text"
+                  className={`consolidator-address-input ${addressError ? 'error' : ''}`}
+                  placeholder="Enter Bitcoin address (bc1p..., 1..., 3...)"
+                  value={customAddress}
+                  onChange={(e) => {
+                    setCustomAddress(e.target.value);
                     setAddressError('');
                   }}
                   disabled={isConsolidating}
                 />
-                <span>Send to connected wallet</span>
-              </label>
-              {useConnectedWallet && connectedAddress?.ordinals && (
-                <div className="consolidator-address-preview">
-                  <span className="consolidator-address-label">Address:</span>
-                  <span className="consolidator-address-value">
-                    {connectedAddress.ordinals}
-                  </span>
-                </div>
-              )}
-              {useConnectedWallet && !isWalletConnected && (
-                <p className="consolidator-hint consolidator-hint--warn">
-                  ⚠ No wallet connected. Connect a wallet in Step 1.
-                </p>
-              )}
-
-              {/* Custom address option */}
-              <label
-                className="consolidator-radio-label"
-                style={{ marginTop: '16px' }}
-              >
-                <input
-                  type="radio"
-                  name="destMode"
-                  checked={!useConnectedWallet}
-                  onChange={() => setUseConnectedWallet(false)}
-                  disabled={isConsolidating}
-                />
-                <span>Use custom address</span>
-              </label>
-              {!useConnectedWallet && (
-                <div className="consolidator-custom-address">
-                  <input
-                    type="text"
-                    className={`consolidator-address-input ${addressError ? 'error' : ''}`}
-                    placeholder="Enter Bitcoin address (bc1p..., 1..., 3...)"
-                    value={customAddress}
-                    onChange={(e) => {
-                      setCustomAddress(e.target.value);
-                      setAddressError('');
-                    }}
-                    disabled={isConsolidating}
-                  />
-                  {addressError && (
-                    <p className="consolidator-error-text">{addressError}</p>
+                {addressError && (
+                  <p className="consolidator-error-text">{addressError}</p>
+                )}
+                {!addressError &&
+                  customAddress.trim() &&
+                  isValidBitcoinAddress(customAddress.trim(), network) && (
+                    <p className="consolidator-success-text">✓ Valid address</p>
                   )}
-                  {!addressError &&
-                    customAddress.trim() &&
-                    isValidBitcoinAddress(customAddress.trim(), network) && (
-                      <p className="consolidator-success-text">
-                        ✓ Valid address
-                      </p>
-                    )}
-                </div>
-              )}
+              </div>
+            )}
 
-              {isDestinationValid && (
-                <button
-                  onClick={() => setCurrentStep(4)}
-                  className="consolidator-btn"
-                  style={{ marginTop: '20px' }}
-                >
-                  Continue to Step 4 →
-                </button>
-              )}
-            </div>
+            {isDestinationValid && (
+              <button
+                onClick={() => setCurrentStep(4)}
+                className="consolidator-btn"
+                style={{ marginTop: '20px' }}
+              >
+                Continue to Step 4 →
+              </button>
+            )}
           </div>
-        </div>
+        </WizardStep>
 
         {/* ── Step 4: Consolidate ── */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 4 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(4)}
-          >
-            <div className="consolidator-step-number">4</div>
-            <div className="consolidator-step-title">Consolidate Funds</div>
-            <div className="consolidator-step-status">
-              <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[4] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
-              />
-            </div>
-          </div>
-
-          <div
-            className={`consolidator-step-content ${currentStep === 4 ? 'active' : 'hidden'}`}
-          >
-            <div className="consolidator-controls">
-              {/* Destination summary */}
-              {isDestinationValid && (
-                <div className="consolidator-summary-card">
-                  <div className="consolidator-summary-row">
-                    <span className="consolidator-summary-label">
-                      Destination:
-                    </span>
-                    <span className="consolidator-summary-value consolidator-address-mono">
-                      {destinationAddress.slice(0, 14)}...
-                      {destinationAddress.slice(-10)}
-                    </span>
-                  </div>
-                  <div className="consolidator-summary-row">
-                    <span className="consolidator-summary-label">
-                      Active wallets:
-                    </span>
-                    <span className="consolidator-summary-value">
-                      {activeWallets.length}
-                    </span>
-                  </div>
-                  <div className="consolidator-summary-row">
-                    <span className="consolidator-summary-label">
-                      Fee rate:
-                    </span>
-                    <span className="consolidator-summary-value">
-                      {feeRate} sat/vbyte
-                    </span>
-                  </div>
+        <WizardStep
+          classPrefix="consolidator"
+          number={4}
+          title="Consolidate Funds"
+          isActive={currentStep === 4}
+          isComplete={stepStatuses[4] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(4)}
+        >
+          <div className="consolidator-controls">
+            {/* Destination summary */}
+            {isDestinationValid && (
+              <div className="consolidator-summary-card">
+                <div className="consolidator-summary-row">
+                  <span className="consolidator-summary-label">
+                    Destination:
+                  </span>
+                  <span className="consolidator-summary-value consolidator-address-mono">
+                    {destinationAddress.slice(0, 14)}...
+                    {destinationAddress.slice(-10)}
+                  </span>
                 </div>
-              )}
-
-              {/* Fee rate input */}
-              <div className="consolidator-control-group">
-                <label className="consolidator-label">
-                  Fee Rate (sat/vbyte):
-                </label>
-                <input
-                  type="number"
-                  value={feeRate}
-                  onChange={(e) =>
-                    setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
-                  }
-                  disabled={isConsolidating}
-                  min="1"
-                  max="500"
-                  className="consolidator-number-input"
-                />
-                <p className="consolidator-hint">
-                  Typical: 5–15 sat/vbyte for confirmation within a few hours
-                </p>
+                <div className="consolidator-summary-row">
+                  <span className="consolidator-summary-label">
+                    Active wallets:
+                  </span>
+                  <span className="consolidator-summary-value">
+                    {activeWallets.length}
+                  </span>
+                </div>
+                <div className="consolidator-summary-row">
+                  <span className="consolidator-summary-label">Fee rate:</span>
+                  <span className="consolidator-summary-value">
+                    {feeRate} sat/vbyte
+                  </span>
+                </div>
               </div>
+            )}
 
-              {/* Custom wallet subset toggle */}
-              <div className="consolidator-control-group">
-                <label className="consolidator-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={useCustomWalletSubset}
-                    onChange={(e) => {
-                      setUseCustomWalletSubset(e.target.checked);
-                      if (!e.target.checked) {
+            {/* Fee rate input */}
+            <div className="consolidator-control-group">
+              <label className="consolidator-label">
+                Fee Rate (sat/vbyte):
+              </label>
+              <input
+                type="number"
+                value={feeRate}
+                onChange={(e) =>
+                  setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
+                }
+                disabled={isConsolidating}
+                min="1"
+                max="500"
+                className="consolidator-number-input"
+              />
+              <p className="consolidator-hint">
+                Typical: 5–15 sat/vbyte for confirmation within a few hours
+              </p>
+            </div>
+
+            {/* Custom wallet subset toggle */}
+            <div className="consolidator-control-group">
+              <label className="consolidator-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={useCustomWalletSubset}
+                  onChange={(e) => {
+                    setUseCustomWalletSubset(e.target.checked);
+                    if (!e.target.checked) {
+                      setSelectedWalletIndices(
+                        new Set(wallets.map((_, i) => i))
+                      );
+                    }
+                  }}
+                  disabled={isConsolidating || wallets.length === 0}
+                />
+                <span>Select specific wallets to consolidate</span>
+              </label>
+
+              {useCustomWalletSubset && wallets.length > 0 && (
+                <div className="consolidator-wallet-checkboxes">
+                  <div className="consolidator-wallet-check-actions">
+                    <button
+                      className="consolidator-btn consolidator-btn--tiny"
+                      onClick={() =>
                         setSelectedWalletIndices(
                           new Set(wallets.map((_, i) => i))
-                        );
+                        )
                       }
-                    }}
-                    disabled={isConsolidating || wallets.length === 0}
-                  />
-                  <span>Select specific wallets to consolidate</span>
-                </label>
-
-                {useCustomWalletSubset && wallets.length > 0 && (
-                  <div className="consolidator-wallet-checkboxes">
-                    <div className="consolidator-wallet-check-actions">
-                      <button
-                        className="consolidator-btn consolidator-btn--tiny"
-                        onClick={() =>
-                          setSelectedWalletIndices(
-                            new Set(wallets.map((_, i) => i))
-                          )
-                        }
-                        disabled={isConsolidating}
+                      disabled={isConsolidating}
+                    >
+                      Select all
+                    </button>
+                    <button
+                      className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
+                      onClick={() => setSelectedWalletIndices(new Set())}
+                      disabled={isConsolidating}
+                    >
+                      Deselect all
+                    </button>
+                  </div>
+                  {wallets.map((wallet, i) => {
+                    const status = walletStatuses[wallet.address];
+                    return (
+                      <label
+                        key={i}
+                        className="consolidator-wallet-checkbox-row"
                       >
-                        Select all
-                      </button>
-                      <button
-                        className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                        onClick={() => setSelectedWalletIndices(new Set())}
-                        disabled={isConsolidating}
-                      >
-                        Deselect all
-                      </button>
-                    </div>
-                    {wallets.map((wallet, i) => {
-                      const status = walletStatuses[wallet.address];
-                      return (
-                        <label
-                          key={i}
-                          className="consolidator-wallet-checkbox-row"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedWalletIndices.has(i)}
-                            onChange={(e) => {
-                              const next = new Set(selectedWalletIndices);
-                              e.target.checked ? next.add(i) : next.delete(i);
-                              setSelectedWalletIndices(next);
-                            }}
-                            disabled={isConsolidating}
-                          />
-                          <span className="consolidator-wallet-label">
-                            Wallet #{i + 1}: {wallet.address.slice(0, 8)}...
-                            {wallet.address.slice(-6)}
-                          </span>
-                          {status && (
-                            <span
-                              className={`consolidator-wallet-badge ${
-                                status.skipped
-                                  ? 'badge--skipped'
-                                  : status.error
-                                    ? 'badge--error'
-                                    : 'badge--success'
-                              }`}
-                            >
-                              {status.skipped
-                                ? 'Skipped'
+                        <input
+                          type="checkbox"
+                          checked={selectedWalletIndices.has(i)}
+                          onChange={(e) => {
+                            const next = new Set(selectedWalletIndices);
+                            e.target.checked ? next.add(i) : next.delete(i);
+                            setSelectedWalletIndices(next);
+                          }}
+                          disabled={isConsolidating}
+                        />
+                        <span className="consolidator-wallet-label">
+                          Wallet #{i + 1}: {wallet.address.slice(0, 8)}...
+                          {wallet.address.slice(-6)}
+                        </span>
+                        {status && (
+                          <span
+                            className={`consolidator-wallet-badge ${
+                              status.skipped
+                                ? 'badge--skipped'
                                 : status.error
-                                  ? 'Failed'
-                                  : '✓ Sent'}
-                            </span>
-                          )}
-                        </label>
-                      );
-                    })}
-                    {selectedWalletIndices.size === 0 && (
-                      <p className="consolidator-error-text">
-                        ⚠ Select at least one wallet
-                      </p>
+                                  ? 'badge--error'
+                                  : 'badge--success'
+                            }`}
+                          >
+                            {status.skipped
+                              ? 'Skipped'
+                              : status.error
+                                ? 'Failed'
+                                : '✓ Sent'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                  {selectedWalletIndices.size === 0 && (
+                    <p className="consolidator-error-text">
+                      ⚠ Select at least one wallet
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Preview balance button */}
+            <button
+              onClick={handleFetchPreview}
+              className="consolidator-btn consolidator-btn--secondary"
+              disabled={
+                isFetchingPreview ||
+                isConsolidating ||
+                activeWallets.length === 0
+              }
+              style={{ marginBottom: '8px' }}
+            >
+              {isFetchingPreview ? 'Fetching...' : '⟳ Preview Balances'}
+            </button>
+
+            {/* Preview data */}
+            {previewData && (
+              <div className="consolidator-preview-card">
+                <h4 className="consolidator-preview-title">Balance Preview</h4>
+                <div className="consolidator-preview-stats">
+                  <div className="consolidator-preview-stat">
+                    <span className="consolidator-preview-stat-label">
+                      Total balance
+                    </span>
+                    <span className="consolidator-preview-stat-value">
+                      {(previewData.totalSats / 1e8).toFixed(8)} BTC
+                    </span>
+                    <span className="consolidator-preview-stat-sub">
+                      {previewData.totalSats.toLocaleString()} sats
+                    </span>
+                  </div>
+                  <div className="consolidator-preview-stat">
+                    <span className="consolidator-preview-stat-label">
+                      Total UTXOs
+                    </span>
+                    <span className="consolidator-preview-stat-value">
+                      {previewData.totalUtxos}
+                    </span>
+                  </div>
+                  <div className="consolidator-preview-stat">
+                    <span className="consolidator-preview-stat-label">
+                      Wallets with funds
+                    </span>
+                    <span className="consolidator-preview-stat-value">
+                      {previewData.walletsWithFunds} / {previewData.walletCount}
+                    </span>
+                  </div>
+                </div>
+                <div className="consolidator-preview-wallets">
+                  {previewData.walletPreviews.map((wp, i) => (
+                    <div
+                      key={i}
+                      className={`consolidator-preview-wallet-row ${wp.sats === 0 ? 'empty' : ''}`}
+                    >
+                      <span className="consolidator-preview-wallet-addr">
+                        Wallet #{i + 1}: {wp.address.slice(0, 8)}...
+                      </span>
+                      <span className="consolidator-preview-wallet-bal">
+                        {wp.error
+                          ? '⚠ Error'
+                          : wp.sats === 0
+                            ? 'Empty'
+                            : `${(wp.sats / 1e8).toFixed(8)} BTC (${wp.utxos} UTXOs)`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="consolidator-action-row">
+              <button
+                onClick={
+                  isConsolidating ? handleStop : handleStartConsolidation
+                }
+                className={`consolidator-btn consolidator-btn--large ${
+                  isConsolidating
+                    ? 'consolidator-btn--stop'
+                    : 'consolidator-btn--start'
+                }`}
+                disabled={!isConsolidating && !canConsolidate}
+              >
+                {isConsolidating
+                  ? '⏹ Stop Consolidation'
+                  : '⚡ Start Consolidation'}
+              </button>
+            </div>
+
+            {!canConsolidate && !isConsolidating && (
+              <div className="consolidator-requirements">
+                <p className="consolidator-hint">Requirements:</p>
+                <ul className="consolidator-requirements-list">
+                  <li className={isWalletConnected ? 'met' : ''}>
+                    {isWalletConnected ? '✓' : '○'} Wallet connected
+                  </li>
+                  <li className={wallets.length > 0 ? 'met' : ''}>
+                    {wallets.length > 0 ? '✓' : '○'} Proxy wallets loaded
+                  </li>
+                  <li className={isDestinationValid ? 'met' : ''}>
+                    {isDestinationValid ? '✓' : '○'} Valid destination address
+                  </li>
+                  <li className={activeWallets.length > 0 ? 'met' : ''}>
+                    {activeWallets.length > 0 ? '✓' : '○'} At least one wallet
+                    selected
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Console */}
+          <div className="consolidator-console">
+            <div className="consolidator-console-header">
+              <h3>Console Output</h3>
+              {consoleLogs.length > 0 && (
+                <button
+                  className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
+                  onClick={() => setConsoleLogs([])}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="consolidator-console-logs" ref={consoleRef}>
+              {consoleLogs.length === 0 ? (
+                <p className="consolidator-console-empty">
+                  No logs yet. Start consolidation to see output here.
+                </p>
+              ) : (
+                consoleLogs.map((log, i) => (
+                  <div key={i} className="consolidator-console-log">
+                    <span className="consolidator-console-time">
+                      {log.timestamp}
+                    </span>
+                    <span className="consolidator-console-message">
+                      {log.message}
+                    </span>
+                    {log.link && (
+                      <a
+                        href={log.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="consolidator-console-link"
+                      >
+                        View tx
+                      </a>
                     )}
                   </div>
-                )}
-              </div>
-
-              {/* Preview balance button */}
-              <button
-                onClick={handleFetchPreview}
-                className="consolidator-btn consolidator-btn--secondary"
-                disabled={
-                  isFetchingPreview ||
-                  isConsolidating ||
-                  activeWallets.length === 0
-                }
-                style={{ marginBottom: '8px' }}
-              >
-                {isFetchingPreview ? 'Fetching...' : '⟳ Preview Balances'}
-              </button>
-
-              {/* Preview data */}
-              {previewData && (
-                <div className="consolidator-preview-card">
-                  <h4 className="consolidator-preview-title">
-                    Balance Preview
-                  </h4>
-                  <div className="consolidator-preview-stats">
-                    <div className="consolidator-preview-stat">
-                      <span className="consolidator-preview-stat-label">
-                        Total balance
-                      </span>
-                      <span className="consolidator-preview-stat-value">
-                        {(previewData.totalSats / 1e8).toFixed(8)} BTC
-                      </span>
-                      <span className="consolidator-preview-stat-sub">
-                        {previewData.totalSats.toLocaleString()} sats
-                      </span>
-                    </div>
-                    <div className="consolidator-preview-stat">
-                      <span className="consolidator-preview-stat-label">
-                        Total UTXOs
-                      </span>
-                      <span className="consolidator-preview-stat-value">
-                        {previewData.totalUtxos}
-                      </span>
-                    </div>
-                    <div className="consolidator-preview-stat">
-                      <span className="consolidator-preview-stat-label">
-                        Wallets with funds
-                      </span>
-                      <span className="consolidator-preview-stat-value">
-                        {previewData.walletsWithFunds} /{' '}
-                        {previewData.walletCount}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="consolidator-preview-wallets">
-                    {previewData.walletPreviews.map((wp, i) => (
-                      <div
-                        key={i}
-                        className={`consolidator-preview-wallet-row ${wp.sats === 0 ? 'empty' : ''}`}
-                      >
-                        <span className="consolidator-preview-wallet-addr">
-                          Wallet #{i + 1}: {wp.address.slice(0, 8)}...
-                        </span>
-                        <span className="consolidator-preview-wallet-bal">
-                          {wp.error
-                            ? '⚠ Error'
-                            : wp.sats === 0
-                              ? 'Empty'
-                              : `${(wp.sats / 1e8).toFixed(8)} BTC (${wp.utxos} UTXOs)`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))
               )}
-
-              {/* Action buttons */}
-              <div className="consolidator-action-row">
-                <button
-                  onClick={
-                    isConsolidating ? handleStop : handleStartConsolidation
-                  }
-                  className={`consolidator-btn consolidator-btn--large ${
-                    isConsolidating
-                      ? 'consolidator-btn--stop'
-                      : 'consolidator-btn--start'
-                  }`}
-                  disabled={!isConsolidating && !canConsolidate}
-                >
-                  {isConsolidating
-                    ? '⏹ Stop Consolidation'
-                    : '⚡ Start Consolidation'}
-                </button>
-              </div>
-
-              {!canConsolidate && !isConsolidating && (
-                <div className="consolidator-requirements">
-                  <p className="consolidator-hint">Requirements:</p>
-                  <ul className="consolidator-requirements-list">
-                    <li className={isWalletConnected ? 'met' : ''}>
-                      {isWalletConnected ? '✓' : '○'} Wallet connected
-                    </li>
-                    <li className={wallets.length > 0 ? 'met' : ''}>
-                      {wallets.length > 0 ? '✓' : '○'} Proxy wallets loaded
-                    </li>
-                    <li className={isDestinationValid ? 'met' : ''}>
-                      {isDestinationValid ? '✓' : '○'} Valid destination address
-                    </li>
-                    <li className={activeWallets.length > 0 ? 'met' : ''}>
-                      {activeWallets.length > 0 ? '✓' : '○'} At least one wallet
-                      selected
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Console */}
-            <div className="consolidator-console">
-              <div className="consolidator-console-header">
-                <h3>Console Output</h3>
-                {consoleLogs.length > 0 && (
-                  <button
-                    className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                    onClick={() => setConsoleLogs([])}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="consolidator-console-logs" ref={consoleRef}>
-                {consoleLogs.length === 0 ? (
-                  <p className="consolidator-console-empty">
-                    No logs yet. Start consolidation to see output here.
-                  </p>
-                ) : (
-                  consoleLogs.map((log, i) => (
-                    <div key={i} className="consolidator-console-log">
-                      <span className="consolidator-console-time">
-                        {log.timestamp}
-                      </span>
-                      <span className="consolidator-console-message">
-                        {log.message}
-                      </span>
-                      {log.link && (
-                        <a
-                          href={log.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="consolidator-console-link"
-                        >
-                          View tx
-                        </a>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
           </div>
-        </div>
+        </WizardStep>
 
         {/* Settings Modal */}
         {showSettingsModal && (

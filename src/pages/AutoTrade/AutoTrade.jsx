@@ -10,7 +10,7 @@ import WalletManagement from '../../features/wallet/WalletManagement';
 import Dispatch from '../../features/wallet/Dispatch';
 import OrdinalsCollections from '../../features/marketplace/OrdinalsCollections';
 import CollectionOfferModal from '../../features/marketplace/CollectionOfferModal';
-import AutoTradeStep from './components/AutoTradeStep';
+import WizardStep from '../../components/WizardStep';
 import TradingControls from './components/TradingControls';
 import TradingConsole from './components/TradingConsole';
 import AutoTradeSettingsModal from './components/AutoTradeSettingsModal';
@@ -351,7 +351,9 @@ const AutoTrade = () => {
         </button>
 
         {/* Step 1: Connect Wallet */}
-        <AutoTradeStep
+        <WizardStep
+          classPrefix="auto-trade"
+          headerStyle={{ cursor: 'pointer' }}
           number={1}
           title="Connect Wallet"
           isActive={currentStep === 1}
@@ -390,10 +392,12 @@ const AutoTrade = () => {
               </button>
             </div>
           )}
-        </AutoTradeStep>
+        </WizardStep>
 
         {/* Step 2: Create Fine Trading Wallets */}
-        <AutoTradeStep
+        <WizardStep
+          classPrefix="auto-trade"
+          headerStyle={{ cursor: 'pointer' }}
           number={2}
           title="Create Fine Trading Wallets"
           isActive={currentStep === 2}
@@ -410,10 +414,12 @@ const AutoTrade = () => {
               Continue to Step 3
             </button>
           )}
-        </AutoTradeStep>
+        </WizardStep>
 
         {/* Step 3: Dispatch BTC */}
-        <AutoTradeStep
+        <WizardStep
+          classPrefix="auto-trade"
+          headerStyle={{ cursor: 'pointer' }}
           number={3}
           title="Dispatch BTC"
           isActive={currentStep === 3}
@@ -445,10 +451,12 @@ const AutoTrade = () => {
             onClose={() => setShowDispatchModal(false)}
             proxyWallets={wallets}
           />
-        </AutoTradeStep>
+        </WizardStep>
 
         {/* Step 4: Select Collection */}
-        <AutoTradeStep
+        <WizardStep
+          classPrefix="auto-trade"
+          headerStyle={{ cursor: 'pointer' }}
           number={4}
           title="Select Collection to Trade"
           isActive={currentStep === 4}
@@ -478,16 +486,17 @@ const AutoTrade = () => {
               </button>
             </div>
           )}
-        </AutoTradeStep>
+        </WizardStep>
 
         {/* Step 5: Start Auto-Trading */}
-        <AutoTradeStep
+        <WizardStep
+          classPrefix="auto-trade"
+          headerStyle={{ cursor: 'pointer', position: 'relative' }}
           number={5}
           title="Start Auto Trading"
           isActive={currentStep === 5}
           isComplete={stepStatuses[5] === StepStatus.COMPLETE}
           onSelect={() => handleStepClick(5)}
-          headerStyle={{ position: 'relative' }}
           headerExtra={
             // Settings button (top right of the step header)
             <button
@@ -524,7 +533,7 @@ const AutoTrade = () => {
           />
 
           <TradingConsole consoleRef={consoleRef} consoleLogs={consoleLogs} />
-        </AutoTradeStep>
+        </WizardStep>
 
         {/* Settings Modal */}
         {showSettingsModal && (

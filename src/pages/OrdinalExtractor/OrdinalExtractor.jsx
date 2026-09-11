@@ -23,6 +23,7 @@ import background_8 from '../../assets/images/png/backgrounds/background_8.PNG';
 import '../WalletConsolidator/WalletConsolidator.css';
 import { useEventHub } from '../../lib/eventHub';
 import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
+import WizardStep from '../../components/WizardStep';
 
 const StepStatus = {
   PENDING: null,
@@ -476,479 +477,421 @@ const OrdinalExtractor = () => {
         </p>
 
         {/* Step 1: Connect Wallet */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 1 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(1)}
-          >
-            <div className="consolidator-step-number">1</div>
-            <div className="consolidator-step-title">Connect Wallet</div>
-            <div className="consolidator-step-status">
-              <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[1] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
-              />
-            </div>
-          </div>
-
-          <div
-            className={`consolidator-step-content ${currentStep === 1 ? 'active' : 'hidden'}`}
-          >
-            {!isWalletConnected ? (
-              <div className="consolidator-wallet-list">
-                {CONNECT_WALLET_LIST.map((w, i) => (
-                  <button
-                    key={i}
-                    className="consolidator-wallet-item"
-                    onClick={() => handleConnect(w.wallet)}
-                  >
-                    <img
-                      src={w.icon}
-                      alt={w.wallet}
-                      className="consolidator-wallet-icon"
-                    />
-                    <span>{w.wallet}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="consolidator-connected-info">
-                <p className="consolidator-connected-address">
-                  ✓ Connected: {connectedAddress?.ordinals?.slice(0, 10)}...
-                  {connectedAddress?.ordinals?.slice(-8)}
-                </p>
+        <WizardStep
+          classPrefix="consolidator"
+          number={1}
+          title="Connect Wallet"
+          isActive={currentStep === 1}
+          isComplete={stepStatuses[1] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(1)}
+        >
+          {!isWalletConnected ? (
+            <div className="consolidator-wallet-list">
+              {CONNECT_WALLET_LIST.map((w, i) => (
                 <button
-                  onClick={handleDisconnect}
-                  className="consolidator-btn consolidator-btn--secondary"
+                  key={i}
+                  className="consolidator-wallet-item"
+                  onClick={() => handleConnect(w.wallet)}
                 >
-                  Disconnect
+                  <img
+                    src={w.icon}
+                    alt={w.wallet}
+                    className="consolidator-wallet-icon"
+                  />
+                  <span>{w.wallet}</span>
                 </button>
-                {stepStatuses[1] === StepStatus.COMPLETE && (
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    className="consolidator-btn"
-                  >
-                    Continue to Step 2 →
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+              ))}
+            </div>
+          ) : (
+            <div className="consolidator-connected-info">
+              <p className="consolidator-connected-address">
+                ✓ Connected: {connectedAddress?.ordinals?.slice(0, 10)}...
+                {connectedAddress?.ordinals?.slice(-8)}
+              </p>
+              <button
+                onClick={handleDisconnect}
+                className="consolidator-btn consolidator-btn--secondary"
+              >
+                Disconnect
+              </button>
+              {stepStatuses[1] === StepStatus.COMPLETE && (
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="consolidator-btn"
+                >
+                  Continue to Step 2 →
+                </button>
+              )}
+            </div>
+          )}
+        </WizardStep>
 
         {/* Step 2: Load Proxy Wallets */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 2 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(2)}
-          >
-            <div className="consolidator-step-number">2</div>
-            <div className="consolidator-step-title">
+        <WizardStep
+          classPrefix="consolidator"
+          number={2}
+          title={
+            <>
               Load Proxy Wallets (optional)
               {wallets.length > 0 && (
                 <span className="consolidator-badge">{wallets.length}</span>
               )}
-            </div>
-            <div className="consolidator-step-status">
+            </>
+          }
+          isActive={currentStep === 2}
+          isComplete={stepStatuses[2] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(2)}
+        >
+          <WalletManagement glEventHub={glEventHub} />
+
+          <div style={{ marginTop: '14px' }}>
+            <label className="consolidator-checkbox-label">
               <input
                 type="checkbox"
-                readOnly
-                checked={stepStatuses[2] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
+                checked={includeConnectedWallet}
+                onChange={(e) => setIncludeConnectedWallet(e.target.checked)}
+                disabled={isExtracting || !isWalletConnected}
               />
-            </div>
+              <span>Include connected wallet in scan/extraction</span>
+            </label>
           </div>
 
-          <div
-            className={`consolidator-step-content ${currentStep === 2 ? 'active' : 'hidden'}`}
-          >
-            <WalletManagement glEventHub={glEventHub} />
-
-            <div style={{ marginTop: '14px' }}>
+          {wallets.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
               <label className="consolidator-checkbox-label">
                 <input
                   type="checkbox"
-                  checked={includeConnectedWallet}
-                  onChange={(e) => setIncludeConnectedWallet(e.target.checked)}
-                  disabled={isExtracting || !isWalletConnected}
+                  checked={useCustomWalletSubset}
+                  onChange={(e) => {
+                    setUseCustomWalletSubset(e.target.checked);
+                    if (!e.target.checked) {
+                      setSelectedWalletIndices(
+                        new Set(wallets.map((_, i) => i))
+                      );
+                    }
+                  }}
+                  disabled={isExtracting}
                 />
-                <span>Include connected wallet in scan/extraction</span>
+                <span>Select specific proxy wallets</span>
               </label>
-            </div>
 
-            {wallets.length > 0 && (
-              <div style={{ marginTop: '10px' }}>
-                <label className="consolidator-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={useCustomWalletSubset}
-                    onChange={(e) => {
-                      setUseCustomWalletSubset(e.target.checked);
-                      if (!e.target.checked) {
+              {useCustomWalletSubset && wallets.length > 0 && (
+                <div className="consolidator-wallet-checkboxes">
+                  <div className="consolidator-wallet-check-actions">
+                    <button
+                      className="consolidator-btn consolidator-btn--tiny"
+                      onClick={() =>
                         setSelectedWalletIndices(
                           new Set(wallets.map((_, i) => i))
-                        );
+                        )
                       }
-                    }}
-                    disabled={isExtracting}
-                  />
-                  <span>Select specific proxy wallets</span>
-                </label>
-
-                {useCustomWalletSubset && wallets.length > 0 && (
-                  <div className="consolidator-wallet-checkboxes">
-                    <div className="consolidator-wallet-check-actions">
-                      <button
-                        className="consolidator-btn consolidator-btn--tiny"
-                        onClick={() =>
-                          setSelectedWalletIndices(
-                            new Set(wallets.map((_, i) => i))
-                          )
-                        }
-                        disabled={isExtracting}
-                      >
-                        Select all
-                      </button>
-                      <button
-                        className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                        onClick={() => setSelectedWalletIndices(new Set())}
-                        disabled={isExtracting}
-                      >
-                        Deselect all
-                      </button>
-                    </div>
-                    {wallets.map((wallet, i) => (
-                      <label
-                        key={i}
-                        className="consolidator-wallet-checkbox-row"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedWalletIndices.has(i)}
-                          onChange={(e) => {
-                            const next = new Set(selectedWalletIndices);
-                            e.target.checked ? next.add(i) : next.delete(i);
-                            setSelectedWalletIndices(next);
-                          }}
-                          disabled={isExtracting}
-                        />
-                        <span className="consolidator-wallet-label">
-                          Wallet #{i + 1}: {wallet.address.slice(0, 8)}...
-                          {wallet.address.slice(-6)}
-                        </span>
-                      </label>
-                    ))}
+                      disabled={isExtracting}
+                    >
+                      Select all
+                    </button>
+                    <button
+                      className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
+                      onClick={() => setSelectedWalletIndices(new Set())}
+                      disabled={isExtracting}
+                    >
+                      Deselect all
+                    </button>
                   </div>
-                )}
+                  {wallets.map((wallet, i) => (
+                    <label key={i} className="consolidator-wallet-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedWalletIndices.has(i)}
+                        onChange={(e) => {
+                          const next = new Set(selectedWalletIndices);
+                          e.target.checked ? next.add(i) : next.delete(i);
+                          setSelectedWalletIndices(next);
+                        }}
+                        disabled={isExtracting}
+                      />
+                      <span className="consolidator-wallet-label">
+                        Wallet #{i + 1}: {wallet.address.slice(0, 8)}...
+                        {wallet.address.slice(-6)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => setCurrentStep(3)}
+            className="consolidator-btn"
+            style={{ marginTop: '16px' }}
+            disabled={!isWalletConnected}
+          >
+            Continue to Step 3 →
+          </button>
+        </WizardStep>
+
+        {/* Step 3: Destination */}
+        <WizardStep
+          classPrefix="consolidator"
+          number={3}
+          title="Set Destination Address"
+          isActive={currentStep === 3}
+          isComplete={stepStatuses[3] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(3)}
+        >
+          <div className="consolidator-destination-section">
+            <label className="consolidator-radio-label">
+              <input
+                type="radio"
+                name="destMode"
+                checked={useConnectedWalletAsDestination}
+                onChange={() => {
+                  setUseConnectedWalletAsDestination(true);
+                  setDestinationError('');
+                }}
+                disabled={isExtracting}
+              />
+              <span>
+                Send extracted 546 UTXOs to connected ordinals address
+              </span>
+            </label>
+
+            {useConnectedWalletAsDestination && connectedAddress?.ordinals && (
+              <div className="consolidator-address-preview">
+                <span className="consolidator-address-label">Address:</span>
+                <span className="consolidator-address-value">
+                  {connectedAddress.ordinals}
+                </span>
               </div>
             )}
 
-            <button
-              onClick={() => setCurrentStep(3)}
-              className="consolidator-btn"
+            <label
+              className="consolidator-radio-label"
               style={{ marginTop: '16px' }}
-              disabled={!isWalletConnected}
             >
-              Continue to Step 3 →
-            </button>
-          </div>
-        </div>
-
-        {/* Step 3: Destination */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 3 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(3)}
-          >
-            <div className="consolidator-step-number">3</div>
-            <div className="consolidator-step-title">
-              Set Destination Address
-            </div>
-            <div className="consolidator-step-status">
               <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[3] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
+                type="radio"
+                name="destMode"
+                checked={!useConnectedWalletAsDestination}
+                onChange={() => setUseConnectedWalletAsDestination(false)}
+                disabled={isExtracting}
               />
-            </div>
-          </div>
+              <span>Use custom destination address</span>
+            </label>
 
-          <div
-            className={`consolidator-step-content ${currentStep === 3 ? 'active' : 'hidden'}`}
-          >
-            <div className="consolidator-destination-section">
-              <label className="consolidator-radio-label">
+            {!useConnectedWalletAsDestination && (
+              <div className="consolidator-custom-address">
                 <input
-                  type="radio"
-                  name="destMode"
-                  checked={useConnectedWalletAsDestination}
-                  onChange={() => {
-                    setUseConnectedWalletAsDestination(true);
+                  type="text"
+                  className={`consolidator-address-input ${destinationError ? 'error' : ''}`}
+                  placeholder="Enter Bitcoin address"
+                  value={customDestination}
+                  onChange={(e) => {
+                    setCustomDestination(e.target.value);
                     setDestinationError('');
                   }}
                   disabled={isExtracting}
                 />
-                <span>
-                  Send extracted 546 UTXOs to connected ordinals address
-                </span>
-              </label>
-
-              {useConnectedWalletAsDestination &&
-                connectedAddress?.ordinals && (
-                  <div className="consolidator-address-preview">
-                    <span className="consolidator-address-label">Address:</span>
-                    <span className="consolidator-address-value">
-                      {connectedAddress.ordinals}
-                    </span>
-                  </div>
+                {destinationError && (
+                  <p className="consolidator-error-text">{destinationError}</p>
                 )}
+              </div>
+            )}
 
-              <label
-                className="consolidator-radio-label"
-                style={{ marginTop: '16px' }}
+            {isDestinationValid && (
+              <button
+                onClick={() => setCurrentStep(4)}
+                className="consolidator-btn"
+                style={{ marginTop: '20px' }}
               >
-                <input
-                  type="radio"
-                  name="destMode"
-                  checked={!useConnectedWalletAsDestination}
-                  onChange={() => setUseConnectedWalletAsDestination(false)}
-                  disabled={isExtracting}
-                />
-                <span>Use custom destination address</span>
-              </label>
-
-              {!useConnectedWalletAsDestination && (
-                <div className="consolidator-custom-address">
-                  <input
-                    type="text"
-                    className={`consolidator-address-input ${destinationError ? 'error' : ''}`}
-                    placeholder="Enter Bitcoin address"
-                    value={customDestination}
-                    onChange={(e) => {
-                      setCustomDestination(e.target.value);
-                      setDestinationError('');
-                    }}
-                    disabled={isExtracting}
-                  />
-                  {destinationError && (
-                    <p className="consolidator-error-text">
-                      {destinationError}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {isDestinationValid && (
-                <button
-                  onClick={() => setCurrentStep(4)}
-                  className="consolidator-btn"
-                  style={{ marginTop: '20px' }}
-                >
-                  Continue to Step 4 →
-                </button>
-              )}
-            </div>
+                Continue to Step 4 →
+              </button>
+            )}
           </div>
-        </div>
+        </WizardStep>
 
         {/* Step 4: Scan + Extract */}
-        <div className="consolidator-step">
-          <div
-            className={`consolidator-step-header ${currentStep === 4 ? 'active' : ''}`}
-            onClick={() => setCurrentStep(4)}
-          >
-            <div className="consolidator-step-number">4</div>
-            <div className="consolidator-step-title">Scan and Extract</div>
-            <div className="consolidator-step-status">
+        <WizardStep
+          classPrefix="consolidator"
+          number={4}
+          title="Scan and Extract"
+          isActive={currentStep === 4}
+          isComplete={stepStatuses[4] === StepStatus.COMPLETE}
+          onSelect={() => setCurrentStep(4)}
+        >
+          <div className="consolidator-controls">
+            <div className="consolidator-control-group">
+              <label className="consolidator-label">
+                Fee Rate (sat/vbyte):
+              </label>
               <input
-                type="checkbox"
-                readOnly
-                checked={stepStatuses[4] === StepStatus.COMPLETE}
-                className="consolidator-step-checkbox"
+                type="number"
+                value={feeRate}
+                onChange={(e) =>
+                  setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
+                }
+                disabled={isExtracting || isScanning}
+                min="1"
+                max="500"
+                className="consolidator-number-input"
               />
+              <p className="consolidator-hint">
+                First version uses estimated fee; if you see “insufficient
+                change”, lower fee rate or ensure there’s a fee UTXO.
+              </p>
             </div>
-          </div>
 
-          <div
-            className={`consolidator-step-content ${currentStep === 4 ? 'active' : 'hidden'}`}
-          >
-            <div className="consolidator-controls">
-              <div className="consolidator-control-group">
-                <label className="consolidator-label">
-                  Fee Rate (sat/vbyte):
-                </label>
-                <input
-                  type="number"
-                  value={feeRate}
-                  onChange={(e) =>
-                    setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
-                  }
-                  disabled={isExtracting || isScanning}
-                  min="1"
-                  max="500"
-                  className="consolidator-number-input"
-                />
-                <p className="consolidator-hint">
-                  First version uses estimated fee; if you see “insufficient
-                  change”, lower fee rate or ensure there’s a fee UTXO.
+            <button
+              onClick={handleScan}
+              className="consolidator-btn consolidator-btn--secondary"
+              disabled={
+                !isWalletConnected ||
+                !isDestinationValid ||
+                isScanning ||
+                isExtracting
+              }
+            >
+              {isScanning ? 'Scanning...' : '🔎 Scan for inscription UTXOs'}
+            </button>
+
+            {selectableInscriptions.length > 0 && (
+              <div className="consolidator-preview-card">
+                <h4 className="consolidator-preview-title">
+                  Select inscriptions to extract
+                </h4>
+                <p className="consolidator-hint" style={{ marginTop: 0 }}>
+                  Singles are auto-selected after scan. Multi-inscription UTXOs
+                  require explicit selection; extracting one will move the
+                  others too.
                 </p>
-              </div>
 
+                <div className="consolidator-wallet-check-actions">
+                  <button
+                    className="consolidator-btn consolidator-btn--tiny"
+                    onClick={selectAllSingles}
+                    disabled={isExtracting || isScanning}
+                  >
+                    Select all singles
+                  </button>
+                  <button
+                    className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
+                    onClick={clearSelection}
+                    disabled={isExtracting || isScanning}
+                  >
+                    Clear selection
+                  </button>
+                  <span
+                    className="consolidator-hint"
+                    style={{ marginLeft: '8px' }}
+                  >
+                    Selected: {selectedInscriptionIds.size}
+                  </span>
+                </div>
+
+                <div
+                  className="consolidator-preview-wallets"
+                  style={{ maxHeight: 260 }}
+                >
+                  {selectableInscriptions.map((row, i) => {
+                    const ins = row.inscription;
+                    const id = ins.inscriptionId;
+                    const checked = selectedInscriptionIds.has(id);
+                    return (
+                      <label
+                        key={`${row.walletKey}:${row.txid}:${row.vout}:${id}:${i}`}
+                        className="consolidator-wallet-checkbox-row"
+                        style={{ padding: '6px 4px' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            toggleSelection(id, e.target.checked)
+                          }
+                          disabled={isExtracting || isScanning}
+                        />
+                        <span className="consolidator-wallet-label">
+                          {ins.inscriptionNumber != null
+                            ? `#${ins.inscriptionNumber}`
+                            : id.slice(0, 10)}
+                          {' — '}
+                          {row.address?.slice(0, 8)}...
+                          {row.address?.slice(-6)}
+                          {' — '}
+                          {row.txid.slice(0, 8)}...:{row.vout}
+                          {' — '}
+                          size {row.satoshi} sats
+                          {row.inscriptionsCount > 1 ? ' — MULTI' : ''}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="consolidator-action-row">
               <button
-                onClick={handleScan}
-                className="consolidator-btn consolidator-btn--secondary"
+                onClick={isExtracting ? handleStop : handleStartExtraction}
+                className={`consolidator-btn consolidator-btn--large ${
+                  isExtracting
+                    ? 'consolidator-btn--stop'
+                    : 'consolidator-btn--start'
+                }`}
                 disabled={
                   !isWalletConnected ||
                   !isDestinationValid ||
-                  isScanning ||
-                  isExtracting
+                  (!isExtracting && isScanning)
                 }
               >
-                {isScanning ? 'Scanning...' : '🔎 Scan for inscription UTXOs'}
+                {isExtracting ? '⏹ Stop Extraction' : '⚡ Start Extraction'}
               </button>
-
-              {selectableInscriptions.length > 0 && (
-                <div className="consolidator-preview-card">
-                  <h4 className="consolidator-preview-title">
-                    Select inscriptions to extract
-                  </h4>
-                  <p className="consolidator-hint" style={{ marginTop: 0 }}>
-                    Singles are auto-selected after scan. Multi-inscription
-                    UTXOs require explicit selection; extracting one will move
-                    the others too.
-                  </p>
-
-                  <div className="consolidator-wallet-check-actions">
-                    <button
-                      className="consolidator-btn consolidator-btn--tiny"
-                      onClick={selectAllSingles}
-                      disabled={isExtracting || isScanning}
-                    >
-                      Select all singles
-                    </button>
-                    <button
-                      className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                      onClick={clearSelection}
-                      disabled={isExtracting || isScanning}
-                    >
-                      Clear selection
-                    </button>
-                    <span
-                      className="consolidator-hint"
-                      style={{ marginLeft: '8px' }}
-                    >
-                      Selected: {selectedInscriptionIds.size}
-                    </span>
-                  </div>
-
-                  <div
-                    className="consolidator-preview-wallets"
-                    style={{ maxHeight: 260 }}
-                  >
-                    {selectableInscriptions.map((row, i) => {
-                      const ins = row.inscription;
-                      const id = ins.inscriptionId;
-                      const checked = selectedInscriptionIds.has(id);
-                      return (
-                        <label
-                          key={`${row.walletKey}:${row.txid}:${row.vout}:${id}:${i}`}
-                          className="consolidator-wallet-checkbox-row"
-                          style={{ padding: '6px 4px' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) =>
-                              toggleSelection(id, e.target.checked)
-                            }
-                            disabled={isExtracting || isScanning}
-                          />
-                          <span className="consolidator-wallet-label">
-                            {ins.inscriptionNumber != null
-                              ? `#${ins.inscriptionNumber}`
-                              : id.slice(0, 10)}
-                            {' — '}
-                            {row.address?.slice(0, 8)}...
-                            {row.address?.slice(-6)}
-                            {' — '}
-                            {row.txid.slice(0, 8)}...:{row.vout}
-                            {' — '}
-                            size {row.satoshi} sats
-                            {row.inscriptionsCount > 1 ? ' — MULTI' : ''}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="consolidator-action-row">
-                <button
-                  onClick={isExtracting ? handleStop : handleStartExtraction}
-                  className={`consolidator-btn consolidator-btn--large ${
-                    isExtracting
-                      ? 'consolidator-btn--stop'
-                      : 'consolidator-btn--start'
-                  }`}
-                  disabled={
-                    !isWalletConnected ||
-                    !isDestinationValid ||
-                    (!isExtracting && isScanning)
-                  }
-                >
-                  {isExtracting ? '⏹ Stop Extraction' : '⚡ Start Extraction'}
-                </button>
-              </div>
-            </div>
-
-            {/* Console */}
-            <div className="consolidator-console">
-              <div className="consolidator-console-header">
-                <h3>Console Output</h3>
-                {consoleLogs.length > 0 && (
-                  <button
-                    className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                    onClick={() => setConsoleLogs([])}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="consolidator-console-logs" ref={consoleRef}>
-                {consoleLogs.length === 0 ? (
-                  <p className="consolidator-console-empty">
-                    No logs yet. Scan and start extraction to see output here.
-                  </p>
-                ) : (
-                  consoleLogs.map((log, i) => (
-                    <div key={i} className="consolidator-console-log">
-                      <span className="consolidator-console-time">
-                        {log.timestamp}
-                      </span>
-                      <span className="consolidator-console-message">
-                        {log.message}
-                      </span>
-                      {log.link && (
-                        <a
-                          href={log.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="consolidator-console-link"
-                        >
-                          View tx
-                        </a>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
           </div>
-        </div>
+
+          {/* Console */}
+          <div className="consolidator-console">
+            <div className="consolidator-console-header">
+              <h3>Console Output</h3>
+              {consoleLogs.length > 0 && (
+                <button
+                  className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
+                  onClick={() => setConsoleLogs([])}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="consolidator-console-logs" ref={consoleRef}>
+              {consoleLogs.length === 0 ? (
+                <p className="consolidator-console-empty">
+                  No logs yet. Scan and start extraction to see output here.
+                </p>
+              ) : (
+                consoleLogs.map((log, i) => (
+                  <div key={i} className="consolidator-console-log">
+                    <span className="consolidator-console-time">
+                      {log.timestamp}
+                    </span>
+                    <span className="consolidator-console-message">
+                      {log.message}
+                    </span>
+                    {log.link && (
+                      <a
+                        href={log.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="consolidator-console-link"
+                      >
+                        View tx
+                      </a>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </WizardStep>
       </div>
     </div>
   );
