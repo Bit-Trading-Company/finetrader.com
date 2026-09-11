@@ -73,7 +73,10 @@ const MenuBar = ({ glEventHub, layout }) => {
     if (!layout) return;
 
     const items = layout.root.getItemsById(componentId);
-    if (items.length > 0) {
+    // Golden Layout 1.5.9 content items have no hide()/show(), so these
+    // toggles are not implemented yet (docs/KNOWN_ISSUES.md). Skip instead of
+    // throwing.
+    if (items.length > 0 && typeof items[0].hide === 'function') {
       const item = items[0];
       if (item.isHidden) {
         item.show();

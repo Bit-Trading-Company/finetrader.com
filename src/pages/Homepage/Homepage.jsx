@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import GoldenLayout from 'golden-layout';
 import { OrdConnectProvider } from '@ordzaar/ord-connect';
@@ -112,6 +112,9 @@ const createLayoutConfig = () => ({
 const Homepage = () => {
   const layoutRef = useRef(null);
   const goldenLayoutRef = useRef(null);
+  // State copy of the layout so MenuBar re-renders once it exists (the ref
+  // alone is still null when MenuBar first renders).
+  const [goldenLayout, setGoldenLayout] = useState(null);
 
   useEffect(() => {
     // Handle window resize
@@ -148,6 +151,7 @@ const Homepage = () => {
 
     // Store reference for cleanup
     goldenLayoutRef.current = layout;
+    setGoldenLayout(layout);
 
     // Add menu event listeners
     const handleMenuConnectWallet = () => {
@@ -202,15 +206,13 @@ const Homepage = () => {
         );
         goldenLayoutRef.current.destroy();
       }
+      setGoldenLayout(null);
     };
   }, []);
 
   return (
     <>
-      <MenuBar
-        glEventHub={goldenLayoutRef.current?.eventHub}
-        layout={goldenLayoutRef.current}
-      />
+      <MenuBar glEventHub={goldenLayout?.eventHub} layout={goldenLayout} />
       <div
         ref={layoutRef}
         id="golden-layout-container"
