@@ -18,19 +18,78 @@ const CORS_ALLOWED_HEADERS = [
   'x-wallet-provider',
 ].join(', ');
 
-// Any origin may call these routes (see docs/KNOWN_ISSUES.md).
-function setCors(res, methods) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+const headerValue = (req, name) => {
+  const value = req.headers?.[name];
+  return Array.isArray(value) ? value[0] : value;
+};
+
+/**
+ * Extra browser origins allowed to call the API, from ALLOWED_ORIGINS
+ * (comma-separated, e.g. "https://staging.example.com"). The site's own origin
+ * never needs to be listed.
+ */
+function extraAllowedOrigins() {
+  return (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+}
+
+/**
+ * Whether a request may use the API.
+ *
+ * Browsers attach an Origin header to cross-origin requests and to same-origin
+ * POSTs; the origin must then be this deployment's own host or be listed in
+ * ALLOWED_ORIGINS. Requests without an Origin are allowed (same-origin GETs,
+ * server-side callers) unless the browser marks them `Sec-Fetch-Site:
+ * cross-site` (e.g. an <img> or no-cors fetch from another website).
+ *
+ * This stops other websites from spending the API keys through their visitors'
+ * browsers. It cannot stop scripts that forge headers; rate-limit /api/* at the
+ * edge for that (see docs/KNOWN_ISSUES.md).
+ */
+function isOriginAllowed(req) {
+  const origin = headerValue(req, 'origin');
+  if (!origin) return headerValue(req, 'sec-fetch-site') !== 'cross-site';
+
+  let originHost;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false; // includes `Origin: null` (sandboxed frames, file://)
+  }
+  const requestHosts = [
+    headerValue(req, 'x-forwarded-host'),
+    headerValue(req, 'host'),
+  ]
+    .filter(Boolean)
+    .flatMap((value) => value.split(',').map((host) => host.trim()));
+  if (requestHosts.includes(originHost)) return true;
+  return extraAllowedOrigins().includes(origin.replace(/\/+$/, ''));
+}
+
+function setCors(req, res, methods) {
+  const origin = headerValue(req, 'origin');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', methods);
   res.setHeader('Access-Control-Allow-Headers', CORS_ALLOWED_HEADERS);
 }
 
 /**
- * Apply CORS headers and answer preflight requests.
- * @returns {boolean} true when the request was a preflight and has been answered
+ * Reject requests from other websites, apply CORS headers and answer
+ * preflight requests. Call first in every handler.
+ * @returns {boolean} true when the request has already been answered (403 for
+ *   a disallowed origin, or a preflight) and the handler should stop
  */
 function handlePreflight(req, res, methods = 'GET, POST, OPTIONS') {
-  setCors(res, methods);
+  if (!isOriginAllowed(req)) {
+    res.status(403).json({ error: 'Origin not allowed' });
+    return true;
+  }
+  setCors(req, res, methods);
   if (req.method !== 'OPTIONS') return false;
   res.status(204).end();
   return true;
@@ -183,6 +242,7 @@ function sendServerError(res, label, error, status = 500) {
 }
 
 module.exports = {
+  isOriginAllowed,
   setCors,
   handlePreflight,
   rejectUnlessMethod,

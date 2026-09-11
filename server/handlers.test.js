@@ -74,6 +74,19 @@ const lastFetch = () => {
 };
 
 describe('handleSatflow', () => {
+  it('rejects requests from other websites before calling Satflow', async () => {
+    const res = createResponse();
+    await handleSatflow(
+      request({
+        query: { op: 'item', inscriptionId: 'abci0' },
+        headers: { origin: 'https://evil.example', host: 'finetrader.com' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('rejects a missing op', async () => {
     const res = createResponse();
     await handleSatflow(request(), res);

@@ -30,13 +30,13 @@ npm run build
 
 Copy `.env.example` to `.env` and fill in the values:
 
-| Variable                 | Required | Description                                                                                      |
-| ------------------------ | -------- | ------------------------------------------------------------------------------------------------ |
-| `SATFLOW_API_KEY`        | Yes      | Satflow API key used by every `/api/satflow-*` route                                             |
-| `UNISAT_API_KEY`         | Yes      | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/) |
-| `REACT_APP_HIRO_API_KEY` | Optional | Hiro API key for the inscriptions panel. Embedded in the browser bundle, so treat it as public   |
+| Variable          | Required | Description                                                                                                                       |
+| ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `SATFLOW_API_KEY` | Yes      | Satflow API key used by every `/api/satflow-*` route                                                                              |
+| `UNISAT_API_KEY`  | Yes      | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/)                                  |
+| `ALLOWED_ORIGINS` | Optional | Extra browser origins (comma-separated) allowed to call `/api/*`. The site's own origin is always allowed; other websites get 403 |
 
-API keys are only read on the server (`server/`): from `.env` during development and from the Vercel project settings in production. Without them, upstream requests are unauthenticated and usually fail with 401/403/429.
+API keys are only read on the server (`server/`): from `.env` during development and from the Vercel project settings in production. Without them, upstream requests are unauthenticated and usually fail with 401/403/429. `/api/*` only answers requests from the site itself (or `ALLOWED_ORIGINS`), so other websites cannot use the keys through their visitors' browsers.
 
 ## Deployment (Vercel)
 
