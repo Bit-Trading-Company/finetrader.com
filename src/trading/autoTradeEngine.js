@@ -13,6 +13,7 @@
  */
 
 import { getMempoolTxUrl } from '../lib/mempoolProvider';
+import { getBuyerCandidates } from './buyerSelection';
 import { checkTransactionConfirmed, fetchWalletBalance } from './chain';
 import {
   TRADING_EXCHANGES,
@@ -696,12 +697,8 @@ const getFirstEligibleBuyerAddress = async (
 ) => {
   const itemPrice = item.listedPrice || 0;
   const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
-  const startIndex = (sellerWallet.index + 1) % wallets.length;
 
-  for (let i = 0; i < wallets.length - 1; i++) {
-    const currentIndex = (startIndex + i) % wallets.length;
-    if (currentIndex === sellerWallet.index) continue;
-    const buyerWallet = wallets[currentIndex];
+  for (const buyerWallet of getBuyerCandidates(wallets, sellerWallet)) {
     const balance = await fetchWalletBalance(buyerWallet.address, network);
     if (balance >= totalCost && buyerWallet?.address) {
       return String(buyerWallet.address).toLowerCase();
@@ -734,14 +731,10 @@ const tryPreparePurchaseForItem = async (
   let lastError = '';
   let hadAnyWithBalance = false;
 
-  const startIndex = (sellerWallet.index + 1) % wallets.length;
-  for (let i = 0; i < wallets.length - 1; i++) {
+  for (const buyerWallet of getBuyerCandidates(wallets, sellerWallet)) {
     if (typeof isStopRequested === 'function' && isStopRequested()) {
       return { success: false, error: 'Trading stopped by user' };
     }
-    const currentIndex = (startIndex + i) % wallets.length;
-    if (currentIndex === sellerWallet.index) continue;
-    const buyerWallet = wallets[currentIndex];
 
     const balance = await fetchWalletBalance(buyerWallet.address, network);
     if (balance < totalCost) continue;
