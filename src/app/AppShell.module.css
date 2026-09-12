@@ -1,0 +1,307 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--ds-sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--ds-surface-app);
+  color: var(--ds-text);
+}
+
+.collapsed {
+  grid-template-columns: var(--ds-sidebar-width-collapsed) minmax(0, 1fr);
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-4) var(--ds-space-3);
+  background: var(--ds-surface);
+  border-right: 1px solid var(--ds-border);
+  z-index: var(--ds-z-sidebar);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2);
+  color: var(--ds-text);
+  text-decoration: none;
+  min-width: 0;
+}
+
+.brandMark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-accent-quiet);
+  border: 1px solid var(--ds-accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--ds-font-display);
+  font-size: 18px;
+  color: var(--ds-accent-hover);
+}
+
+.brandText {
+  font-family: var(--ds-font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+  scrollbar-width: thin;
+}
+
+.groupTitle {
+  padding: 0 var(--ds-space-2);
+  margin-bottom: var(--ds-space-2);
+  font-size: var(--ds-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: 9px var(--ds-space-2);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  text-decoration: none;
+  font-size: var(--ds-text-md);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.link:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text);
+}
+
+.linkActive {
+  background: var(--ds-accent-quiet);
+  color: var(--ds-accent-hover);
+}
+
+.linkIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.linkLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebarFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-border-subtle);
+}
+
+.collapseButton {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  padding: 6px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.collapseButton:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text);
+}
+
+/* Collapsed rail */
+.collapsed .brandText,
+.collapsed .groupTitle,
+.collapsed .linkLabel {
+  display: none;
+}
+
+.collapsed .link {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.collapsed .sidebarFooter {
+  justify-content: center;
+}
+
+/* Main column */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--ds-z-sticky);
+  height: var(--ds-topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  padding: 0 var(--ds-space-6);
+  background: color-mix(in srgb, var(--ds-surface-app) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.topbarLeft,
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.pageName {
+  font-size: var(--ds-text-md);
+  font-weight: 600;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pageHint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.address {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+}
+
+.iconButton {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  padding: 7px;
+  cursor: pointer;
+  display: none;
+  place-items: center;
+}
+
+.iconButton:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text);
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--ds-content-max);
+  margin: 0 auto;
+  padding: var(--ds-space-8) var(--ds-space-6) var(--ds-space-16);
+  min-width: 0;
+}
+
+/* Mobile: sidebar becomes a drawer */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 6, 11, 0.6);
+  z-index: calc(var(--ds-z-sidebar) - 1);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .shell,
+  .collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(84vw, var(--ds-sidebar-width));
+    transform: translateX(-102%);
+    transition: transform var(--ds-duration-base) var(--ds-ease);
+    box-shadow: var(--ds-shadow-lg);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  /* The rail never applies on small screens; the drawer is always full width. */
+  .collapsed .brandText,
+  .collapsed .groupTitle,
+  .collapsed .linkLabel {
+    display: block;
+  }
+
+  .collapsed .link {
+    justify-content: flex-start;
+    padding: 9px var(--ds-space-2);
+  }
+
+  .iconButton {
+    display: grid;
+  }
+
+  .collapseButton {
+    display: none;
+  }
+
+  .topbar {
+    padding: 0 var(--ds-space-4);
+  }
+
+  .content {
+    padding: var(--ds-space-6) var(--ds-space-4) var(--ds-space-12);
+  }
+
+  .pageHint {
+    display: none;
+  }
+}

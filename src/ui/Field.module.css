@@ -1,0 +1,143 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  color: var(--ds-text-muted);
+}
+
+.required {
+  color: var(--ds-accent);
+  margin-left: 2px;
+}
+
+.hint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+}
+
+.error {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-danger);
+}
+
+/* Inputs */
+.control {
+  width: 100%;
+  background: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text);
+  font-family: inherit;
+  font-size: var(--ds-text-md);
+  padding: 9px 12px;
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.control::placeholder {
+  color: var(--ds-text-faint);
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--ds-border-strong);
+}
+
+.control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.invalid {
+  border-color: var(--ds-danger);
+}
+
+/* Numbers, addresses and txids stay monospaced. */
+.mono {
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 13px) calc(50% + 2px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+  cursor: pointer;
+}
+
+/* Checkbox and radio rows */
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-sunken);
+  cursor: pointer;
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.choice:hover {
+  border-color: var(--ds-border-strong);
+  background: var(--ds-surface-hover);
+}
+
+.choiceSelected {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent-quiet);
+}
+
+.choiceDisabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.choiceInput {
+  margin: 2px 0 0;
+  accent-color: var(--ds-accent);
+  flex-shrink: 0;
+}
+
+.choiceLabel {
+  font-size: var(--ds-text-md);
+  color: var(--ds-text);
+}
+
+.choiceHint {
+  margin-top: 2px;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.choiceGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.choiceGroupRow {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.choiceGroupRow .choice {
+  flex: 1 1 180px;
+}

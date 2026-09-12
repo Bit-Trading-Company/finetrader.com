@@ -14,6 +14,8 @@ import ErrorBoundary from './app/ErrorBoundary';
 // Global design tokens and fonts (used by every stylesheet).
 import './styles/tokens.css';
 import './styles/fonts.css';
+// Semantic tokens for the redesigned UI (src/ui primitives, .ds-root).
+import './styles/theme.css';
 
 // AGGRESSIVELY block MetaMask from interfering with Bitcoin app
 // This is a Bitcoin-only application and should not use Ethereum wallets

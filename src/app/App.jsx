@@ -8,6 +8,8 @@ import Splash from '../pages/Splash/Splash';
 import AutoTrade from '../pages/AutoTrade/AutoTrade';
 import WalletConsolidator from '../pages/WalletConsolidator/WalletConsolidator';
 import OrdinalExtractor from '../pages/OrdinalExtractor/OrdinalExtractor';
+import DesignSystem from '../pages/DesignSystem/DesignSystem';
+import AppShell from './AppShell';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { useEffect } from 'react';
@@ -43,6 +45,14 @@ function App() {
             <Route path="/consolidator" element={<WalletConsolidator />} />
             <Route path="/extractor" element={<OrdinalExtractor />} />
             <Route path="/satflow-stats" element={<SatflowStats />} />
+            {/*
+              Redesigned screens render inside the app shell (sidebar + top
+              bar). Pages move in here as they are rebuilt; the routes above
+              still serve the pre-redesign UI.
+            */}
+            <Route element={<AppShell />}>
+              <Route path="/design" element={<DesignSystem />} />
+            </Route>
           </Routes>
         </div>
       </ThemeProvider>
