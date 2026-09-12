@@ -26,3 +26,8 @@ yarn-error.log*
 
 /notes
 .ai-docs
+
+# Local tooling: browser-preview dev-server config and installed skills
+.claude/
+.agents/
+skills-lock.json
