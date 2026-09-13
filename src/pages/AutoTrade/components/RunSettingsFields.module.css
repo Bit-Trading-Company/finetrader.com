@@ -1,4 +1,4 @@
-.body {
+.fields {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-5);

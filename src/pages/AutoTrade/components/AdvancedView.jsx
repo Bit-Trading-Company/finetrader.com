@@ -24,6 +24,7 @@ import CreateWalletsPanel from './CreateWalletsPanel';
 import PendingPurchases from './PendingPurchases';
 import ProxyWalletTable from './ProxyWalletTable';
 import RunControls from './RunControls';
+import RunSettingsFields from './RunSettingsFields';
 import RunConsole from './RunConsole';
 import styles from './AdvancedView.module.css';
 
@@ -284,6 +285,21 @@ const AdvancedView = ({
                 onOpenBids={onOpenBids}
                 compact
               />
+
+              {/*
+                Inline rather than behind the Settings dialog: on the
+                dashboard these are part of what you are tuning, not a
+                one-off preference.
+              */}
+              <details className={styles.moreSettings}>
+                <summary className={styles.moreSummary}>Run settings</summary>
+                <div className={styles.moreBody}>
+                  <RunSettingsFields
+                    settings={settings}
+                    isTrading={isTrading}
+                  />
+                </div>
+              </details>
             </div>
           </Card>
         </aside>

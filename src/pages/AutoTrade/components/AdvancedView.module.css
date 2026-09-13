@@ -139,3 +139,46 @@
 .panelBody {
   padding: var(--ds-space-4);
 }
+
+.moreSettings {
+  border-top: 1px solid var(--ds-border-subtle);
+  padding-top: var(--ds-space-4);
+}
+
+.moreSummary {
+  cursor: pointer;
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  color: var(--ds-text-muted);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.moreSummary::-webkit-details-marker {
+  display: none;
+}
+
+/* A chevron that turns as the section opens. */
+.moreSummary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--ds-duration-fast) var(--ds-ease);
+}
+
+.moreSettings[open] .moreSummary::before {
+  transform: rotate(45deg);
+}
+
+.moreSummary:hover {
+  color: var(--ds-text);
+}
+
+.moreBody {
+  padding-top: var(--ds-space-4);
+}
