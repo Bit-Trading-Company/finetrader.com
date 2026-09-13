@@ -50,7 +50,26 @@ export const useAutoTradeWorkspace = () => {
 
   const { consoleLogs, addConsoleLog, clearConsole, consoleRef } =
     useTradingConsole();
-  const settings = useAutoTradeSettings({ wallets });
+  const baseSettings = useAutoTradeSettings();
+
+  /*
+   * The trading engine reads the wallet subset off `settings`, but the subset
+   * itself belongs to the session so it survives navigation. Merge it in
+   * under the keys the engine already expects rather than teaching the engine
+   * about the session.
+   */
+  const settings = useMemo(
+    () => ({
+      ...baseSettings,
+      useCustomWalletSubset: session.useCustomSubset,
+      selectedWalletIndices: session.activeIndices,
+      setUseCustomWalletSubset: (on) =>
+        on ? session.activateNone() : session.activateAll(),
+      setSelectedWalletIndices: (indices) =>
+        session.setActiveWalletIndices(indices),
+    }),
+    [baseSettings, session]
+  );
   const { isTrading, pendingPurchases, handleStartTrading } =
     useAutoTradeRunner({
       settings,

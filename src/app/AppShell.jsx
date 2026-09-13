@@ -12,8 +12,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { NAV_GROUPS, findNavItem } from './navigation';
 import { useWalletConnection } from '../features/wallet/useWalletConnection';
-import { shortenAddress } from '../lib/format';
-import { Badge, Button } from '../ui';
+import { useWalletSession } from '../features/wallet/WalletSession';
+import { useWalletManager } from '../features/wallet/WalletManagerContext';
+import FineTraderWalletsModal from '../features/wallet/FineTraderWalletsModal';
+import HeaderWalletMenu from './HeaderWalletMenu';
+import SidebarWalletStatus from './SidebarWalletStatus';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -36,7 +39,9 @@ const AppShell = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { address, isWalletConnected } = useWalletConnection();
+  const connection = useWalletConnection();
+  const session = useWalletSession();
+  const { isOpen, openWalletManager, closeWalletManager } = useWalletManager();
   const current = findNavItem(location.pathname);
 
   // Close the mobile drawer whenever the route changes.
@@ -82,6 +87,8 @@ const AppShell = () => {
           </span>
           <span className={styles.brandText}>Fine Trader</span>
         </Link>
+
+        <SidebarWalletStatus session={session} onOpen={openWalletManager} />
 
         <nav className={styles.nav}>
           {NAV_GROUPS.map((group) => (
@@ -168,17 +175,11 @@ const AppShell = () => {
           </div>
 
           <div className={styles.topbarRight}>
-            {isWalletConnected ? (
-              <Badge tone="success" dot>
-                <span className={styles.address}>
-                  {shortenAddress(address?.ordinals || '')}
-                </span>
-              </Badge>
-            ) : (
-              <Button as={Link} to="/auto-trade" size="sm" variant="secondary">
-                Connect wallet
-              </Button>
-            )}
+            <HeaderWalletMenu
+              session={session}
+              connection={connection}
+              onOpenWallets={openWalletManager}
+            />
           </div>
         </header>
 
@@ -186,6 +187,9 @@ const AppShell = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Mounted once here so every page manages the same wallets. */}
+      <FineTraderWalletsModal open={isOpen} onClose={closeWalletManager} />
     </div>
   );
 };

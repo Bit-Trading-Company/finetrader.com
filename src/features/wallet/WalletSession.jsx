@@ -59,6 +59,9 @@ export const MAX_WALLET_COUNT = 100;
 /**
  * @typedef {object} WalletSession
  * @property {ProxyWallet[]} wallets every derived wallet, ordered by index
+ * @property {ProxyWallet[]} activeWallets the subset that trades
+ * @property {Set<number>} activeIndices positions of the active wallets
+ * @property {boolean} useCustomSubset false when every wallet trades
  * @property {ProxyWallet|null} selectedWallet
  * @property {boolean} hasWallets
  * @property {boolean} isGenerating a signature or derivation is in flight
@@ -82,6 +85,17 @@ export const WalletSessionProvider = ({ children }) => {
 
   const [wallets, setWallets] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
+
+  /*
+   * Which wallets take part in a run. This lives with the wallets rather than
+   * with a page's settings so the choice survives navigation — the user picks
+   * their wallets once, in the wallet manager, and every page honours it.
+   *
+   * Positions, not `wallet.index`: `selectActiveWallets` filters by position
+   * and that is what the trading engine consumes.
+   */
+  const [useCustomSubset, setUseCustomSubset] = useState(false);
+  const [activeIndices, setActiveIndices] = useState(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -94,9 +108,48 @@ export const WalletSessionProvider = ({ children }) => {
   const clearWallets = useCallback(() => {
     setWallets([]);
     setSelectedIndex(null);
+    setUseCustomSubset(false);
+    setActiveIndices(new Set());
     setError(null);
     clearSelectedProxyWallet();
   }, []);
+
+  /** Every wallet trades, including any derived later. */
+  const activateAll = useCallback(() => {
+    setUseCustomSubset(false);
+    setActiveIndices(new Set());
+  }, []);
+
+  /** No wallet trades — the counterpart to activateAll. */
+  const activateNone = useCallback(() => {
+    setUseCustomSubset(true);
+    setActiveIndices(new Set());
+  }, []);
+
+  /** Trade from exactly these positions. */
+  const setActiveWalletIndices = useCallback((indices) => {
+    setUseCustomSubset(true);
+    setActiveIndices(new Set(indices));
+  }, []);
+
+  /**
+   * Flip one wallet in or out. Turns on subset mode on the first tick, so the
+   * user does not have to find a separate switch before choosing.
+   */
+  const toggleWallet = useCallback(
+    (position, walletCount) => {
+      setActiveIndices((previous) => {
+        const next = useCustomSubset
+          ? new Set(previous)
+          : new Set(Array.from({ length: walletCount }, (_, i) => i));
+        if (next.has(position)) next.delete(position);
+        else next.add(position);
+        return next;
+      });
+      setUseCustomSubset(true);
+    },
+    [useCustomSubset]
+  );
 
   /*
    * Derived keys belong to the address that signed for them. When the wallet
@@ -181,9 +234,31 @@ export const WalletSessionProvider = ({ children }) => {
     [wallets, selectedIndex]
   );
 
+  const activeWallets = useMemo(
+    () =>
+      useCustomSubset
+        ? wallets.filter((_, position) => activeIndices.has(position))
+        : wallets,
+    [wallets, useCustomSubset, activeIndices]
+  );
+
+  /** True when the wallet at `position` takes part in a run. */
+  const isWalletActive = useCallback(
+    (position) => !useCustomSubset || activeIndices.has(position),
+    [useCustomSubset, activeIndices]
+  );
+
   const value = useMemo(
     () => ({
       wallets,
+      activeWallets,
+      activeIndices,
+      useCustomSubset,
+      isWalletActive,
+      activateAll,
+      activateNone,
+      setActiveWalletIndices,
+      toggleWallet,
       selectedWallet,
       hasWallets: wallets.length > 0,
       isGenerating,
@@ -197,6 +272,14 @@ export const WalletSessionProvider = ({ children }) => {
     }),
     [
       wallets,
+      activeWallets,
+      activeIndices,
+      useCustomSubset,
+      isWalletActive,
+      activateAll,
+      activateNone,
+      setActiveWalletIndices,
+      toggleWallet,
       selectedWallet,
       isGenerating,
       error,

@@ -182,3 +182,35 @@
 .moreBody {
   padding-top: var(--ds-space-4);
 }
+
+/* Wallet bar: the dashboard's link into the Fine Trader wallets manager. */
+.walletBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.walletBarText {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.walletBarActions {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+.panelTitle {
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  padding-bottom: var(--ds-space-3);
+}

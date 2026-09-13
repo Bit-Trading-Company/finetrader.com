@@ -1,0 +1,29 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.explainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  background: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-md);
+  line-height: 1.55;
+}
+
+.generate {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.count {
+  width: 160px;
+}

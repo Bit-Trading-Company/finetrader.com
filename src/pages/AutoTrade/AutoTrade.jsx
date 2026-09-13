@@ -14,6 +14,7 @@ import Dispatch from '../../features/wallet/Dispatch';
 import CollectionOfferModal from '../../features/marketplace/CollectionOfferModal';
 import { useEventHub } from '../../lib/eventHub';
 import { useWalletSessionBridge } from '../../features/wallet/WalletSession';
+import { useWalletManager } from '../../features/wallet/WalletManagerContext';
 import { Alert, Button, PageHeader, Tabs } from '../../ui';
 import AdvancedView from './components/AdvancedView';
 import SimpleFlow from './components/SimpleFlow';
@@ -71,6 +72,7 @@ const AutoTrade = () => {
     isTrading,
   } = workspace;
 
+  const { openWalletManager } = useWalletManager();
   const [showDispatch, setShowDispatch] = useState(false);
   const [showBids, setShowBids] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -122,6 +124,7 @@ const AutoTrade = () => {
           workspace={workspace}
           onOpenDispatch={() => setShowDispatch(true)}
           onOpenBids={openBids}
+          onOpenWallets={openWalletManager}
           startButton={startButton}
         />
       ) : (
@@ -129,6 +132,7 @@ const AutoTrade = () => {
           workspace={workspace}
           onOpenDispatch={() => setShowDispatch(true)}
           onOpenBids={openBids}
+          onOpenWallets={openWalletManager}
           startButton={startButton}
         />
       )}

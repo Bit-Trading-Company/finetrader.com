@@ -5,24 +5,12 @@
  * who already knows the flow and wants to watch wallets, adjust the strategy
  * and read the log without stepping through anything.
  */
-import React, { useState } from 'react';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  StatGrid,
-  StatTile,
-  Tabs,
-} from '../../../ui';
+import React from 'react';
+import { Alert, Badge, Button, Card, StatGrid, StatTile } from '../../../ui';
 import { formatCompactNumber, formatSatsAsBtc } from '../../../lib/format';
 import { getCollectionSlug } from '../../../features/marketplace/collectionsApi';
 import CollectionPicker from './CollectionPicker';
-import ConnectWalletPanel from './ConnectWalletPanel';
-import CreateWalletsPanel from './CreateWalletsPanel';
 import PendingPurchases from './PendingPurchases';
-import ProxyWalletTable from './ProxyWalletTable';
 import RunControls from './RunControls';
 import RunSettingsFields from './RunSettingsFields';
 import RunConsole from './RunConsole';
@@ -98,6 +86,7 @@ const AdvancedView = ({
   workspace,
   onOpenDispatch,
   onOpenBids,
+  onOpenWallets,
   startButton,
 }) => {
   const {
@@ -118,52 +107,17 @@ const AdvancedView = ({
     readiness,
   } = workspace;
 
-  const [panel, setPanel] = useState('wallets');
-
-  /*
-   * The dashboard renders whether or not wallets exist. Gating the whole view
-   * behind them meant you could not look at collections, set a strategy or
-   * even see what the dashboard was for until after signing — the empty state
-   * belongs inside the wallets panel, not in front of everything.
-   */
-  const walletsPanel = readiness.hasWallets ? (
-    <ProxyWalletTable
-      wallets={wallets}
-      balances={balances.balances}
-      isLoadingBalances={balances.isLoading}
-      settings={settings}
-      session={session}
-      network={network}
-      isTrading={isTrading}
-    />
-  ) : (
-    <EmptyState
-      title={readiness.connected ? 'No proxy wallets yet' : 'Connect a wallet'}
-      action={null}
-    >
-      <p className={styles.emptyCopy}>
-        {readiness.connected
-          ? 'Derive a set and every wallet, balance and UTXO count shows up here.'
-          : 'Connect the wallet that will fund your proxy wallets to begin.'}
-      </p>
-      {/* Restores the document flow inside EmptyState's centred text. */}
-      <div className={styles.emptyForm}>
-        {readiness.connected ? (
-          <CreateWalletsPanel session={session} />
-        ) : (
-          <ConnectWalletPanel />
-        )}
-      </div>
-    </EmptyState>
-  );
-
   return (
     <div className={styles.layout}>
       <StatGrid>
         <StatTile
-          label="Proxy wallets"
+          label="Fine Trader wallets"
           value={wallets.length}
-          hint={`${balances.totals.funded} funded`}
+          hint={
+            wallets.length
+              ? `${session.activeWallets.length} trading · ${balances.totals.funded} funded`
+              : 'None yet'
+          }
         />
         <StatTile
           label="Total balance"
@@ -197,65 +151,45 @@ const AdvancedView = ({
 
       {balances.error && <Alert tone="warning">{balances.error}</Alert>}
 
+      <div className={styles.walletBar}>
+        <span className={styles.walletBarText}>
+          {readiness.hasWallets
+            ? `${wallets.length} wallets · ${formatSatsAsBtc(balances.totals.confirmed)} BTC across them`
+            : 'No Fine Trader wallets yet — the auto-trader trades from these.'}
+        </span>
+        <span className={styles.walletBarActions}>
+          <Button variant="secondary" size="sm" onClick={onOpenWallets}>
+            {readiness.hasWallets ? 'Manage wallets' : 'Generate wallets'}
+          </Button>
+          {readiness.hasWallets && (
+            <Button variant="ghost" size="sm" onClick={onOpenDispatch}>
+              Fund wallets
+            </Button>
+          )}
+        </span>
+      </div>
+
       <div className={styles.columns}>
         <div className={styles.main}>
-          {/*
-            The tab strip is the panel's own header rather than the Card's
-            title, which is a heading and renders in the display face.
-          */}
           <Card padding="none">
             <div className={styles.panelHeader}>
-              <Tabs
-                items={[
-                  { id: 'wallets', label: 'Wallets' },
-                  { id: 'collection', label: 'Collection' },
-                ]}
-                value={panel}
-                onChange={setPanel}
-                ariaLabel="Dashboard panels"
-              />
-
-              {panel === 'wallets' && (
-                <div className={styles.walletActions}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={onOpenDispatch}
-                    disabled={!readiness.hasWallets}
-                  >
-                    Fund wallets
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={balances.refresh}
-                    loading={balances.isLoading}
-                    disabled={!readiness.hasWallets}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-              )}
+              <span className={styles.panelTitle}>Collections</span>
             </div>
 
             <div className={styles.panelBody}>
-              {panel === 'wallets' ? (
-                walletsPanel
-              ) : (
-                <div className={styles.collectionPanel}>
-                  {selectedCollection && (
-                    <CollectionSummary
-                      collection={selectedCollection}
-                      floorPriceSats={floorPriceSats}
-                    />
-                  )}
-                  <CollectionPicker
-                    selected={selectedCollection}
-                    onSelect={selectCollection}
-                    variant="table"
+              <div className={styles.collectionPanel}>
+                {selectedCollection && (
+                  <CollectionSummary
+                    collection={selectedCollection}
+                    floorPriceSats={floorPriceSats}
                   />
-                </div>
-              )}
+                )}
+                <CollectionPicker
+                  selected={selectedCollection}
+                  onSelect={selectCollection}
+                  variant="table"
+                />
+              </div>
             </div>
           </Card>
 

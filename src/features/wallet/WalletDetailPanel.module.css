@@ -1,14 +1,20 @@
-.body {
+.panel {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-5);
 }
 
-.badges {
+.head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--ds-space-3);
+}
+
+.title {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-sm);
+  color: var(--ds-text);
 }
 
 .explorer {
@@ -35,4 +41,11 @@
   font-family: var(--ds-font-display);
   font-size: var(--ds-text-xl);
   color: var(--ds-text);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
 }

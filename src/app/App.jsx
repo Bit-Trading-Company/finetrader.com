@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 
 import { BitprintProvider } from '../features/wallet/bitprint.tsx';
 import { WalletSessionProvider } from '../features/wallet/WalletSession';
+import { WalletManagerProvider } from '../features/wallet/WalletManagerContext';
 
 function App() {
   const location = useLocation();
@@ -32,32 +33,34 @@ function App() {
   return (
     <BitprintProvider>
       <WalletSessionProvider>
-        <ThemeProvider>
-          <div
-            className={
-              isDashboard || isAnalytics ? '' : 'bg-gray overflow-x-clip'
-            }
-          >
-            <Routes>
-              <Route path="/" element={<Splash />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/home" element={<Homepage />} />
-              <Route path="/consolidator" element={<WalletConsolidator />} />
-              <Route path="/extractor" element={<OrdinalExtractor />} />
-              <Route path="/satflow-stats" element={<SatflowStats />} />
-              {/*
+        <WalletManagerProvider>
+          <ThemeProvider>
+            <div
+              className={
+                isDashboard || isAnalytics ? '' : 'bg-gray overflow-x-clip'
+              }
+            >
+              <Routes>
+                <Route path="/" element={<Splash />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/home" element={<Homepage />} />
+                <Route path="/consolidator" element={<WalletConsolidator />} />
+                <Route path="/extractor" element={<OrdinalExtractor />} />
+                <Route path="/satflow-stats" element={<SatflowStats />} />
+                {/*
                 Redesigned screens render inside the app shell (sidebar + top
                 bar). Pages move in here as they are rebuilt; the routes above
                 still serve the pre-redesign UI.
               */}
-              <Route element={<AppShell />}>
-                <Route path="/auto-trade" element={<AutoTrade />} />
-                <Route path="/design" element={<DesignSystem />} />
-              </Route>
-            </Routes>
-          </div>
-        </ThemeProvider>
+                <Route element={<AppShell />}>
+                  <Route path="/auto-trade" element={<AutoTrade />} />
+                  <Route path="/design" element={<DesignSystem />} />
+                </Route>
+              </Routes>
+            </div>
+          </ThemeProvider>
+        </WalletManagerProvider>
       </WalletSessionProvider>
     </BitprintProvider>
   );

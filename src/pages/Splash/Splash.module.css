@@ -12,6 +12,10 @@
 .splash {
   --px: 0;
   --py: 0;
+  /* Page gutter, reused by the frame's height and the cast's overhang. */
+  --pad: clamp(8px, 1.6vw, 20px);
+  /* Bottom strip of the hand-drawn frame; the cast bleeds through it. */
+  --frame-bottom: 28px;
 
   min-height: 100vh;
   min-height: 100dvh;
@@ -22,16 +26,16 @@
    * Clipping vertically too would hide the copy instead of letting it scroll
    * on very short windows.
    */
-  overflow-x: clip;
-  padding: clamp(8px, 1.6vw, 20px);
+  overflow: clip;
+  padding: var(--pad);
   box-sizing: border-box;
 }
 
 /* The hand-drawn frame from the original splash, kept as the outer edge. */
 .frame {
   height: 100%;
-  min-height: calc(100vh - clamp(16px, 3.2vw, 40px));
-  min-height: calc(100dvh - clamp(16px, 3.2vw, 40px));
+  min-height: calc(100vh - var(--pad) * 2);
+  min-height: calc(100dvh - var(--pad) * 2);
   border-image: url('../../assets/images/png/fine-trader-1.png') 50 56 55 64
     fill / 22px 20px 28px 28px;
   box-sizing: border-box;
@@ -45,19 +49,18 @@
   grid-template-rows: 1fr auto;
   align-items: center;
   /*
-   * Clips the decoration that deliberately sits outside the frame: the glow
-   * hangs below the bottom edge, and the zoomed cast runs past both sides.
-   * The grid rows still grow with their content, so the copy is never hidden
-   * by this — it makes the stage taller instead.
+   * Only the sides are clipped: the zoomed cast runs past both of them, but
+   * it must be free to hang below so the characters reach the bottom of the
+   * viewport rather than stopping at the frame.
    */
-  overflow: clip;
+  overflow-x: clip;
 }
 
 /* Warm pool of light behind the cast, so they are not floating on flat black. */
 .glow {
   position: absolute;
   left: 50%;
-  bottom: -18%;
+  bottom: 0;
   width: min(1100px, 120%);
   aspect-ratio: 1.6;
   transform: translate(calc(-50% + var(--px) * 18px), calc(var(--py) * 10px));
@@ -151,8 +154,12 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  /* Nudge the artwork past the frame's bottom edge so the suits bleed off. */
-  margin-bottom: -2px;
+  /*
+   * Pull the artwork down through the frame's bottom strip and the page
+   * gutter, so the characters stand on the bottom edge of the viewport with
+   * no dark band beneath them. `.splash` clips whatever runs past.
+   */
+  margin-bottom: calc(-1 * (var(--pad) + var(--frame-bottom)));
 }
 
 .cast {
@@ -213,6 +220,10 @@
 }
 
 @media (max-width: 560px) {
+  .splash {
+    --frame-bottom: 20px;
+  }
+
   .frame {
     border-image-width: 16px 14px 20px 20px;
   }

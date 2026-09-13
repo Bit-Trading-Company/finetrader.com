@@ -11,6 +11,7 @@ export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as CopyField } from './CopyField';
 export { default as Modal } from './Modal';
+export { default as InfoTip } from './Tooltip';
 export { default as Tabs } from './Tabs';
 export { default as Table } from './Table';
 export {

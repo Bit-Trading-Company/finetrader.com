@@ -10,7 +10,6 @@ import React, { useState } from 'react';
 import { Badge, Button, Card } from '../../../ui';
 import { formatSatsAsBtc } from '../../../lib/format';
 import ConnectWalletPanel from './ConnectWalletPanel';
-import CreateWalletsPanel from './CreateWalletsPanel';
 import CollectionPicker from './CollectionPicker';
 import RunControls from './RunControls';
 import RunConsole from './RunConsole';
@@ -42,7 +41,13 @@ const Step = ({ number, title, summary, done, open, onToggle, children }) => (
   </li>
 );
 
-const SimpleFlow = ({ workspace, onOpenDispatch, onOpenBids, startButton }) => {
+const SimpleFlow = ({
+  workspace,
+  onOpenDispatch,
+  onOpenBids,
+  onOpenWallets,
+  startButton,
+}) => {
   const {
     session,
     wallets,
@@ -95,7 +100,27 @@ const SimpleFlow = ({ workspace, onOpenDispatch, onOpenBids, startButton }) => {
         open={current === 2}
         onToggle={() => toggle(2)}
       >
-        <CreateWalletsPanel session={session} />
+        <div className={styles.fund}>
+          <p className={styles.copy}>
+            Fine Trader wallets are derived from one signature by your connected
+            wallet. The auto-trader trades from them, so it can sign each trade
+            itself instead of asking you every time.
+          </p>
+          <div className={styles.fundRow}>
+            <Button
+              onClick={onOpenWallets}
+              disabled={!session.isWalletConnected}
+            >
+              {wallets.length > 0 ? 'Manage wallets' : 'Generate wallets'}
+            </Button>
+            {wallets.length > 0 && (
+              <Badge tone="success">
+                {wallets.length} derived · {session.activeWallets.length}{' '}
+                trading
+              </Badge>
+            )}
+          </div>
+        </div>
       </Step>
 
       <Step

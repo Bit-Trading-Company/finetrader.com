@@ -1,8 +1,10 @@
 /**
  * AutoTrade settings: trading mode and exchange, timer, prices and amounts,
- * fees, prep delay, wallet subset / randomizer and the mempool provider.
+ * fees, prep delay, wallet randomizer and the mempool provider.
  *
- * @param {{ wallets: object[] }} params
+ * Which wallets take part is NOT here — that lives in the wallet session, so
+ * the choice holds across pages. `useAutoTradeWorkspace` merges it in under
+ * the keys the trading engine expects.
  */
 import { useState, useMemo, useEffect } from 'react';
 import {
@@ -13,7 +15,7 @@ import {
 import { TRADING_EXCHANGES } from '../../../trading/exchanges';
 import { FINE_TRADING_USE_FEES_KEY } from '../constants';
 
-export const useAutoTradeSettings = ({ wallets }) => {
+export const useAutoTradeSettings = () => {
   // Step 5: Auto Trading
   const [tradingMode, setTradingMode] = useState('auto-buy-sell'); // Trading mode
   const [tradingExchange, setTradingExchange] = useState(
@@ -40,8 +42,6 @@ export const useAutoTradeSettings = ({ wallets }) => {
   const [mempoolProvider, setMempoolProviderState] = useState(
     getMempoolApiProvider()
   );
-  const [useCustomWalletSubset, setUseCustomWalletSubset] = useState(false);
-  const [selectedWalletIndices, setSelectedWalletIndices] = useState(new Set());
   const [walletRandomizer, setWalletRandomizer] = useState(false);
   const [useFees, setUseFees] = useState(() => {
     try {
@@ -59,24 +59,6 @@ export const useAutoTradeSettings = ({ wallets }) => {
   const [buyXEachAmount, setBuyXEachAmount] = useState(1); // Floor items to buy per wallet (buy-x-each mode)
   const [useCustomSellPrice, setUseCustomSellPrice] = useState(false); // Use custom price for sell-x-each mode
   const [customSellPrice, setCustomSellPrice] = useState(0); // Custom sell price in BTC
-
-  // Update selected wallet indices when wallets change
-  useEffect(() => {
-    if (wallets.length > 0 && !useCustomWalletSubset) {
-      // If custom subset is disabled, ensure all wallets are selected
-      const allIndices = new Set(wallets.map((_, index) => index));
-      setSelectedWalletIndices((prev) => {
-        // Only update if the sets don't match
-        if (
-          prev.size !== allIndices.size ||
-          !Array.from(allIndices).every((i) => prev.has(i))
-        ) {
-          return allIndices;
-        }
-        return prev; // Return previous value to avoid unnecessary updates
-      });
-    }
-  }, [wallets, useCustomWalletSubset]);
 
   // Sync mempool provider state from localStorage on mount
   useEffect(() => {
@@ -147,10 +129,6 @@ export const useAutoTradeSettings = ({ wallets }) => {
     upperTradePrice,
     setUpperTradePrice,
     mempoolProvider,
-    useCustomWalletSubset,
-    setUseCustomWalletSubset,
-    selectedWalletIndices,
-    setSelectedWalletIndices,
     walletRandomizer,
     setWalletRandomizer,
     useFees,
