@@ -1,0 +1,315 @@
+/*
+ * Splash screen.
+ *
+ * Layout is one full-height grid: the copy takes the free space at the top,
+ * the cast is pinned to the bottom row. The artwork's own transparent upper
+ * half is what lets the two overlap gracefully as the viewport shrinks.
+ *
+ * --px / --py are written by the pointer-parallax effect in Splash.jsx and
+ * range from -1 to 1; they are 0 until the pointer moves.
+ */
+
+.splash {
+  --px: 0;
+  --py: 0;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ds-surface-app);
+  color: var(--ds-text);
+  /*
+   * Only the horizontal axis is clipped (the glow is wider than the stage).
+   * Clipping vertically too would hide the copy instead of letting it scroll
+   * on very short windows.
+   */
+  overflow-x: clip;
+  padding: clamp(8px, 1.6vw, 20px);
+  box-sizing: border-box;
+}
+
+/* The hand-drawn frame from the original splash, kept as the outer edge. */
+.frame {
+  height: 100%;
+  min-height: calc(100vh - clamp(16px, 3.2vw, 40px));
+  min-height: calc(100dvh - clamp(16px, 3.2vw, 40px));
+  border-image: url('../../assets/images/png/fine-trader-1.png') 50 56 55 64
+    fill / 22px 20px 28px 28px;
+  box-sizing: border-box;
+}
+
+.stage {
+  position: relative;
+  height: 100%;
+  min-height: inherit;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  /*
+   * Clips the decoration that deliberately sits outside the frame: the glow
+   * hangs below the bottom edge, and the zoomed cast runs past both sides.
+   * The grid rows still grow with their content, so the copy is never hidden
+   * by this — it makes the stage taller instead.
+   */
+  overflow: clip;
+}
+
+/* Warm pool of light behind the cast, so they are not floating on flat black. */
+.glow {
+  position: absolute;
+  left: 50%;
+  bottom: -18%;
+  width: min(1100px, 120%);
+  aspect-ratio: 1.6;
+  transform: translate(calc(-50% + var(--px) * 18px), calc(var(--py) * 10px));
+  background: radial-gradient(
+    ellipse at center,
+    rgba(237, 137, 54, 0.16),
+    rgba(237, 137, 54, 0.05) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* Copy ------------------------------------------------------------------- */
+
+.copy {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 46rem;
+  margin: 0 auto;
+  /*
+   * The grid row already centres this block, so it needs only enough top
+   * padding to keep the eyebrow off the frame. Anything more competes with
+   * the cast for the viewport and pushes the page into a short scroll.
+   */
+  padding: clamp(8px, 2vh, 24px) clamp(16px, 5vw, 48px) 0;
+  transform: translate(calc(var(--px) * -5px), calc(var(--py) * -3px));
+}
+
+.eyebrow {
+  margin: 0 0 clamp(10px, 1.6vh, 18px);
+  font-size: var(--ds-text-sm);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  animation: rise var(--ds-duration-slow) var(--ds-ease) both;
+  animation-delay: 80ms;
+}
+
+.title {
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--ds-accent);
+  text-wrap: balance;
+  animation: rise var(--ds-duration-slow) var(--ds-ease) both;
+  animation-delay: 160ms;
+}
+
+.dots {
+  color: var(--ds-accent-hover);
+}
+
+/* Sits under the whole heading; the stroke draws itself on mount. */
+.underline {
+  display: block;
+  width: 100%;
+  height: clamp(8px, 1.4vw, 14px);
+  margin-top: 0.15em;
+  color: var(--ds-accent-hover);
+  opacity: 0.85;
+}
+
+.lede {
+  max-width: 34rem;
+  margin: clamp(14px, 2.4vh, 24px) auto 0;
+  font-size: clamp(0.9375rem, 1.4vw, 1.125rem);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-muted);
+  text-wrap: pretty;
+  animation: rise var(--ds-duration-slow) var(--ds-ease) both;
+  animation-delay: 260ms;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 2vw, 20px);
+  margin-top: clamp(20px, 3.2vh, 36px);
+  animation: rise var(--ds-duration-slow) var(--ds-ease) both;
+  animation-delay: 360ms;
+}
+
+.secondary {
+  color: var(--ds-text-muted);
+  text-decoration: none;
+  font-size: var(--ds-text-lg);
+  padding: 6px 4px;
+  border-bottom: 1px solid transparent;
+  transition:
+    color var(--ds-duration-fast) var(--ds-ease),
+    border-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.secondary:hover {
+  color: var(--ds-text);
+  border-bottom-color: var(--ds-border-strong);
+}
+
+/* Cast ------------------------------------------------------------------- */
+
+.castWrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  /* Nudge the artwork past the frame's bottom edge so the suits bleed off. */
+  margin-bottom: -2px;
+}
+
+.cast {
+  width: 100%;
+  /* Never shrink to fit: on small screens the image is wider than the stage. */
+  flex-shrink: 0;
+  /*
+   * The characters live in the bottom ~45% of a 4:3 image. `cover` with a
+   * bottom anchor crops the empty top on wide screens and crops the outer
+   * shoulders on narrow ones, keeping the faces a usable size throughout.
+   */
+  height: clamp(230px, 52vh, 620px);
+  object-fit: cover;
+  object-position: center bottom;
+  user-select: none;
+  transform: translate(calc(var(--px) * 10px), calc(var(--py) * 5px));
+  animation:
+    rise 520ms var(--ds-ease) both,
+    float 9s ease-in-out 900ms infinite;
+  animation-delay: 220ms, 900ms;
+}
+
+/* Motion ----------------------------------------------------------------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -8px;
+  }
+}
+
+/*
+ * The rise keyframes animate `transform`, which would otherwise cancel the
+ * parallax translate on the cast. Once the entrance has run, the parallax
+ * takes over; `float` uses the independent `translate` property so the two
+ * compose instead of fighting.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow,
+  .title,
+  .lede,
+  .actions,
+  .cast {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .frame {
+    border-image-width: 16px 14px 20px 20px;
+  }
+
+  /*
+   * On a narrow screen, sizing the band by height leaves a tall stripe of the
+   * artwork's transparent upper half between the copy and the faces. Making
+   * the image wider than the viewport instead lets its width drive the
+   * `cover` scale: the faces get bigger, the band can be short enough to hold
+   * little but the characters, and the only cost is that the outer two lose a
+   * shoulder off each side.
+   */
+  .cast {
+    width: 175%;
+    height: clamp(210px, 32vh, 320px);
+  }
+
+  .copy {
+    padding-top: clamp(16px, 2.5vh, 32px);
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: var(--ds-space-3);
+  }
+
+  .actions > :first-child {
+    width: 100%;
+    max-width: 20rem;
+  }
+}
+
+/*
+ * Short viewports — a laptop in a half-height window, or a small phone. The
+ * copy is what overflows here, so the display type and the rhythm between
+ * blocks both come down a step. This block is last so it also wins over the
+ * narrow-screen band height above, which a small phone matches as well.
+ */
+@media (max-height: 620px) {
+  .title {
+    font-size: clamp(1.75rem, 4.6vw, 2.75rem);
+  }
+
+  .eyebrow {
+    margin-bottom: var(--ds-space-2);
+    font-size: var(--ds-text-xs);
+  }
+
+  .lede {
+    margin-top: var(--ds-space-3);
+    font-size: 0.9375rem;
+  }
+
+  .actions {
+    margin-top: var(--ds-space-4);
+  }
+
+  .cast {
+    height: clamp(150px, 34vh, 260px);
+  }
+
+  .copy {
+    padding-top: var(--ds-space-2);
+  }
+}
+
+/*
+ * Short *and* wide — a half-height desktop window. Here `cover` would scale
+ * the artwork from the viewport width and crop the tops of the heads off. The
+ * characters occupy roughly a 2732:921 slice, so holding the image to about
+ * three times the band's height keeps all three of them whole.
+ */
+@media (max-height: 620px) and (min-width: 561px) {
+  .cast {
+    width: min(100%, 96vh);
+  }
+}
