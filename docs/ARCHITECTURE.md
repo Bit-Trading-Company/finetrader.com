@@ -46,16 +46,21 @@ sources are called from the browser directly.
 
 ## Routes
 
-| Path             | Page                 | Notes                                                 |
-| ---------------- | -------------------- | ----------------------------------------------------- |
-| `/`              | `Splash`             | Landing screen                                        |
-| `/auto-trade`    | `AutoTrade`          | Main product: 5-step wizard ending in the auto-trader |
-| `/dashboard`     | `Dashboard`          | Wallets, collections, manual buy/sell                 |
-| `/analytics`     | `Analytics`          | Wallet and trading analytics                          |
-| `/consolidator`  | `WalletConsolidator` | Sweep BTC from proxy wallets to one address           |
-| `/extractor`     | `OrdinalExtractor`   | Scan wallets for inscription UTXOs and move them      |
-| `/satflow-stats` | `SatflowStats`       | Satflow collection statistics                         |
-| `/home`          | `Homepage`           | Legacy Golden Layout multi-panel workspace            |
+Routes nested under `AppShell` in `App.jsx` are the redesigned ones: they
+render inside the sidebar and top bar, on the design system. The rest still
+serve the pre-redesign UI and move across as they are rebuilt.
+
+| Path             | Page                 | Shell | Notes                                            |
+| ---------------- | -------------------- | ----- | ------------------------------------------------ |
+| `/`              | `Splash`             | —     | Landing screen (full-bleed by design)            |
+| `/auto-trade`    | `AutoTrade`          | yes   | Main product: simple flow and advanced dashboard |
+| `/design`        | `DesignSystem`       | yes   | Living style guide of the UI primitives          |
+| `/dashboard`     | `Dashboard`          | no    | Wallets, collections, manual buy/sell            |
+| `/analytics`     | `Analytics`          | no    | Wallet and trading analytics                     |
+| `/consolidator`  | `WalletConsolidator` | no    | Sweep BTC from proxy wallets to one address      |
+| `/extractor`     | `OrdinalExtractor`   | no    | Scan wallets for inscription UTXOs and move them |
+| `/satflow-stats` | `SatflowStats`       | no    | Satflow collection statistics                    |
+| `/home`          | `Homepage`           | no    | Legacy Golden Layout multi-panel workspace       |
 
 ## Wallets
 
@@ -101,7 +106,11 @@ the other pages never fire; those pages track connection state through
 ## Trading
 
 ```
-AutoTrade page
+AutoTrade page  (/auto-trade, inside the app shell)
+ ├─ useAutoTradeWorkspace        one session shared by both views: wallets,
+ │    │                          collection, settings, engine, readiness
+ │    ├─ components/SimpleFlow     the guided five steps
+ │    └─ components/AdvancedView   the dashboard (wallet table + run panel)
  ├─ hooks/useAutoTradeSettings   settings state (mode, exchange, timer, prices, fees, wallet subset)
  ├─ hooks/useAutoTradeRunner     Start/Stop, timer-driven cycles, pending purchases
  └─ hooks/useTradingConsole      console log
@@ -168,22 +177,34 @@ layout.
 
 ## Styles
 
-All CSS is plain global CSS bundled into one stylesheet, because every page is
-imported statically by `App.jsx`. Page CSS is co-located with its page but
-applies app-wide, so class names are prefixed per page (`auto-trade-*`,
-`consolidator-*`, `dashboard-*`).
+Two systems coexist while the redesign is in progress.
 
-- `src/styles/tokens.css` — colors (`var(--color-*)`) and font stacks
-  (`--font-family-app`, `--font-family-display`).
+**Redesigned UI** uses CSS Modules and the `--ds-*` tokens:
+
+- `src/styles/theme.css` — the semantic tokens (surfaces, text, spacing, radii,
+  type scale, motion, layout) and the `.ds-root` base.
+- `src/ui/` — the primitives every new screen is built from, exported from
+  `src/ui/index.js`. `/design` renders all of them; check a change there.
+
+New UI must render inside `class="ds-root"` (the app shell provides it): the
+legacy typography rules skip that subtree, so fonts and colors inherit
+normally there.
+
+**Legacy UI** is plain global CSS bundled into one stylesheet, because every
+page is imported statically by `App.jsx`. Page CSS is co-located with its page
+but applies app-wide, so class names are prefixed per page (`consolidator-*`,
+`dashboard-*`).
+
+- `src/styles/tokens.css` — the raw palette (`var(--color-*)`) and font stacks
+  (`--font-family-app`, `--font-family-display`). `theme.css` maps onto this.
 - `src/styles/fonts.css` — the `@font-face` declarations.
 - `src/styles/global.css` — one `body` rule with the page defaults, shared
   component styles, and the legacy typography rules that put the app font on
   every element (fonts therefore do not inherit) and paint `<p>` white.
 
-New UI should render inside an element with `class="ds-root"`: the legacy
-typography rules skip that subtree, so fonts and colors inherit normally there.
-Prefer CSS Modules (`*.module.css`) for new components so their class names
-cannot collide with the legacy global ones. See KNOWN_ISSUES.md.
+Because legacy page CSS is global, a component can end up styled by a
+stylesheet another page imports. When rebuilding a page, check whether
+anything else used its classes — see KNOWN_ISSUES.md.
 
 ## Testing and checks
 
