@@ -90,6 +90,16 @@ export const getMempoolAddressUtxoUrl = (address, network = 'mainnet') => {
   return `${getMempoolAddressUrl(address, network)}/utxo`;
 };
 
+/**
+ * The explorer page for an address, for linking a user out to it.
+ * This is the human-readable page, not the `/api/` endpoint above.
+ */
+export const getMempoolAddressWebUrl = (address, network = 'mainnet') => {
+  const root = getRootUrl(getMempoolApiProvider());
+  const prefix = getNetworkPrefix(network);
+  return `${root}${prefix}address/${encodeURIComponent(address)}`;
+};
+
 export const getMempoolAddressTxsUrl = (address, network = 'mainnet') => {
   return `${getMempoolApiBaseUrl(network)}address/${encodeURIComponent(
     address

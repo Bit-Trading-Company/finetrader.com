@@ -43,16 +43,16 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/home" element={<Homepage />} />
-              <Route path="/auto-trade" element={<AutoTrade />} />
               <Route path="/consolidator" element={<WalletConsolidator />} />
               <Route path="/extractor" element={<OrdinalExtractor />} />
               <Route path="/satflow-stats" element={<SatflowStats />} />
               {/*
-              Redesigned screens render inside the app shell (sidebar + top
-              bar). Pages move in here as they are rebuilt; the routes above
-              still serve the pre-redesign UI.
-            */}
+                Redesigned screens render inside the app shell (sidebar + top
+                bar). Pages move in here as they are rebuilt; the routes above
+                still serve the pre-redesign UI.
+              */}
               <Route element={<AppShell />}>
+                <Route path="/auto-trade" element={<AutoTrade />} />
                 <Route path="/design" element={<DesignSystem />} />
               </Route>
             </Routes>

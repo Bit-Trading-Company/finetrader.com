@@ -1,0 +1,62 @@
+.console {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.title {
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+}
+
+.output {
+  flex: 1;
+  min-height: 180px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+  line-height: 1.55;
+  scrollbar-width: thin;
+}
+
+.line {
+  color: var(--ds-text-muted);
+  /* Engine output carries its own newlines and spacing. */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ok {
+  color: var(--ds-success);
+}
+
+.warn {
+  color: var(--ds-warning);
+}
+
+.error {
+  color: var(--ds-danger);
+}
+
+.empty {
+  color: var(--ds-text-faint);
+  font-family: var(--ds-font-sans);
+}

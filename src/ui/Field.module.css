@@ -116,12 +116,18 @@
   flex-shrink: 0;
 }
 
+/*
+ * Both are spans inside the label, so they need to be blocks: inline they run
+ * together on one line and the hint's margin is ignored.
+ */
 .choiceLabel {
+  display: block;
   font-size: var(--ds-text-md);
   color: var(--ds-text);
 }
 
 .choiceHint {
+  display: block;
   margin-top: 2px;
   font-size: var(--ds-text-sm);
   color: var(--ds-text-muted);

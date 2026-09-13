@@ -1,0 +1,143 @@
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  counter-reset: step;
+}
+
+.step {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+  transition: border-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.open {
+  border-color: var(--ds-border-strong);
+}
+
+.head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.head:hover {
+  background: var(--ds-surface-hover);
+}
+
+.marker {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-surface-raised);
+  color: var(--ds-text);
+  font-family: var(--ds-font-display);
+  /* The display face runs small, so the numeral needs a size up to read. */
+  font-size: 1.25rem;
+  line-height: 1;
+  transition:
+    background-color var(--ds-duration-base) var(--ds-ease),
+    color var(--ds-duration-base) var(--ds-ease),
+    border-color var(--ds-duration-base) var(--ds-ease);
+}
+
+.markerDone {
+  background: var(--ds-success-quiet);
+  border-color: var(--ds-success);
+  color: var(--ds-success);
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+}
+
+.summary {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+  font-family: var(--ds-font-mono);
+}
+
+.body {
+  padding: 0 var(--ds-space-5) var(--ds-space-5);
+  border-top: 1px solid var(--ds-border-subtle);
+  padding-top: var(--ds-space-5);
+}
+
+.fund {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.copy {
+  color: var(--ds-text-muted);
+  max-width: 60ch;
+}
+
+.fundRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-4);
+}
+
+.fundStats {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.run {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--ds-space-4);
+  align-items: start;
+}
+
+.runSide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+@media (max-width: 900px) {
+  .run {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .head {
+    padding: var(--ds-space-3) var(--ds-space-4);
+    gap: var(--ds-space-3);
+  }
+
+  .body {
+    padding: var(--ds-space-4);
+  }
+}

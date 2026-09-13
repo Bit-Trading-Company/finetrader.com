@@ -5,6 +5,7 @@ import {
   enrichSatflowListingItemForDisplay,
 } from '../../trading/satflow/satflowApi';
 import { formatSatsAsBtc, formatCompactNumber } from '../../lib/format';
+import './CollectionDetails.css';
 
 const ENRICH_CONCURRENCY = 6;
 
@@ -234,7 +235,7 @@ const CollectionDetails = ({ glEventHub, selectedCollection }) => {
           >
             <button
               type="button"
-              className="auto-trade-button"
+              className="collection-details-button"
               disabled={!canGoPrev || loading}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               style={{ marginRight: '8px' }}
@@ -243,7 +244,7 @@ const CollectionDetails = ({ glEventHub, selectedCollection }) => {
             </button>
             <button
               type="button"
-              className="auto-trade-button"
+              className="collection-details-button"
               disabled={!canGoNext || loading}
               onClick={() => setPage((p) => p + 1)}
             >

@@ -1,0 +1,20 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.inline > :first-child {
+  width: 120px;
+}
+
+.unit {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
