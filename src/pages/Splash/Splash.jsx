@@ -61,8 +61,6 @@ const Splash = () => {
           <div className={styles.glow} aria-hidden="true" />
 
           <header className={styles.copy}>
-            <p className={styles.eyebrow}>Bitcoin ordinals, on autopilot</p>
-
             <h1 className={styles.title}>
               Everything is gonna be fine
               <span className={styles.dots} aria-hidden="true">
@@ -70,11 +68,6 @@ const Splash = () => {
               </span>
               <ScribbleUnderline animate className={styles.underline} />
             </h1>
-
-            <p className={styles.lede}>
-              Spin up proxy wallets, load them with sats, and let the trader
-              work a collection across every marketplace you care about.
-            </p>
 
             <div className={styles.actions}>
               <Button as={Link} to="/auto-trade" size="lg">

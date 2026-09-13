@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -15,7 +16,8 @@ import {
   StatTile,
   Tabs,
 } from '../../../ui';
-import { formatSatsAsBtc } from '../../../lib/format';
+import { formatCompactNumber, formatSatsAsBtc } from '../../../lib/format';
+import { getCollectionSlug } from '../../../features/marketplace/collectionsApi';
 import CollectionPicker from './CollectionPicker';
 import ConnectWalletPanel from './ConnectWalletPanel';
 import CreateWalletsPanel from './CreateWalletsPanel';
@@ -23,6 +25,72 @@ import ProxyWalletTable from './ProxyWalletTable';
 import RunControls from './RunControls';
 import RunConsole from './RunConsole';
 import styles from './AdvancedView.module.css';
+
+/**
+ * Everything the API reports about the collection being traded. The picker
+ * table shows the same fields for every collection; this pins them for the
+ * one actually selected, next to the live floor the engine will use.
+ */
+const CollectionSummary = ({ collection, floorPriceSats }) => {
+  const rows = [
+    ['Floor (live)', floorPriceSats ? formatSatsAsBtc(floorPriceSats) : '—'],
+    ['Floor (listed)', collection.fp ? formatSatsAsBtc(collection.fp) : '—'],
+    [
+      'Listed',
+      collection.listedCount != null
+        ? formatCompactNumber(collection.listedCount)
+        : '—',
+    ],
+    [
+      'Supply',
+      collection.totalSupply
+        ? formatCompactNumber(collection.totalSupply)
+        : '—',
+    ],
+    [
+      'Volume 24h',
+      collection.vol1d != null ? formatSatsAsBtc(collection.vol1d) : '—',
+    ],
+    [
+      'Volume 7d',
+      collection.vol7d != null ? formatSatsAsBtc(collection.vol7d) : '—',
+    ],
+    [
+      'Volume 30d',
+      collection.vol30d != null ? formatSatsAsBtc(collection.vol30d) : '—',
+    ],
+    [
+      'Total volume',
+      collection.totalVol ? formatSatsAsBtc(collection.totalVol) : '—',
+    ],
+  ];
+
+  return (
+    <div className={styles.summary}>
+      <div className={styles.summaryHead}>
+        {collection.image && (
+          <img src={collection.image} alt="" className={styles.summaryThumb} />
+        )}
+        <div>
+          <div className={styles.summaryName}>{collection.name}</div>
+          <code className={styles.summarySlug}>
+            {getCollectionSlug(collection)}
+          </code>
+        </div>
+        <Badge tone="success">Trading this</Badge>
+      </div>
+
+      <dl className={styles.summaryStats}>
+        {rows.map(([label, value]) => (
+          <div key={label} className={styles.summaryStat}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+};
 
 const AdvancedView = ({
   workspace,
@@ -41,6 +109,7 @@ const AdvancedView = ({
     isTrading,
     pendingPurchases,
     consoleLogs,
+    clearConsole,
     consoleRef,
     floorPriceSats,
     applyFloorPrice,
@@ -49,36 +118,42 @@ const AdvancedView = ({
 
   const [panel, setPanel] = useState('wallets');
 
-  if (!readiness.hasWallets) {
-    return (
-      <Card>
-        <EmptyState
-          title={
-            readiness.connected ? 'No proxy wallets yet' : 'Connect a wallet'
-          }
-          action={null}
-        >
-          <p className={styles.emptyCopy}>
-            The dashboard shows what each proxy wallet holds and what the trader
-            is doing with it.{' '}
-            {readiness.connected
-              ? 'Derive a set to get started'
-              : 'Connect the wallet that will fund them to begin'}{' '}
-            — the simple view walks through the whole flow if you would rather
-            be guided.
-          </p>
-          {/* Restores the document flow inside EmptyState's centred text. */}
-          <div className={styles.emptyForm}>
-            {readiness.connected ? (
-              <CreateWalletsPanel session={session} />
-            ) : (
-              <ConnectWalletPanel />
-            )}
-          </div>
-        </EmptyState>
-      </Card>
-    );
-  }
+  /*
+   * The dashboard renders whether or not wallets exist. Gating the whole view
+   * behind them meant you could not look at collections, set a strategy or
+   * even see what the dashboard was for until after signing — the empty state
+   * belongs inside the wallets panel, not in front of everything.
+   */
+  const walletsPanel = readiness.hasWallets ? (
+    <ProxyWalletTable
+      wallets={wallets}
+      balances={balances.balances}
+      isLoadingBalances={balances.isLoading}
+      settings={settings}
+      session={session}
+      network={network}
+      isTrading={isTrading}
+    />
+  ) : (
+    <EmptyState
+      title={readiness.connected ? 'No proxy wallets yet' : 'Connect a wallet'}
+      action={null}
+    >
+      <p className={styles.emptyCopy}>
+        {readiness.connected
+          ? 'Derive a set and every wallet, balance and UTXO count shows up here.'
+          : 'Connect the wallet that will fund your proxy wallets to begin.'}
+      </p>
+      {/* Restores the document flow inside EmptyState's centred text. */}
+      <div className={styles.emptyForm}>
+        {readiness.connected ? (
+          <CreateWalletsPanel session={session} />
+        ) : (
+          <ConnectWalletPanel />
+        )}
+      </div>
+    </EmptyState>
+  );
 
   return (
     <div className={styles.layout}>
@@ -122,9 +197,12 @@ const AdvancedView = ({
 
       <div className={styles.columns}>
         <div className={styles.main}>
-          <Card
-            padding="md"
-            title={
+          {/*
+            The tab strip is the panel's own header rather than the Card's
+            title, which is a heading and renders in the display face.
+          */}
+          <Card padding="none">
+            <div className={styles.panelHeader}>
               <Tabs
                 items={[
                   { id: 'wallets', label: 'Wallets' },
@@ -134,14 +212,14 @@ const AdvancedView = ({
                 onChange={setPanel}
                 ariaLabel="Dashboard panels"
               />
-            }
-            actions={
-              panel === 'wallets' ? (
+
+              {panel === 'wallets' && (
                 <div className={styles.walletActions}>
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={onOpenDispatch}
+                    disabled={!readiness.hasWallets}
                   >
                     Fund wallets
                   </Button>
@@ -150,34 +228,40 @@ const AdvancedView = ({
                     size="sm"
                     onClick={balances.refresh}
                     loading={balances.isLoading}
+                    disabled={!readiness.hasWallets}
                   >
                     Refresh
                   </Button>
                 </div>
-              ) : null
-            }
-          >
-            {panel === 'wallets' ? (
-              <ProxyWalletTable
-                wallets={wallets}
-                balances={balances.balances}
-                isLoadingBalances={balances.isLoading}
-                settings={settings}
-                network={network}
-                isTrading={isTrading}
-              />
-            ) : (
-              <CollectionPicker
-                selected={selectedCollection}
-                onSelect={selectCollection}
-              />
-            )}
+              )}
+            </div>
+
+            <div className={styles.panelBody}>
+              {panel === 'wallets' ? (
+                walletsPanel
+              ) : (
+                <div className={styles.collectionPanel}>
+                  {selectedCollection && (
+                    <CollectionSummary
+                      collection={selectedCollection}
+                      floorPriceSats={floorPriceSats}
+                    />
+                  )}
+                  <CollectionPicker
+                    selected={selectedCollection}
+                    onSelect={selectCollection}
+                    variant="table"
+                  />
+                </div>
+              )}
+            </div>
           </Card>
 
           <RunConsole
             logs={consoleLogs}
             consoleRef={consoleRef}
             isTrading={isTrading}
+            onClear={clearConsole}
           />
         </div>
 

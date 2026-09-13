@@ -95,7 +95,6 @@ const AutoTrade = () => {
     <div className={styles.page}>
       <PageHeader
         title="Auto-trader"
-        description="Run a collection from your proxy wallets."
         actions={
           <div className={styles.headerActions}>
             <Tabs

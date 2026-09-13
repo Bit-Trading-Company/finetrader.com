@@ -47,15 +47,22 @@
   color: var(--ds-warning);
 }
 
-.link {
-  display: inline-grid;
-  place-items: center;
-  color: var(--ds-text-faint);
-  padding: 4px;
-  border-radius: var(--ds-radius-sm);
+.selectors {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
 }
 
-.link:hover {
-  color: var(--ds-accent-hover);
-  background: var(--ds-surface-hover);
+.selectorLabel {
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-faint);
+  margin-right: var(--ds-space-1);
+}
+
+.detailsHint {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+  white-space: nowrap;
 }

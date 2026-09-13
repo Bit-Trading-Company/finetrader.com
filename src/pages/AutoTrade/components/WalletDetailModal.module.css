@@ -1,0 +1,38 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.explorer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--ds-text-muted);
+  text-decoration: none;
+  font-size: var(--ds-text-sm);
+}
+
+.explorer:hover {
+  color: var(--ds-accent-hover);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.heading {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-xl);
+  color: var(--ds-text);
+}

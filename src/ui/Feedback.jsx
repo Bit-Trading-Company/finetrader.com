@@ -89,7 +89,8 @@ export const EmptyState = ({ title, art, action, children }) => (
   <div className={styles.empty}>
     {art && <div className={styles.emptyArt}>{art}</div>}
     <div className={styles.emptyTitle}>{title}</div>
-    {children && <p className={styles.emptyBody}>{children}</p>}
+    {/* A div, not a p: callers pass paragraphs and whole forms in here. */}
+    {children && <div className={styles.emptyBody}>{children}</div>}
     {action}
   </div>
 );

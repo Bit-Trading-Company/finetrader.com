@@ -52,6 +52,7 @@ const SimpleFlow = ({ workspace, onOpenDispatch, onOpenBids, startButton }) => {
     settings,
     isTrading,
     consoleLogs,
+    clearConsole,
     consoleRef,
     floorPriceSats,
     applyFloorPrice,
@@ -176,6 +177,7 @@ const SimpleFlow = ({ workspace, onOpenDispatch, onOpenBids, startButton }) => {
               logs={consoleLogs}
               consoleRef={consoleRef}
               isTrading={isTrading}
+              onClear={clearConsole}
             />
           </div>
         </div>

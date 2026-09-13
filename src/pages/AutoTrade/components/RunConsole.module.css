@@ -17,6 +17,12 @@
   border-bottom: 1px solid var(--ds-border-subtle);
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
 .title {
   font-size: var(--ds-text-sm);
   font-weight: 600;
@@ -37,11 +43,41 @@
   scrollbar-width: thin;
 }
 
+.row {
+  display: flex;
+  gap: var(--ds-space-3);
+  align-items: baseline;
+}
+
+/* Fixed column so the messages line up under each other. */
+.time {
+  flex-shrink: 0;
+  color: var(--ds-text-faint);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
 .line {
+  flex: 1;
+  min-width: 0;
   color: var(--ds-text-muted);
   /* Engine output carries its own newlines and spacing. */
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--ds-space-2);
+  color: var(--ds-accent-hover);
+  text-decoration: none;
+  font-size: var(--ds-text-xs);
+}
+
+.link:hover {
+  text-decoration: underline;
 }
 
 .ok {

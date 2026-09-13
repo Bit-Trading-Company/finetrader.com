@@ -48,7 +48,8 @@ export const useAutoTradeWorkspace = () => {
     }
   }, []);
 
-  const { consoleLogs, addConsoleLog, consoleRef } = useTradingConsole();
+  const { consoleLogs, addConsoleLog, clearConsole, consoleRef } =
+    useTradingConsole();
   const settings = useAutoTradeSettings({ wallets });
   const { isTrading, pendingPurchases, handleStartTrading } =
     useAutoTradeRunner({
@@ -193,6 +194,7 @@ export const useAutoTradeWorkspace = () => {
     handleStartTrading,
     consoleLogs,
     addConsoleLog,
+    clearConsole,
     consoleRef,
     floorPriceSats,
     applyFloorPrice,

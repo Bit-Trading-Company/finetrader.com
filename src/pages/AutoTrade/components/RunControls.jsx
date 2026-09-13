@@ -7,10 +7,7 @@
  * would actually happen when you pressed Start.
  */
 import React from 'react';
-import {
-  TRADING_EXCHANGE_OPTIONS,
-  getExchangeLabel,
-} from '../../../trading/exchanges';
+import { TRADING_EXCHANGE_OPTIONS } from '../../../trading/exchanges';
 import {
   Button,
   Checkbox,
@@ -122,8 +119,8 @@ const RunControls = ({
           onChange={(e) => setTradingExchange(e.target.value)}
         >
           {TRADING_EXCHANGE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {getExchangeLabel(option.value)}
+            <option key={option.id} value={option.id}>
+              {option.label}
             </option>
           ))}
         </Select>

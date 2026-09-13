@@ -1,6 +1,9 @@
 /**
- * Trading console state: the log list (capped at 1000 entries), addConsoleLog
- * and a ref that keeps the log view scrolled to the newest entry.
+ * Trading console state: the log list (capped at 1000 entries), addConsoleLog,
+ * clearConsole and a ref that keeps the log view scrolled to the newest entry.
+ *
+ * Each entry is `{ message, link, timestamp }` — renderers must read
+ * `.message`, not the entry itself.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
@@ -19,6 +22,9 @@ export const useTradingConsole = () => {
     });
   }, []);
 
+  /** Empty the log; the run itself is unaffected. */
+  const clearConsole = useCallback(() => setConsoleLogs([]), []);
+
   // Auto-scroll console to bottom when new logs are added
   const consoleRef = useRef(null);
   useEffect(() => {
@@ -32,5 +38,5 @@ export const useTradingConsole = () => {
     }
   }, [consoleLogs]);
 
-  return { consoleLogs, addConsoleLog, consoleRef };
+  return { consoleLogs, addConsoleLog, clearConsole, consoleRef };
 };

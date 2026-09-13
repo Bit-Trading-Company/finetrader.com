@@ -80,21 +80,11 @@
   margin: 0 auto;
   /*
    * The grid row already centres this block, so it needs only enough top
-   * padding to keep the eyebrow off the frame. Anything more competes with
+   * padding to keep the headline off the frame. Anything more competes with
    * the cast for the viewport and pushes the page into a short scroll.
    */
   padding: clamp(8px, 2vh, 24px) clamp(16px, 5vw, 48px) 0;
   transform: translate(calc(var(--px) * -5px), calc(var(--py) * -3px));
-}
-
-.eyebrow {
-  margin: 0 0 clamp(10px, 1.6vh, 18px);
-  font-size: var(--ds-text-sm);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ds-text-faint);
-  animation: rise var(--ds-duration-slow) var(--ds-ease) both;
-  animation-delay: 80ms;
 }
 
 .title {
@@ -109,7 +99,7 @@
   color: var(--ds-accent);
   text-wrap: balance;
   animation: rise var(--ds-duration-slow) var(--ds-ease) both;
-  animation-delay: 160ms;
+  animation-delay: 80ms;
 }
 
 .dots {
@@ -126,26 +116,15 @@
   opacity: 0.85;
 }
 
-.lede {
-  max-width: 34rem;
-  margin: clamp(14px, 2.4vh, 24px) auto 0;
-  font-size: clamp(0.9375rem, 1.4vw, 1.125rem);
-  line-height: var(--ds-leading-normal);
-  color: var(--ds-text-muted);
-  text-wrap: pretty;
-  animation: rise var(--ds-duration-slow) var(--ds-ease) both;
-  animation-delay: 260ms;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: clamp(12px, 2vw, 20px);
-  margin-top: clamp(20px, 3.2vh, 36px);
+  margin-top: clamp(24px, 4vh, 44px);
   animation: rise var(--ds-duration-slow) var(--ds-ease) both;
-  animation-delay: 360ms;
+  animation-delay: 220ms;
 }
 
 .secondary {
@@ -226,9 +205,7 @@
  */
 
 @media (prefers-reduced-motion: reduce) {
-  .eyebrow,
   .title,
-  .lede,
   .actions,
   .cast {
     animation: none;
@@ -277,16 +254,6 @@
 @media (max-height: 620px) {
   .title {
     font-size: clamp(1.75rem, 4.6vw, 2.75rem);
-  }
-
-  .eyebrow {
-    margin-bottom: var(--ds-space-2);
-    font-size: var(--ds-text-xs);
-  }
-
-  .lede {
-    margin-top: var(--ds-space-3);
-    font-size: 0.9375rem;
   }
 
   .actions {

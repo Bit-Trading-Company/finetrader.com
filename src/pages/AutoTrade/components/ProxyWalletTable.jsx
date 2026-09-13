@@ -2,18 +2,18 @@
  * Every proxy wallet, with what it holds and whether it takes part in a run.
  *
  * This is the piece the advanced view exists for: previously the only way to
- * see a wallet's balance was to hover it one at a time.
+ * see a wallet's balance was to hover it one at a time. Clicking a row opens
+ * the full detail for that wallet.
  *
  * Selection note: `selectActiveWallets` filters by position in the wallets
  * array, so the selection set holds positions, not `wallet.index`. They agree
  * today (wallets are derived in order) but the position is what the engine
  * actually uses, so that is what is stored here.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge, Button, Checkbox, Table } from '../../../ui';
-import { ExternalIcon } from '../../../ui/icons';
 import { formatSatsAsBtc, shortenAddress } from '../../../lib/format';
-import { getMempoolAddressWebUrl } from '../../../lib/mempoolProvider';
+import WalletDetailModal from './WalletDetailModal';
 import styles from './ProxyWalletTable.module.css';
 
 /**
@@ -22,6 +22,7 @@ import styles from './ProxyWalletTable.module.css';
  * @param {Record<string, object>} props.balances keyed by address
  * @param {boolean} props.isLoadingBalances
  * @param {object} props.settings from useAutoTradeSettings
+ * @param {object} props.session from useWalletSession
  * @param {string} props.network
  * @param {boolean} props.isTrading
  */
@@ -30,6 +31,7 @@ const ProxyWalletTable = ({
   balances,
   isLoadingBalances,
   settings,
+  session,
   network,
   isTrading,
 }) => {
@@ -40,7 +42,9 @@ const ProxyWalletTable = ({
     setSelectedWalletIndices,
   } = settings;
 
-  const isSelected = (position) =>
+  const [detailIndex, setDetailIndex] = useState(null);
+
+  const isActive = (position) =>
     !useCustomWalletSubset || selectedWalletIndices.has(position);
 
   const toggle = (position) => {
@@ -59,26 +63,54 @@ const ProxyWalletTable = ({
     setSelectedWalletIndices(next);
   };
 
+  /** Every wallet trades. Leaves subset mode so new wallets are included too. */
   const selectAll = () => {
     setUseCustomWalletSubset(false);
     setSelectedWalletIndices(new Set(wallets.map((_, i) => i)));
   };
 
-  const activeCount = wallets.filter((_, i) => isSelected(i)).length;
+  /** No wallet trades — the counterpart to Select all, so both are reachable. */
+  const selectNone = () => {
+    setUseCustomWalletSubset(true);
+    setSelectedWalletIndices(new Set());
+  };
+
+  /** Only the wallets holding a balance, which is usually what a run wants. */
+  const selectFunded = () => {
+    setUseCustomWalletSubset(true);
+    setSelectedWalletIndices(
+      new Set(
+        wallets
+          .map((w, i) => (balances[w.address]?.total > 0 ? i : null))
+          .filter((i) => i !== null)
+      )
+    );
+  };
+
+  const activeCount = wallets.filter((_, i) => isActive(i)).length;
+  const fundedCount = wallets.filter(
+    (w) => (balances[w.address]?.total || 0) > 0
+  ).length;
 
   const columns = [
     {
       key: 'use',
-      header: 'Use',
+      header: 'Trade',
       width: '64px',
       render: (wallet, index) => (
-        <Checkbox
-          checked={isSelected(index)}
-          disabled={isTrading}
-          onChange={() => toggle(index)}
-          label=""
-          aria-label={`Trade from wallet ${wallet.index + 1}`}
-        />
+        <span
+          // The row opens the detail; the checkbox must not.
+          onClick={(event) => event.stopPropagation()}
+          role="presentation"
+        >
+          <Checkbox
+            checked={isActive(index)}
+            disabled={isTrading}
+            onChange={() => toggle(index)}
+            label=""
+            aria-label={`Trade from wallet ${wallet.index + 1}`}
+          />
+        </span>
       ),
     },
     {
@@ -90,6 +122,9 @@ const ProxyWalletTable = ({
           <code className={styles.address}>
             {shortenAddress(wallet.address)}
           </code>
+          {session.selectedWallet?.index === wallet.index && (
+            <Badge tone="info">actions</Badge>
+          )}
         </span>
       ),
     },
@@ -132,58 +167,85 @@ const ProxyWalletTable = ({
       render: (wallet) => balances[wallet.address]?.utxoCount ?? '—',
     },
     {
-      key: 'link',
-      header: '',
-      width: '48px',
+      key: 'txs',
+      header: 'Txs',
       align: 'right',
-      render: (wallet) => (
-        <a
-          className={styles.link}
-          href={getMempoolAddressWebUrl(wallet.address, network)}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`Open wallet ${wallet.index + 1} in the block explorer`}
-        >
-          <ExternalIcon size={16} />
-        </a>
-      ),
+      numeric: true,
+      render: (wallet) => balances[wallet.address]?.txCount ?? '—',
+    },
+    {
+      key: 'details',
+      header: '',
+      width: '80px',
+      align: 'right',
+      render: () => <span className={styles.detailsHint}>Details →</span>,
     },
   ];
+
+  const detailWallet =
+    detailIndex === null ? null : wallets[detailIndex] || null;
 
   return (
     <div className={styles.panel}>
       <div className={styles.toolbar}>
         <span className={styles.summary}>
-          {useCustomWalletSubset ? (
-            <Badge tone="warning">
-              {activeCount} of {wallets.length} trading
-            </Badge>
-          ) : (
-            <Badge tone="neutral">All {wallets.length} trading</Badge>
-          )}
+          <Badge tone={activeCount === 0 ? 'warning' : 'neutral'}>
+            {activeCount} of {wallets.length} trading
+          </Badge>
           {isLoadingBalances && (
             <span className={styles.loading}>Refreshing balances…</span>
           )}
         </span>
 
-        {useCustomWalletSubset && (
+        <span className={styles.selectors}>
+          <span className={styles.selectorLabel}>Select</span>
           <Button
             variant="ghost"
             size="sm"
             onClick={selectAll}
-            disabled={isTrading}
+            disabled={isTrading || activeCount === wallets.length}
           >
-            Use all wallets
+            All
           </Button>
-        )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={selectNone}
+            disabled={isTrading || activeCount === 0}
+          >
+            None
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={selectFunded}
+            disabled={isTrading || fundedCount === 0}
+          >
+            Funded ({fundedCount})
+          </Button>
+        </span>
       </div>
 
       <Table
         columns={columns}
         rows={wallets}
         getRowKey={(wallet) => wallet.address}
-        isRowSelected={(wallet) => isSelected(wallets.indexOf(wallet))}
+        onRowClick={(wallet) => setDetailIndex(wallets.indexOf(wallet))}
+        isRowSelected={(wallet) => isActive(wallets.indexOf(wallet))}
       />
+
+      {detailWallet && (
+        <WalletDetailModal
+          wallet={detailWallet}
+          balance={balances[detailWallet.address]}
+          network={network}
+          isActive={isActive(detailIndex)}
+          isSelected={session.selectedWallet?.index === detailWallet.index}
+          onToggleActive={() => toggle(detailIndex)}
+          onSelect={() => session.selectWallet(detailWallet)}
+          onClose={() => setDetailIndex(null)}
+        />
+      )}
     </div>
   );
 };
