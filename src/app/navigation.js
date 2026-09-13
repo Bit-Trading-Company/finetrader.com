@@ -35,7 +35,6 @@ export const NAV_GROUPS = [
         label: 'Auto-Trade',
         icon: BoltIcon,
         description: 'Run a collection on Satflow or ord.net',
-        legacy: true,
       },
       {
         to: '/dashboard',

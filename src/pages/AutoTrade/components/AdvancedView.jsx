@@ -21,6 +21,7 @@ import { getCollectionSlug } from '../../../features/marketplace/collectionsApi'
 import CollectionPicker from './CollectionPicker';
 import ConnectWalletPanel from './ConnectWalletPanel';
 import CreateWalletsPanel from './CreateWalletsPanel';
+import PendingPurchases from './PendingPurchases';
 import ProxyWalletTable from './ProxyWalletTable';
 import RunControls from './RunControls';
 import RunConsole from './RunConsole';
@@ -256,6 +257,12 @@ const AdvancedView = ({
               )}
             </div>
           </Card>
+
+          <PendingPurchases
+            purchases={pendingPurchases}
+            wallets={wallets}
+            network={network}
+          />
 
           <RunConsole
             logs={consoleLogs}

@@ -119,6 +119,19 @@
   text-overflow: ellipsis;
 }
 
+.linkTag {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-hover);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .sidebarFooter {
   display: flex;
   align-items: center;
@@ -151,7 +164,8 @@
 /* Collapsed rail */
 .collapsed .brandText,
 .collapsed .groupTitle,
-.collapsed .linkLabel {
+.collapsed .linkLabel,
+.collapsed .linkTag {
   display: none;
 }
 
@@ -276,7 +290,8 @@
   /* The rail never applies on small screens; the drawer is always full width. */
   .collapsed .brandText,
   .collapsed .groupTitle,
-  .collapsed .linkLabel {
+  .collapsed .linkLabel,
+  .collapsed .linkTag {
     display: block;
   }
 

@@ -105,6 +105,19 @@ const AppShell = () => {
                         <Icon />
                       </span>
                       <span className={styles.linkLabel}>{item.label}</span>
+                      {/*
+                        Pages not yet rebuilt look nothing like the shell
+                        around them; saying so up front is less jarring than
+                        the jump.
+                      */}
+                      {item.legacy && (
+                        <span
+                          className={styles.linkTag}
+                          title="Not redesigned yet"
+                        >
+                          old
+                        </span>
+                      )}
                     </NavLink>
                   );
                 })}

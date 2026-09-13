@@ -172,3 +172,8 @@
   color: var(--ds-text-faint);
   font-size: var(--ds-text-xs);
 }
+
+.filterReset {
+  display: flex;
+  align-items: flex-end;
+}

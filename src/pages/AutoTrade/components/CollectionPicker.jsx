@@ -135,6 +135,13 @@ const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
   const activeFilters =
     (filterText ? 1 : 0) + (sortBy !== 'vol1d' || direction !== 'desc' ? 1 : 0);
 
+  const resetFilters = () => {
+    setSortBy('vol1d');
+    setDirection('desc');
+    setLimit(50);
+    setFilterText('');
+  };
+
   const columns = [
     {
       key: 'name',
@@ -290,6 +297,18 @@ const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
               placeholder="Name contains…"
             />
           </label>
+
+          <div className={styles.filterReset}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              disabled={activeFilters === 0 && limit === 50}
+            >
+              Reset
+            </Button>
+          </div>
         </div>
       )}
 
