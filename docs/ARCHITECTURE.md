@@ -75,10 +75,28 @@ same proxy wallets, so funds can be recovered by signing again.
 funds. Proxy wallets sign PSBTs locally (`signPsbtWithProxyWallet`, Taproot
 key-path) and are funded through `Dispatch`.
 
+**Wallet session.** `WalletSessionProvider` (`src/features/wallet/WalletSession.jsx`)
+sits above the router and holds the derived wallets for the whole app, so the
+user signs once and every page sees the same wallets. Read it with
+`useWalletSession()`. It is memory-only on purpose — the signature is the
+master secret for every derived key, so it is never stored — which means
+wallets survive navigation but not a reload.
+
+Redesigned pages use the session. The pre-redesign pages still render their
+own `WalletManagement`, each deriving its own copy; they move over as they are
+rebuilt. A rebuilt page that still hosts a legacy child can feed it with
+`useWalletSessionBridge(hub)`, which republishes session state as the hub
+events those children expect.
+
 **Cross-component events.** Pages create an event hub (`useEventHub` in
 `src/lib/eventHub.js`) and pass it to feature components as `glEventHub` (the
 name dates from Golden Layout). Common events: `wallets-generated`,
 `wallet-selected`, `wallet-connection-changed`, `collection-selected`.
+
+Note that `wallet-connection-changed` and `wallet-disconnected` are only ever
+emitted by `WalletConnect`, which is mounted on `/home`. Listeners for them on
+the other pages never fire; those pages track connection state through
+`useWalletConnection` or the session instead.
 
 ## Trading
 
