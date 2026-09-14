@@ -10,11 +10,8 @@
  * API returns, for the dashboard.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  fetchTopCollections,
-  getCollectionSlug,
-  searchCollections,
-} from '../../../features/marketplace/collectionsApi';
+import { getCollectionSlug } from '../../../features/marketplace/collectionsApi';
+import { getTradingApi } from '../../../trading/exchanges';
 import { formatCompactNumber, formatSatsAsBtc } from '../../../lib/format';
 import { Alert, Button, Loading, Select, Table, TextInput } from '../../../ui';
 import styles from './CollectionPicker.module.css';
@@ -57,7 +54,22 @@ const Change = ({ value }) => {
  * @param {(collection: object) => void} props.onSelect
  * @param {'grid'|'table'} [props.variant]
  */
-const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
+/**
+ * @param {object} props
+ * @param {string} [props.exchange] which marketplace to browse; each has its
+ *   own discovery, and ord.net can only show collections with live listings.
+ * @param {object[]} [props.wallets] ord.net authenticates even its reads
+ */
+const CollectionPicker = ({
+  selected,
+  onSelect,
+  variant = 'grid',
+  exchange,
+  wallets,
+}) => {
+  const api = getTradingApi(exchange);
+  // ord.net signs its reads with a proxy wallet, so browsing waits for one.
+  const blockedOnWallet = Boolean(api.needsWalletForReads) && !wallets?.length;
   const [collections, setCollections] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -71,10 +83,15 @@ const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
   const [filterText, setFilterText] = useState('');
 
   const loadTop = useCallback(async () => {
+    if (blockedOnWallet) {
+      setCollections([]);
+      setError(null);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
-      setCollections(await fetchTopCollections());
+      setCollections(await api.fetchCollections({ wallets }));
       setIsSearchResult(false);
     } catch (err) {
       setError(err.message || 'Could not load collections');
@@ -82,7 +99,7 @@ const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [api, wallets, blockedOnWallet]);
 
   useEffect(() => {
     loadTop();
@@ -97,7 +114,7 @@ const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
     setIsLoading(true);
     setError(null);
     try {
-      setCollections(await searchCollections(term));
+      setCollections(await api.searchCollections(term, { wallets }));
       setIsSearchResult(true);
     } catch (err) {
       setError(err.message || 'Search failed');
@@ -318,9 +335,11 @@ const CollectionPicker = ({ selected, onSelect, variant = 'grid' }) => {
         <Loading>Loading collections…</Loading>
       ) : visible.length === 0 ? (
         <p className={styles.none}>
-          {isSearchResult || filterText
-            ? 'No collections matched.'
-            : 'No collections available right now.'}
+          {blockedOnWallet
+            ? 'Generate a Fine Trader wallet first — ord.net signs in before it will show you the order book.'
+            : isSearchResult || filterText
+              ? 'No collections matched.'
+              : 'No collections available right now.'}
         </p>
       ) : variant === 'table' ? (
         <div className={styles.tableWrap}>

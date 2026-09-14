@@ -29,6 +29,11 @@ import { ordnetAdapter } from './ordnet/ordnetAdapter';
  * @property {boolean} [needsWalletForReads] True when even read calls (floor
  *   price, listings) need a signed-in wallet session, as ord.net does. Pages
  *   skip those reads until a proxy wallet exists.
+ * @property {(options?: object) => Promise<object[]>} fetchCollections
+ *   Collections a user can pick from, shaped like
+ *   features/marketplace/collectionsApi's Collection.
+ * @property {(query: string, options?: object) => Promise<object[]>} searchCollections
+ *   Same shape, filtered by a search term.
  * @property {(collectionSymbol: string, bypassCache: boolean, options?: object) => Promise<object[]>} fetchCollectionItems
  *   Collection listings, cheapest first. options may include pageSize / page.
  * @property {(collectionSymbol: string, bypassCache: boolean, options?: object) => Promise<number|null>} getFloorPrice

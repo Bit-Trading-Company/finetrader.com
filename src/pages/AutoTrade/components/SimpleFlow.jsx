@@ -179,6 +179,8 @@ const SimpleFlow = ({
         <CollectionPicker
           selected={selectedCollection}
           onSelect={selectCollection}
+          exchange={settings.tradingExchange}
+          wallets={wallets}
         />
       </Step>
 

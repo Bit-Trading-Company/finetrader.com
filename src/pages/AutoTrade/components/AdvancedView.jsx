@@ -223,6 +223,8 @@ const AdvancedView = ({
                 selected={selectedCollection}
                 onSelect={selectCollection}
                 variant="table"
+                exchange={settings.tradingExchange}
+                wallets={wallets}
               />
             </div>
           </Card>

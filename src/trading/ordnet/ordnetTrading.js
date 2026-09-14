@@ -99,7 +99,13 @@ const setStoredSession = (address, session) => {
   }
 };
 
-const ordNetFetch = async (
+/**
+ * Low-level call into the ord.net proxy.
+ *
+ * Exported for `ordnetCollections`, which needs the same transport and
+ * session handling. Treat it as internal to this directory.
+ */
+export const ordNetFetch = async (
   path,
   { method = 'GET', token, query, body } = {}
 ) => {
@@ -283,7 +289,8 @@ const withOrdNetSession = async (wallet, network, run) => {
   }
 };
 
-const getReadSession = async (options = {}) => {
+/** A session for read calls. Internal to this directory; see ordNetFetch. */
+export const getReadSession = async (options = {}) => {
   const wallet = options.wallet || options.wallets?.[0];
   if (!wallet) {
     throw new Error(
