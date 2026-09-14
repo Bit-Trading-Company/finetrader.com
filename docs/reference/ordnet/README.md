@@ -17,6 +17,14 @@ looks stale.
 | `openapi.json` | OpenAPI 3.1, 35 operations, 125 schemas — authoritative |
 | `llms.txt` | Upstream index that enumerates the doc set |
 
+## Known drift from the published docs
+
+`authentication.md` says the funding floor is **0.01 BTC**. ord.net lowered it
+to **0.001 BTC** and has not updated the docs (confirmed with them directly,
+2026-09-14). The app uses 0.001 — see `ORDNET_MIN_FUNDING_SATS` in
+`src/trading/ordnet/ordnetTrading.js`. If a funded wallet is refused with a
+403, check whether it has moved again.
+
 Completeness was checked two ways: `llms.txt` and `sitemap-0.xml` both list the
 same eight pages, and all eight are mirrored here.
 

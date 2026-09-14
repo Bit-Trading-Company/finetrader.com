@@ -9,7 +9,12 @@
  */
 import { webcrypto } from 'crypto';
 import { TextEncoder } from 'util';
-import { fetchWalletOrdinals } from './ordnetTrading';
+import {
+  fetchWalletOrdinals,
+  formatMinFunding,
+  ORDNET_MIN_FUNDING_SATS,
+  setOrdNetProviderSigner,
+} from './ordnetTrading';
 
 /*
  * bip322-js pins bitcoinjs-lib 6 while this app is on 7, and CRA's Jest
@@ -177,5 +182,82 @@ describe('ord.net fetchWalletOrdinals', () => {
     expect(calls.ordnet.length - afterWarmup).toBe(1);
     // Ownership never touches ord.net.
     expect(calls.unisat.length).toBe(2);
+  });
+});
+
+describe('ord.net funding floor', () => {
+  it('is the 0.001 BTC ord.net actually enforces, not the 0.01 they document', () => {
+    expect(ORDNET_MIN_FUNDING_SATS).toBe(100000);
+    expect(formatMinFunding()).toBe('0.001');
+  });
+});
+
+describe('ord.net connected-wallet fallback', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    setOrdNetProviderSigner(null);
+  });
+
+  afterEach(() => setOrdNetProviderSigner(null));
+
+  it('signs in as the connected wallet when no proxy wallet can', async () => {
+    const slug = nextSlug();
+    const signed = [];
+    let verifyBody = null;
+
+    global.fetch = jest.fn(async (url, init) => {
+      const target = String(url);
+      if (target.startsWith('/api/unisat')) {
+        return jsonResponse({ data: { total: 0, utxo: [] } });
+      }
+      if (target.includes('auth%2Fchallenge')) {
+        return jsonResponse({
+          authRequestId: 'req-1',
+          challenges: [
+            { challengeId: 'c1', address: 'bc1p-ordinals', message: 'sign me' },
+          ],
+        });
+      }
+      if (target.includes('auth%2Fverify')) {
+        // Captured rather than asserted here: assertions belong outside the
+        // stub, where they run whether or not the branch was reached.
+        verifyBody = JSON.parse(init.body);
+        return jsonResponse({
+          sessionToken: 'provider-token',
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          walletBindings: [{ walletBindingId: 'provider-binding' }],
+        });
+      }
+      if (target.includes('path=%2Flistings')) {
+        return jsonResponse({ listings: [], pagination: { hasNext: false } });
+      }
+      return jsonResponse({ items: [], pagination: { hasNext: false } });
+    });
+
+    setOrdNetProviderSigner({
+      ordinalsAddress: 'bc1p-ordinals',
+      paymentAddress: 'bc1q-payments',
+      signMessage: async (address, message) => {
+        signed.push({ address, message });
+        return Buffer.from('a-signature').toString('base64');
+      },
+    });
+
+    // No proxy wallets at all: the connected wallet is the only signer.
+    const items = await fetchWalletOrdinals('bc1p-ordinals', slug, true, {
+      wallets: [],
+    });
+
+    expect(items).toEqual([]);
+    expect(signed).toEqual([{ address: 'bc1p-ordinals', message: 'sign me' }]);
+    // The signature must reach ord.net hex-encoded, not base64.
+    expect(verifyBody?.verifications?.[0]?.signature).toMatch(/^[0-9a-f]+$/);
+  });
+
+  it('refuses reads when there is neither a proxy nor a connected wallet', async () => {
+    global.fetch = jest.fn();
+    await expect(
+      fetchWalletOrdinals('bc1p-anything', nextSlug(), true, { wallets: [] })
+    ).rejects.toThrow(/require a wallet/);
   });
 });

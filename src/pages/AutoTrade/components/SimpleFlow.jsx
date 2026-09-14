@@ -181,6 +181,7 @@ const SimpleFlow = ({
           onSelect={selectCollection}
           exchange={settings.tradingExchange}
           wallets={wallets}
+          connected={readiness.connected}
         />
       </Step>
 

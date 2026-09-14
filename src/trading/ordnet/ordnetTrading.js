@@ -242,7 +242,7 @@ export const ensureOrdNetSession = async (wallet, network = 'mainnet') => {
   } catch (error) {
     if (error?.status === 403) {
       throw new Error(
-        `ord.net will not sign in ${address}: it needs at least 0.01 BTC confirmed to trade.`
+        `ord.net will not sign in ${address}: it needs at least ${formatMinFunding()} BTC confirmed to trade.`
       );
     }
     if (error?.status === 503) {
@@ -280,8 +280,13 @@ export const ensureOrdNetSession = async (wallet, network = 'mainnet') => {
  * ord.net will not issue a session token unless the wallet's payment address
  * holds this much, confirmed. It is a minimum balance rather than a fee — the
  * coin stays spendable — but a wallet under it cannot trade here at all.
+ *
+ * ord.net lowered this from 0.01 to 0.001 BTC. Their published docs still say
+ * 0.01 (see docs/reference/ordnet/authentication.md), so this number comes
+ * from them directly rather than from the mirror. If a funded wallet is
+ * refused with a 403, check whether it moved again.
  */
-export const ORDNET_MIN_FUNDING_SATS = 1000000; // 0.01 BTC
+export const ORDNET_MIN_FUNDING_SATS = 100000; // 0.001 BTC
 
 /**
  * Which wallets ord.net will authenticate, checked before a run rather than
@@ -291,6 +296,9 @@ export const ORDNET_MIN_FUNDING_SATS = 1000000; // 0.01 BTC
  * @param {string} network
  * @returns {Promise<{eligible: object[], skipped: {wallet: object, confirmed: number}[]}>}
  */
+export const formatMinFunding = () =>
+  (ORDNET_MIN_FUNDING_SATS / 100000000).toFixed(8).replace(/0+$/, '');
+
 export const checkOrdNetEligibility = async (wallets, network = 'mainnet') => {
   const eligible = [];
   const skipped = [];
@@ -341,14 +349,128 @@ const withOrdNetSession = async (wallet, network, run) => {
 };
 
 /** A session for read calls. Internal to this directory; see ordNetFetch. */
-export const getReadSession = async (options = {}) => {
-  const wallet = options.wallet || options.wallets?.[0];
-  if (!wallet) {
+export /*
+ * The connected browser wallet, as a fallback signer.
+ *
+ * Registered once by the app (see `useOrdNetProviderSigner`) rather than
+ * threaded through every read call, because reads happen deep inside the
+ * engine and the picker and there is only ever one connected wallet.
+ *
+ * It exists for one case: ord.net authenticates even its reads, so with no
+ * proxy wallet over the funding floor there is nothing to sign with and the
+ * order book is simply invisible. The connected wallet can sign that
+ * challenge instead.
+ *
+ * Reads only. A purchase spends from the binding's payment address, so a
+ * proxy wallet can only buy when it is itself the funded, signed-in wallet —
+ * authenticating as the user would just mean a wallet popup per trade, which
+ * is the opposite of what the auto-trader is for.
+ */
+let providerSigner = null;
+
+/**
+ * @param {{ordinalsAddress: string, paymentAddress: string, signMessage: (address: string, message: string) => Promise<string>}|null} signer
+ */
+export const setOrdNetProviderSigner = (signer) => {
+  providerSigner = signer;
+};
+
+const PROVIDER_SESSION_KEY = 'provider';
+
+/** Sign in to ord.net as the connected wallet. */
+const ensureProviderSession = async () => {
+  if (!providerSigner?.signMessage) {
+    throw new Error('No connected wallet available to sign in to ord.net');
+  }
+
+  const cached = getStoredSession(PROVIDER_SESSION_KEY);
+  if (cached) return cached;
+
+  const { ordinalsAddress, paymentAddress } = providerSigner;
+  const challenge = await ordNetFetch('/auth/challenge', {
+    method: 'POST',
+    body: {
+      ordinalsAddress,
+      paymentAddress: paymentAddress || ordinalsAddress,
+    },
+  });
+
+  const verifications = [];
+  for (const entry of challenge.challenges || []) {
+    // ord-connect asks the wallet for a BIP-322 simple signature, which is
+    // what /auth/verify wants; it comes back base64 and goes up as hex.
+    const signature = await providerSigner.signMessage(
+      entry.address,
+      entry.message
+    );
+    if (!signature) {
+      throw new Error('The connected wallet did not return a signature');
+    }
+    verifications.push({
+      challengeId: entry.challengeId,
+      address: entry.address,
+      signature: base64ToHex(String(signature)),
+    });
+  }
+
+  let verified;
+  try {
+    verified = await ordNetFetch('/auth/verify', {
+      method: 'POST',
+      body: { authRequestId: challenge.authRequestId, verifications },
+    });
+  } catch (error) {
+    if (error?.status === 403) {
+      throw new Error(
+        `ord.net will not sign in your connected wallet either: it needs at least ${formatMinFunding()} BTC confirmed.`
+      );
+    }
+    throw error;
+  }
+
+  const binding = verified.walletBindings?.[0];
+  if (!verified.sessionToken || !binding?.walletBindingId) {
     throw new Error(
-      'ord.net reads require a proxy wallet for API authentication'
+      'ord.net auth did not return a session token and wallet binding'
     );
   }
-  return ensureOrdNetSession(wallet, options.network || 'mainnet');
+
+  const session = {
+    sessionToken: verified.sessionToken,
+    expiresAt: verified.expiresAt,
+    walletBindingId: binding.walletBindingId,
+    address: ordinalsAddress,
+    viaProvider: true,
+  };
+  setStoredSession(PROVIDER_SESSION_KEY, session);
+  return session;
+};
+
+/** A session for read calls. Internal to this directory; see ordNetFetch. */
+export const getReadSession = async (options = {}) => {
+  const candidates = options.wallet ? [options.wallet] : options.wallets || [];
+
+  /*
+   * Try the proxy wallets first: a session signed by the wallet that will
+   * actually trade is the one the write paths need anyway. Only when none of
+   * them can sign in does the connected wallet stand in, so a reader is not
+   * left staring at an empty order book.
+   */
+  let firstError = null;
+  for (const wallet of candidates) {
+    try {
+      return await ensureOrdNetSession(wallet, options.network || 'mainnet');
+    } catch (error) {
+      firstError = firstError || error;
+    }
+  }
+
+  if (providerSigner) return ensureProviderSession();
+
+  throw (
+    firstError ||
+    new Error('ord.net reads require a wallet for API authentication')
+  );
 };
 
 const normalizeListing = (row, fallbackCollectionSlug) => {

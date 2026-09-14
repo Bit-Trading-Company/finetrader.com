@@ -17,6 +17,7 @@ import { DIALOG, useDialogs } from './DialogContext';
 import FineTraderWalletsModal from '../features/wallet/FineTraderWalletsModal';
 import Dispatch from '../features/wallet/Dispatch';
 import { useDisplayPreferences } from './DisplayPreferences';
+import { useOrdNetProviderSigner } from '../features/trading/useOrdNetProviderSigner';
 import SettingsDialog from './SettingsDialog';
 import HeaderWalletMenu from './HeaderWalletMenu';
 import SidebarWalletStatus from './SidebarWalletStatus';
@@ -49,6 +50,11 @@ const AppShell = () => {
   const session = useWalletSession();
   const { isDialogOpen, openDialog, closeDialog } = useDialogs();
   const { prefs } = useDisplayPreferences();
+  /*
+   * Lets ord.net sign in as the connected wallet when no Fine Trader wallet
+   * clears its funding floor, so the order book is still readable.
+   */
+  useOrdNetProviderSigner();
   const current = findNavItem(location.pathname);
 
   // Close the mobile drawer whenever the route changes.

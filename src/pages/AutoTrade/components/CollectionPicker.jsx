@@ -59,6 +59,8 @@ const Change = ({ value }) => {
  * @param {string} [props.exchange] which marketplace to browse; each has its
  *   own discovery, and ord.net can only show collections with live listings.
  * @param {object[]} [props.wallets] ord.net authenticates even its reads
+ * @param {boolean} [props.connected] a browser wallet is connected, which
+ *   ord.net can sign a read session with when no proxy wallet qualifies
  */
 const CollectionPicker = ({
   selected,
@@ -66,10 +68,16 @@ const CollectionPicker = ({
   variant = 'grid',
   exchange,
   wallets,
+  connected = false,
 }) => {
   const api = getTradingApi(exchange);
-  // ord.net signs its reads with a proxy wallet, so browsing waits for one.
-  const blockedOnWallet = Boolean(api.needsWalletForReads) && !wallets?.length;
+  /*
+   * ord.net signs even its reads. A Fine Trader wallet is the usual signer,
+   * but the connected wallet can stand in, so browsing only stalls when
+   * there is neither.
+   */
+  const blockedOnWallet =
+    Boolean(api.needsWalletForReads) && !wallets?.length && !connected;
   const [collections, setCollections] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -336,7 +344,7 @@ const CollectionPicker = ({
       ) : visible.length === 0 ? (
         <p className={styles.none}>
           {blockedOnWallet
-            ? 'Generate a Fine Trader wallet first — ord.net signs in before it will show you the order book.'
+            ? 'Connect a wallet — ord.net signs in before it will show you the order book.'
             : isSearchResult || filterText
               ? 'No collections matched.'
               : 'No collections available right now.'}

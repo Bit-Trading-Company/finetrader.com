@@ -225,6 +225,7 @@ const AdvancedView = ({
                 variant="table"
                 exchange={settings.tradingExchange}
                 wallets={wallets}
+                connected={readiness.connected}
               />
             </div>
           </Card>

@@ -14,7 +14,10 @@ import {
   processWalletItems,
 } from '../../../trading/autoTradeEngine';
 import { TRADING_EXCHANGES, getTradingApi } from '../../../trading/exchanges';
-import { checkOrdNetEligibility } from '../../../trading/ordnet/ordnetTrading';
+import {
+  checkOrdNetEligibility,
+  formatMinFunding,
+} from '../../../trading/ordnet/ordnetTrading';
 import { selectActiveWallets } from '../../../features/wallet/walletSelection';
 import { mergePendingPurchases } from '../../../trading/pendingPurchases';
 
@@ -150,9 +153,9 @@ export const useAutoTradeRunner = ({
       }
 
       /*
-       * ord.net refuses a session token to any wallet holding under 0.01 BTC
-       * confirmed, so check here rather than letting each wallet fail with a
-       * 403 partway through the run. The balance is a floor, not a cost — it
+       * ord.net refuses a session token to any wallet under its funding
+       * floor, so check here rather than letting each wallet fail with a 403
+       * partway through the run. The balance is a floor, not a cost — it
        * stays spendable — so a skipped wallet just needs topping up.
        */
       if (exchangeApi.id === TRADING_EXCHANGES.ORDNET) {
@@ -163,13 +166,13 @@ export const useAutoTradeRunner = ({
 
         for (const { wallet, confirmed } of skipped) {
           addConsoleLog(
-            `  ⚠ Skipping ${wallet.address.slice(0, 8)}…: ord.net needs 0.01 BTC confirmed, this wallet has ${(confirmed / 100000000).toFixed(8)}`
+            `  ⚠ Skipping ${wallet.address.slice(0, 8)}…: ord.net needs ${formatMinFunding()} BTC confirmed, this wallet has ${(confirmed / 100000000).toFixed(8)}`
           );
         }
 
         if (eligible.length === 0) {
           addConsoleLog(
-            '✗ No wallets meet ord.net’s 0.01 BTC minimum. Fund them, or switch exchange.'
+            `✗ No wallets meet ord.net’s ${formatMinFunding()} BTC minimum. Fund them, or switch exchange.`
           );
           endRun();
           return;
