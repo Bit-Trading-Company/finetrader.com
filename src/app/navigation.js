@@ -62,18 +62,6 @@ export const NAV_GROUPS = [
     ],
   },
   {
-    id: 'about',
-    title: 'Fine Trader',
-    items: [
-      {
-        to: '/about',
-        label: 'About',
-        icon: InfoIcon,
-        description: 'What this is, and the risks of using it',
-      },
-    ],
-  },
-  {
     id: 'insights',
     title: 'Insights',
     items: [
@@ -83,12 +71,17 @@ export const NAV_GROUPS = [
         icon: ChartIcon,
         description: 'Wallet holdings and purchase history',
       },
+    ],
+  },
+  {
+    id: 'about',
+    title: 'Fine Trader',
+    items: [
       {
-        to: '/satflow-stats',
-        label: 'Collection stats',
-        icon: ChartIcon,
-        description: 'Satflow collection statistics',
-        legacy: true,
+        to: '/about',
+        label: 'About',
+        icon: InfoIcon,
+        description: 'What this is, and the risks of using it',
       },
     ],
   },
