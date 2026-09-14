@@ -17,8 +17,9 @@
   /* Bottom strip of the hand-drawn frame; the cast bleeds through it. */
   --frame-bottom: 28px;
 
-  min-height: 100vh;
-  min-height: 100dvh;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   background: var(--ds-surface-app);
   color: var(--ds-text);
   /*
@@ -34,8 +35,6 @@
 /* The hand-drawn frame from the original splash, kept as the outer edge. */
 .frame {
   height: 100%;
-  min-height: calc(100vh - var(--pad) * 2);
-  min-height: calc(100dvh - var(--pad) * 2);
   border-image: url('../../assets/images/png/fine-trader-1.png') 50 56 55 64
     fill / 22px 20px 28px 28px;
   box-sizing: border-box;
@@ -44,7 +43,6 @@
 .stage {
   position: relative;
   height: 100%;
-  min-height: inherit;
   display: grid;
   grid-template-rows: 1fr auto;
   align-items: center;
@@ -120,10 +118,26 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  /*
+   * Deliberately generous: the headline and the cast leave a band of empty
+   * stage between them, and the call to action belongs in it rather than
+   * tucked under the words.
+   */
   gap: clamp(12px, 2vw, 20px);
-  margin-top: clamp(24px, 4vh, 44px);
+  margin-top: clamp(28px, 11vh, 130px);
   animation: rise var(--ds-duration-slow) var(--ds-ease) both;
   animation-delay: 220ms;
+}
+
+/*
+ * The call to action speaks in the same hand as the headline above it, and
+ * at a size that carries across the empty stage it now sits in.
+ */
+.enter {
+  font-family: var(--ds-font-display);
+  font-size: clamp(1.05rem, 1.9vw, 1.5rem);
+  letter-spacing: 0.02em;
+  padding: 0.7em 1.5em;
 }
 
 /* Cast ------------------------------------------------------------------- */
@@ -135,11 +149,12 @@
   display: flex;
   justify-content: center;
   /*
-   * Pull the artwork down through the frame's bottom strip and the page
-   * gutter, so the characters stand on the bottom edge of the viewport with
-   * no dark band beneath them. `.splash` clips whatever runs past.
+   * Pull the artwork down through the page gutter so the characters stand on
+   * the bottom edge of the viewport with no dark band beneath them. The
+   * frame's bottom strip is left alone: with the page fixed to the viewport
+   * height, pulling through that too pushed their heads out of view.
    */
-  margin-bottom: calc(-1 * (var(--pad) + var(--frame-bottom)));
+  margin-bottom: calc(-1 * var(--pad));
 }
 
 .cast {
@@ -151,7 +166,7 @@
    * bottom anchor crops the empty top on wide screens and crops the outer
    * shoulders on narrow ones, keeping the faces a usable size throughout.
    */
-  height: clamp(230px, 52vh, 620px);
+  height: clamp(210px, 46vh, 560px);
   object-fit: cover;
   object-position: center bottom;
   user-select: none;
@@ -221,6 +236,13 @@
     height: clamp(210px, 32vh, 320px);
   }
 
+  /* Too narrow for one line: let it wrap, and balance the two. */
+  .title {
+    font-size: clamp(1.75rem, 8vw, 2.75rem);
+    white-space: normal;
+    text-wrap: balance;
+  }
+
   .copy {
     padding-top: clamp(16px, 2.5vh, 32px);
   }
@@ -243,11 +265,9 @@
  * narrow-screen band height above, which a small phone matches as well.
  */
 @media (max-height: 620px) {
-  /* Too narrow for one line: let it wrap, and balance the two. */
+  /* Short, not narrow: shrink the headline, but it still fits on one line. */
   .title {
-    font-size: clamp(1.75rem, 8vw, 2.75rem);
-    white-space: normal;
-    text-wrap: balance;
+    font-size: clamp(1.6rem, 4vh, 2.5rem);
   }
 
   .actions {

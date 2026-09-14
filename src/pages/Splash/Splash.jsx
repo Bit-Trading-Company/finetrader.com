@@ -72,7 +72,12 @@ const Splash = () => {
               everything else is a click away in the sidebar once inside.
             */}
             <div className={styles.actions}>
-              <Button as={Link} to="/auto-trade" size="lg">
+              <Button
+                as={Link}
+                to="/auto-trade"
+                size="lg"
+                className={styles.enter}
+              >
                 Enter Fine Trader
               </Button>
             </div>
