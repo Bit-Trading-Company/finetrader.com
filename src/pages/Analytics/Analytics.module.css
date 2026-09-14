@@ -1,0 +1,15 @@
+/*
+ * One frosted panel per section. The sections themselves still carry their
+ * pre-redesign styling, so this puts them on surfaces that match the rest of
+ * the app until they are rebuilt.
+ */
+.panel {
+  padding: var(--ds-space-5);
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--ds-space-4);
+  }
+}

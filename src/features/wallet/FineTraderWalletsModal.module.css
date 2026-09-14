@@ -1,0 +1,46 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.explainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  max-width: 68ch;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-md);
+  line-height: 1.55;
+}
+
+.connect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-subtle);
+}
+
+.connectCopy {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.generate {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.count {
+  width: 120px;
+}
+
+.generateHint {
+  margin-top: calc(var(--ds-space-3) * -1);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+  max-width: 62ch;
+}

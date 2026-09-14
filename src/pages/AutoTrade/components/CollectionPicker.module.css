@@ -1,0 +1,177 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.search {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+.search > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: var(--ds-space-3);
+  /* Long lists scroll inside the panel rather than stretching the page. */
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  background: var(--ds-surface-raised);
+  border: none;
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.card:hover {
+  background: var(--ds-surface-hover);
+}
+
+/* Selection is marked by a leading edge, not a ring around the whole row. */
+.selected {
+  background: var(--ds-accent-quiet);
+  box-shadow: inset 2px 0 0 var(--ds-accent);
+}
+
+.thumb,
+.thumbFallback {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--ds-radius-sm);
+  object-fit: cover;
+  background: var(--ds-surface-sunken);
+}
+
+.body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.stat b {
+  font-family: var(--ds-font-mono);
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.none {
+  padding: var(--ds-space-6);
+  text-align: center;
+  color: var(--ds-text-muted);
+}
+
+/* Advanced search ---------------------------------------------------------- */
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4) 0;
+  border-top: 1px solid var(--ds-border-subtle);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  min-width: 0;
+}
+
+.filterLabel {
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ds-text-faint);
+}
+
+/* Table variant ------------------------------------------------------------ */
+
+.tableWrap {
+  max-height: 460px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.rowName {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.rowThumb {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--ds-radius-sm);
+  object-fit: cover;
+  background: var(--ds-surface-sunken);
+}
+
+.volCell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+  justify-content: flex-end;
+}
+
+/* Change indicators -------------------------------------------------------- */
+
+.up {
+  color: var(--ds-success);
+  font-size: var(--ds-text-xs);
+}
+
+.down {
+  color: var(--ds-danger);
+  font-size: var(--ds-text-xs);
+}
+
+.flat {
+  color: var(--ds-text-faint);
+  font-size: var(--ds-text-xs);
+}
+
+.filterReset {
+  display: flex;
+  align-items: flex-end;
+}

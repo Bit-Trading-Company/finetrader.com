@@ -1,0 +1,44 @@
+# ORD.NET API
+
+> ORD.NET is a Bitcoin ordinals marketplace. The trading API lets wallet clients read the order book, list inscriptions, buy them, and run the offer lifecycle. Auth is wallet-signature based (no API keys). Trading writes use a two-step PSBT flow: preflight to build PSBTs, submit to broadcast.
+
+Base URL: https://ord.net/api/v1
+Marketing site: https://ord.net
+Docs root: https://developers.ord.net
+OpenAPI 3.1: https://developers.ord.net/openapi.json
+
+## Reference
+
+- [Overview (homepage)](https://developers.ord.net/): Base URL, JSON request shape, the PSBT flow that powers every write, and pagination conventions (cursor for /listings, /sales, /collection/:slug/inscriptions, and /me/offers; page for offers/history).
+- [Authentication](https://developers.ord.net/reference/authentication/): Wallet-signature auth (no API keys). POST /auth/challenge and POST /auth/verify with full request/response field tables. /auth/verify signatures are hex-encoded BIP-322 simple signatures. GET /me returns the profile and walletBindings. To receive a bearer token, the verified payment address from the auth flow must hold 0.01 BTC confirmed; auth verify returns 403 when it does not and 503 when the funding check is temporarily unavailable. Bearer tokens are currently valid for 1 hour.
+- [Collections](https://developers.ord.net/reference/collections/): GET /collection-stats/floors for floor stats by comma-separated slugs. GET /collection/:slug/inscriptions is cursor-paginated; sort values: oldest (default) and newest; limit defaults to 48 and maxes at 100. Inscription responses use the collection item-card payload, including media/display fields, traits, satributes, owner, listing state, sat, and location fields.
+- [Listings](https://developers.ord.net/reference/listings/): GET /listings (filterable, cursor-paginated). POST /collection/:slug/listings/preflight, /submit, /delist with the two-step listing PSBT (transfer + settlement) plus a recovery PSBT signed at create time. durationDays values: 1, 7, 30, 90, 180.
+- [Sales](https://developers.ord.net/reference/sales/): GET /sales (cursor-paginated, newest first). Optional collectionSlug filter; unknown collectionSlug returns an empty page. saleType values: internal and external. limit defaults to 50 and maxes at 100.
+- [Buying](https://developers.ord.net/reference/buying/): POST /collection/:slug/purchases/preflight and /submit. Single-step purchase PSBT. spendableUtxos cap is 1000 per call and is required for API-created or non-Xverse bindings.
+- [Offers](https://developers.ord.net/reference/offers/): Per-inscription offer lifecycle. Buyer creates collection-scoped offers with /collection/:slug/offers/preflight + /submit. Seller accepts (1-2 step PSBT), rejects (no PSBT), or counters (3-step PSBT). Buyer accepts a counter (2-step PSBT) or rejects it. validityHours values: 12, 24, 168, 720, 2160. status values: active, accepted, rejected, cancelled, expired, invalidated. kind values: buyer_offer, seller_counter. GET /me/offers with view in {owned, sent, history}.
+- [Errors and rate limits](https://developers.ord.net/reference/errors-rate-limits/): Standard JSON {"error": string} body. Status codes: 200, 400, 401, 403, 404, 409, 410, 429, 500, 503. Rate limits use 60s fixed windows: auth challenge 20/IP and 5/address, auth verify 20/IP and 5/address, trading reads 60/IP and 30/profile, trading writes 20/IP and 8/profile. CORS allows GET/POST/OPTIONS with authorization and content-type headers.
+
+## Conventions
+
+- All endpoints under https://ord.net/api/v1
+- JSON request/response bodies
+- Bearer auth header on every request: `Authorization: Bearer <sessionToken>`
+- The `walletBindingId` field on every write is chosen from `walletBindings` returned by /auth/verify or GET /me
+- Trading writes follow preflight (server builds PSBTs) → wallet signs → submit (server broadcasts)
+- Collection routes use one form: /collection/:slug/...
+- Funded payment address requirement: the auth-flow payment address must hold 0.01 BTC confirmed before a bearer token is issued
+- Cursor pagination: opaque cursor; changing sort or filters invalidates it. Page pagination (offers history): zero-indexed, page size 25.
+
+## Enums
+
+- challenge role: ordinals, payment
+- listings sort: recent (default, newest listing first), price (lowest asking price first)
+- saleType: internal, external
+- collection inscriptions sort: oldest (default), newest
+- listings durationDays: 1, 7, 30, 90, 180
+- offers validityHours: 12, 24, 168, 720, 2160
+- offer status: active, accepted, rejected, cancelled, expired, invalidated
+- offer kind: buyer_offer, seller_counter
+- collection kind: parent_child, gallery
+- collection verificationStatus: verified, unverified
+- /me/offers view: owned (default), sent, history

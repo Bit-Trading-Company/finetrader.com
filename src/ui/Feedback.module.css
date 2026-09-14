@@ -1,0 +1,154 @@
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--ds-radius-pill);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.neutral {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text-muted);
+}
+
+.accent {
+  background: var(--ds-accent-quiet);
+  color: var(--ds-accent-hover);
+}
+
+.success {
+  background: var(--ds-success-quiet);
+  color: var(--ds-success);
+}
+
+.danger {
+  background: var(--ds-danger-quiet);
+  color: var(--ds-danger);
+}
+
+.warning {
+  background: var(--ds-warning-quiet);
+  color: var(--ds-warning);
+}
+
+.info {
+  background: var(--ds-info-quiet);
+  color: var(--ds-info);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Alert */
+.alert {
+  display: flex;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  /* The tone is carried by the wash and the leading edge, not an outline. */
+  border-left: 2px solid var(--ds-border-strong);
+  background: var(--ds-surface-raised);
+  font-size: var(--ds-text-md);
+}
+
+.alertSuccess {
+  border-left-color: var(--ds-success);
+  background: var(--ds-success-quiet);
+}
+
+.alertDanger {
+  border-left-color: var(--ds-danger);
+  background: var(--ds-danger-quiet);
+}
+
+.alertWarning {
+  border-left-color: var(--ds-warning);
+  background: var(--ds-warning-quiet);
+}
+
+.alertInfo {
+  border-left-color: var(--ds-info);
+  background: var(--ds-info-quiet);
+}
+
+.alertTitle {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.alertBody {
+  color: var(--ds-text-muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  border: 2px solid var(--ds-border-strong);
+  border-right-color: var(--ds-accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.spinnerSm {
+  width: 14px;
+  height: 14px;
+}
+
+.spinnerMd {
+  width: 22px;
+  height: 22px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-10) var(--ds-space-6);
+  text-align: center;
+  color: var(--ds-text-muted);
+}
+
+.emptyTitle {
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.emptyBody {
+  max-width: 46ch;
+  font-size: var(--ds-text-md);
+}
+
+.emptyArt {
+  color: var(--ds-text-faint);
+}
+
+/* Inline loading row */
+.loadingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-6);
+  color: var(--ds-text-muted);
+  justify-content: center;
+}

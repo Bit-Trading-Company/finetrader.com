@@ -1,0 +1,49 @@
+# satflow.com Documentation
+
+> Documentation for satflow.com
+
+Append .md to any documentation page URL to get its markdown version.
+
+## API Reference
+- [Overview](https://docs.satflow.com/reference/overview.md)
+- [Create a listing](https://docs.satflow.com/reference/create-a-listing.md): Let's walk through the steps required to list via API on Satflow.
+- [Create a collection bid](https://docs.satflow.com/reference/create-a-collection-bid.md): Let's wall through the steps involved for creating a collection bid via the API on Satflow.
+- [Signing the Satflow Challenge](https://docs.satflow.com/reference/request-and-sign-the-satflow-challenge.md): Some endpoints require a challenge to be signed to be used. Here a simple step by step guide on how to sign our challenge.
+- [Accepting a bid](https://docs.satflow.com/reference/create-a-collection-bid-copy.md): Let's wall through the steps involved for accepting a bid on your item via the API on Satflow.  This is for an individual item bid only (not a collection bid).
+- [Get bid activity data](https://docs.satflow.com/reference/get_activity-bids.md): Returns bid activity data with optional filtering and pagination
+- [Get sales activity data](https://docs.satflow.com/reference/get_activity-sales.md): Returns sales activity data with optional filtering and pagination
+- [Get listings activity data](https://docs.satflow.com/reference/get_activity-listings.md): Returns listings activity data with optional filtering and pagination
+- [Get active bids for an address](https://docs.satflow.com/reference/get_address-bids.md): Returns an array of active bids placed by the specified address
+- [Get bidding wallet information](https://docs.satflow.com/reference/get_address-bidding-wallet.md): Returns the multiSig wallet information for bidding based on provided addresses and public key
+- [Create withdraw intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-withdraw.md): Creates an unsigned PSBT for multisig withdraw that needs to be signed by the user
+- [Create accept collection bid intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-accept-collection-bid.md): Creates an unsigned PSBT for accepting collection bids that needs to be signed by the seller
+- [Submit signed withdraw PSBT](https://docs.satflow.com/reference/post_withdraw.md): Submit a signed multisig withdraw PSBT and broadcast it to the Bitcoin network
+- [Place a bid on an inscription or collection](https://docs.satflow.com/reference/post_bid-place.md): Submit a signed PSBT to place a bid on either a specific inscription or a collection. Collection bids can target the whole collection or specific traits.
+- [Create inscription bid intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-bid.md): Creates an unsigned bidding PSBT for placing a bid on a specific inscription. This wraps `createPsbt.bid`; sign the returned PSBT, then submit it with `/bid/place`.
+- [Get asset settings by type and ticker](https://docs.satflow.com/reference/get_asset-settings-type-ticker.md): Retrieves existing settings for a given asset, or returns in-memory defaults if none exist.
+- [Fill/accept a bid](https://docs.satflow.com/reference/post_bid-fill.md): Submit signed PSBT to fill/accept either an inscription bid or collection bid (including trait-constrained collection bids) and broadcast the item sale. The endpoint automatically detects the bid type based on the provided parameters.
+- [Create accept bid intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-accept.md): Creates an unsigned PSBT for accepting an inscription bid that needs to be signed by the seller
+- [Cancel a bid or ask order](https://docs.satflow.com/reference/post_cancel.md): Cancels a bid or ask order with signature verification
+- [Get challenge message for wallet verification](https://docs.satflow.com/reference/get_challenge.md): Returns a challenge message that needs to be signed by the wallet
+- [Verify signed challenge](https://docs.satflow.com/reference/get_challenge-verify.md): Verifies that the provided signature is valid for the challenge
+- [Get collection statistics](https://docs.satflow.com/reference/get_collection-stats.md): Returns collection statistics including floor price, listed count, rolling volume, and metadata
+- [Get collection floor prices](https://docs.satflow.com/reference/get_collection-stats-floors.md): Returns floor prices for multiple collections by type (ordinals or runes)
+- [Get details for collection](https://docs.satflow.com/reference/get_collection.md): Returns collection metadata and optionally category attributes based on query parameters
+- [Get inscription IDs for a collection](https://docs.satflow.com/reference/get_collection-inscription-ids.md): Returns inscription IDs for a collection in deterministic inscription-number order using offset pagination
+- [Create Satflow listing intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-sell.md): Creates an unsigned PSBT for a single listing that needs to be signed by the user
+- [Create Satflow bulk listing intent (unsigned PSBTs)](https://docs.satflow.com/reference/post_intent-bulk-sell.md): Creates unsigned PSBTs for multiple listings that need to be signed by the user
+- [Submit signed Satflow listing PSBTs](https://docs.satflow.com/reference/post_list.md): Submit signed listing PSBTs to create active listings on the marketplace
+- [Create external marketplace listing intent (unsigned PSBTs)](https://docs.satflow.com/reference/post_intent-external-sell.md): Legacy Magic Eden listing intent endpoint. Magic Eden is deprecated and blocked by default unless `MAGIC_EDEN_DISABLED=false`.
+- [Submit signed external marketplace listing PSBTs](https://docs.satflow.com/reference/post_list-external.md): Legacy Magic Eden listing endpoint. Magic Eden is deprecated and blocked by default unless `MAGIC_EDEN_DISABLED=false`.
+- [Get details for item](https://docs.satflow.com/reference/get_item.md): Returns ordinal inscription data, metadata for token and collection, listing data, and bid data based on query parameters
+- [Get floor listings for collections](https://docs.satflow.com/reference/get_orders-floor.md): Retrieve the floor listings for one or more collections by their IDs.
+- [Get wallet contents](https://docs.satflow.com/reference/get_address-wallet-contents.md): Returns the contents of a wallet including ordinals and runes with optional filtering and pagination
+- [Create secure purchase intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-secure-purchase.md): Creates an unsigned PSBT for secure purchases that needs to be signed by the buyer
+- [Create external purchase intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-external-purchase.md): Creates an unsigned PSBT for external marketplace purchases. Use `dotswap`; `magiceden` is deprecated and blocked by default.
+- [Create Satflow purchase intent (unsigned PSBT)](https://docs.satflow.com/reference/post_intent-satflow-purchase.md): Creates an unsigned PSBT for Satflow marketplace purchases that needs to be signed by the buyer
+- [Broadcast purchase transaction (signed PSBT)](https://docs.satflow.com/reference/post_purchase-broadcast.md): Broadcasts a signed purchase PSBT to complete the transaction. Used for both secure and non-secure purchases.
+- [Submit external purchase transaction (signed PSBT)](https://docs.satflow.com/reference/post_purchase-external.md): Submits a signed external marketplace purchase PSBT to complete the transaction. Use `dotswap`; `magiceden` is deprecated and blocked by default.
+
+## Changelog
+- [v1.1.0](https://docs.satflow.com/changelog/v110.md)
+- [Welcome to ordinals.market](https://docs.satflow.com/changelog/welcome-to-ordinalsmarket.md)

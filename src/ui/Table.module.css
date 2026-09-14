@@ -1,0 +1,111 @@
+.wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-md);
+}
+
+.table th,
+.table td {
+  padding: 10px var(--ds-space-4);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--ds-surface-raised);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.clickable tbody tr {
+  cursor: pointer;
+  transition: background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.clickable tbody tr:hover {
+  background: var(--ds-surface-hover);
+}
+
+.selected,
+.clickable tbody tr.selected:hover {
+  background: var(--ds-accent-quiet);
+}
+
+.right {
+  text-align: right;
+}
+
+.right :global(.ds-cell-inner) {
+  justify-content: flex-end;
+}
+
+.center {
+  text-align: center;
+}
+
+.numeric {
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* On narrow screens each row becomes a stacked card with its labels. */
+@media (max-width: 720px) {
+  .table thead {
+    display: none;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tbody tr {
+    border-bottom: 1px solid var(--ds-border-subtle);
+    border-radius: 0;
+    margin-bottom: var(--ds-space-3);
+    padding: var(--ds-space-2) 0;
+    background: var(--ds-surface);
+  }
+
+  .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-4);
+    text-align: right;
+    padding: 6px var(--ds-space-4);
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    font-size: var(--ds-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ds-text-muted);
+    text-align: left;
+  }
+}

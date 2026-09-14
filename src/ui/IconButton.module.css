@@ -1,0 +1,49 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-md);
+  transition:
+    color var(--ds-duration-fast) var(--ds-ease),
+    background var(--ds-duration-fast) var(--ds-ease);
+}
+
+.md {
+  width: 34px;
+  height: 34px;
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+}
+
+.surface {
+  background: var(--ds-surface-raised);
+  box-shadow: var(--ds-glass-edge);
+}
+
+.button:hover:not(:disabled) {
+  color: var(--ds-text);
+  background: var(--ds-surface-hover);
+}
+
+/* Pressed, because the panel it opens is on screen. */
+.active {
+  color: var(--ds-accent);
+  background: var(--ds-accent-quiet);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

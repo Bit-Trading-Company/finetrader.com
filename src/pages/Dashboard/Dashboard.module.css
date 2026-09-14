@@ -1,0 +1,15 @@
+/*
+ * One frosted panel holding the marketplace views. Those views still carry
+ * their pre-redesign styling, so this keeps them on a surface that matches the
+ * rest of the app until they are rebuilt.
+ */
+.panel {
+  padding: var(--ds-space-5);
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--ds-space-4);
+  }
+}

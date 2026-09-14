@@ -1,0 +1,264 @@
+/*
+ * Design system theme: semantic tokens for the redesigned UI.
+ *
+ * tokens.css holds the raw palette that the legacy pages use. This file adds
+ * the vocabulary the new UI is built from — surfaces, text, state colors,
+ * spacing, radii, type and motion — so a component never hardcodes a color or
+ * a pixel value.
+ *
+ * Everything new renders inside `.ds-root`, which opts out of the legacy
+ * typography rules in global.css (see docs/ARCHITECTURE.md).
+ *
+ * The palette is read off the graffiti the app grew out of
+ * (assets/images/png/backgrounds): an ink ground with a violet cast, the
+ * marker orange of the drawn frame, and the acid green, magenta and cyan of
+ * the scrawl — each pulled back from neon to something that can sit behind
+ * eight columns of figures without shouting.
+ */
+
+:root {
+  /* Surfaces: app background up to the most raised layer */
+  --ds-surface-app: #0b0910;
+  --ds-surface-sunken: #070610;
+  --ds-surface: #14111c;
+  --ds-surface-raised: #1b1726;
+  --ds-surface-overlay: #201b2d;
+  --ds-surface-hover: #262034;
+
+  /*
+   * Frosted panels. Panels carry no border — they are told apart by
+   * translucency over the page art, a lit top edge and a hairline rim, which
+   * is what a sheet of glass actually does to light.
+   *
+   * The blur is paired with a saturation lift: blurring alone greys out the
+   * colour it picks up, and the graffiti behind these panels is the whole
+   * reason to be translucent. One filter token so every frosted surface
+   * frosts identically, and so turning glass off is a single override.
+   */
+  /*
+   * Frosted glass.
+   *
+   * No tint of its own: the blur is the surface. A translucent fill on top of
+   * the blur only greyed out the artwork it was meant to show.
+   *
+   * `--ds-glass-bg` exists for the other direction — with glass switched off
+   * in Settings → Display the shell fills it with a real surface, so a panel
+   * never has to know which mode it is in.
+   */
+  --ds-glass-bg: transparent;
+  --ds-glass-blur: 12px;
+  --ds-glass-filter: blur(var(--ds-glass-blur)) saturate(140%);
+
+  --ds-glass-edge:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+
+  /* Dividers. Rules between rows, never boxes around them. */
+  --ds-border: #2a2438;
+  --ds-border-strong: #3d3552;
+  --ds-border-subtle: #1e1929;
+
+  /* Text */
+  --ds-text: #ece8f5;
+  --ds-text-muted: #a79fbe;
+  --ds-text-faint: #8a8199;
+  --ds-text-inverse: #0b0910;
+
+  /* Brand and state */
+  --ds-accent: #ff9a3c;
+  --ds-accent-hover: #ffb066;
+  --ds-accent-quiet: rgba(255, 154, 60, 0.14);
+  --ds-success: #6ed15a;
+  --ds-success-quiet: rgba(110, 209, 90, 0.14);
+  --ds-danger: #ff4d6d;
+  --ds-danger-quiet: rgba(255, 77, 109, 0.14);
+  --ds-warning: #ffc043;
+  --ds-warning-quiet: rgba(255, 192, 67, 0.14);
+  --ds-info: #56cfe1;
+  --ds-info-quiet: rgba(86, 207, 225, 0.14);
+
+  /* Focus ring */
+  --ds-focus-ring: 0 0 0 2px var(--ds-surface-app), 0 0 0 4px var(--ds-accent);
+
+  /* Spacing scale (4px base) */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-space-10: 40px;
+  --ds-space-12: 48px;
+  --ds-space-16: 64px;
+
+  /*
+   * Radii. Barely there: this is an instrument panel. Enough to take the
+   * bite off a corner, never enough to read as a rounded card.
+   */
+  --ds-radius-sm: 2px;
+  --ds-radius-md: 3px;
+  --ds-radius-lg: 4px;
+  --ds-radius-pill: 999px;
+
+  /* Shadows, tinted toward the ground rather than pure black. */
+  --ds-shadow-sm: 0 1px 2px rgba(6, 4, 12, 0.5);
+  --ds-shadow-md: 0 8px 20px rgba(6, 4, 12, 0.45);
+  --ds-shadow-lg: 0 20px 44px rgba(6, 4, 12, 0.55);
+
+  /* Typography */
+  --ds-font-sans:
+    'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --ds-font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
+    'Courier New', monospace;
+  --ds-font-display: var(--font-family-display);
+
+  --ds-text-xs: 0.75rem; /* 12 */
+  --ds-text-sm: 0.8125rem; /* 13 */
+  --ds-text-md: 0.875rem; /* 14 - default UI size */
+  --ds-text-lg: 1rem; /* 16 */
+  --ds-text-xl: 1.25rem; /* 20 */
+  --ds-display-sm: 1.75rem;
+  --ds-display-md: 2.25rem;
+  --ds-display-lg: clamp(2.5rem, 6vw, 4rem);
+
+  --ds-leading-tight: 1.25;
+  --ds-leading-normal: 1.5;
+
+  /* Motion */
+  --ds-duration-fast: 120ms;
+  --ds-duration-base: 200ms;
+  --ds-duration-slow: 320ms;
+  --ds-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+
+  /* Layout */
+  --ds-sidebar-width: 248px;
+  --ds-sidebar-width-collapsed: 68px;
+  --ds-topbar-height: 60px;
+  --ds-content-max: 1440px;
+
+  /* Layers */
+  --ds-z-sticky: 10;
+  --ds-z-sidebar: 20;
+  --ds-z-modal: 100;
+  --ds-z-toast: 200;
+}
+
+/* Base for every redesigned surface. */
+.ds-root {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-md);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text);
+  -webkit-font-smoothing: antialiased;
+  /*
+   * Prices, balances and counts sit in columns all over this app. Tabular
+   * figures keep those columns from jittering as the numbers change.
+   */
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-root *,
+.ds-root *::before,
+.ds-root *::after {
+  box-sizing: border-box;
+}
+
+/*
+ * Frosted panel.
+ *
+ * The one surface treatment in the app. It reads as a sheet laid over the
+ * page art rather than a box drawn on top of it, which is why it carries no
+ * border: an edge highlight and the blur do the separating.
+ *
+ * Blur is expensive, so this belongs on top-level panels only — never on rows
+ * inside one, and never nested inside another frosted surface.
+ */
+.ds-panel {
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-md);
+  border-radius: var(--ds-radius-lg);
+}
+
+/* Popovers and dialogs: the same glass, lifted further off the page. */
+.ds-panel-raised {
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-lg);
+  border-radius: var(--ds-radius-lg);
+}
+
+/*
+ * The hand-drawn frame.
+ *
+ * A marker-drawn rectangle scanned and stretched as a border-image — the same
+ * edge the splash screen uses. It wraps the whole content column and is off
+ * unless the reader turns it on under Settings → Display, so the app is calm
+ * by default and can be made loud on purpose.
+ *
+ * It is a real border, so content flows inside it at any height. A class using
+ * it must not set the `border` shorthand itself — that would reset
+ * `border-image` and drop the frame. `--ds-frame-scale` thins it; the default
+ * lives in the calc fallback rather than as a declaration here, because
+ * declaring it would tie with the consumer's own class on specificity and win
+ * or lose on emit order instead of on intent.
+ */
+.ds-frame {
+  border-style: solid;
+  border-width: calc(22px * var(--ds-frame-scale, 1))
+    calc(20px * var(--ds-frame-scale, 1)) calc(28px * var(--ds-frame-scale, 1))
+    calc(28px * var(--ds-frame-scale, 1));
+  border-color: var(--ds-accent);
+  border-image: url('../assets/images/png/fine-trader-1.png') 50 56 55 64 /
+    calc(22px * var(--ds-frame-scale, 1)) calc(20px * var(--ds-frame-scale, 1))
+    calc(28px * var(--ds-frame-scale, 1)) calc(28px * var(--ds-frame-scale, 1));
+  /* Keep the panel fill inside the drawn edge rather than under it. */
+  background-clip: padding-box;
+}
+
+/* Headings use the hand-drawn display face. */
+.ds-root h1,
+.ds-root h2,
+.ds-root h3 {
+  font-family: var(--ds-font-display);
+  font-weight: 400;
+  line-height: var(--ds-leading-tight);
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.ds-root h4,
+.ds-root h5,
+.ds-root h6,
+.ds-root p {
+  margin: 0;
+}
+
+/* Figures, addresses and txids stay monospaced so columns line up. */
+.ds-root code,
+.ds-root kbd,
+.ds-root samp {
+  font-family: var(--ds-font-mono);
+  font-size: 0.95em;
+}
+
+.ds-root :focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+  border-radius: var(--ds-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-root *,
+  .ds-root *::before,
+  .ds-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

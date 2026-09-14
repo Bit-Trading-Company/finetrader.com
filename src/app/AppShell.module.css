@@ -1,0 +1,381 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--ds-sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--ds-surface-app);
+  color: var(--ds-text);
+}
+
+.collapsed {
+  grid-template-columns: var(--ds-sidebar-width-collapsed) minmax(0, 1fr);
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-4) 0;
+  /* Chrome glass: the page art carries through it, navigation stays crisp. */
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
+  border-right: 1px solid var(--ds-border-subtle);
+  z-index: var(--ds-z-sidebar);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-space-1) var(--ds-space-4);
+  color: var(--ds-accent);
+  text-decoration: none;
+  min-width: 0;
+}
+
+/*
+ * The wordmark is the mark. Oliver is the heavier of the two hand-drawn
+ * faces, which is what lets the name carry the corner on its own.
+ */
+.brandText {
+  font-family: 'Oliver-Regular', var(--ds-font-display), serif;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+  scrollbar-width: thin;
+}
+
+.groupTitle {
+  padding: 0 var(--ds-space-4);
+  margin-bottom: var(--ds-space-2);
+  font-size: var(--ds-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ds-text-faint);
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  width: 100%;
+  padding: 9px var(--ds-space-4);
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ds-text-muted);
+  text-decoration: none;
+  font-size: var(--ds-text-md);
+  font-weight: 500;
+  white-space: nowrap;
+  /* Reserves the active bar's width so nothing shifts when it appears. */
+  box-shadow: inset 2px 0 0 transparent;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.link:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text);
+}
+
+.linkActive {
+  background: var(--ds-accent-quiet);
+  box-shadow: inset 2px 0 0 var(--ds-accent);
+  color: var(--ds-accent-hover);
+}
+
+.linkIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.linkLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.linkTag {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-hover);
+  color: var(--ds-text-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebarActions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-subtle);
+}
+
+.sidebarFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-3) 0;
+  border-top: 1px solid var(--ds-border-subtle);
+}
+
+.collapseButton {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  padding: 6px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.collapseButton:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text);
+}
+
+/* Collapsed rail */
+.collapsed .brandText,
+.collapsed .groupTitle,
+.collapsed .linkLabel,
+.collapsed .linkTag {
+  display: none;
+}
+
+.collapsed .link {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.collapsed .sidebarFooter {
+  justify-content: center;
+}
+
+/* Main column */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--ds-z-sticky);
+  height: var(--ds-topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  padding: 0 var(--ds-space-6);
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.topbarLeft,
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.pageName {
+  font-size: var(--ds-text-md);
+  font-weight: 600;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pageHint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.address {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+}
+
+.iconButton {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-muted);
+  padding: 7px;
+  cursor: pointer;
+  display: none;
+  place-items: center;
+}
+
+.iconButton:hover {
+  background: var(--ds-surface-hover);
+  color: var(--ds-text);
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--ds-content-max);
+  margin: 0 auto;
+  padding: var(--ds-space-8) var(--ds-space-6) var(--ds-space-16);
+  min-width: 0;
+  /*
+   * Read by the global `.ds-frame` when Settings → Display turns the drawn
+   * border on. Harmless while it is off.
+   */
+  --ds-frame-scale: 0.45;
+}
+
+/*
+ * The drawn frame, fixed over the content column: it holds the area the page
+ * scrolls inside, and never moves with it. Clicks pass through.
+ */
+.frameOverlay {
+  position: fixed;
+  top: var(--ds-topbar-height);
+  right: 0;
+  bottom: 0;
+  left: var(--ds-sidebar-width);
+  z-index: var(--ds-z-sticky);
+  pointer-events: none;
+  --ds-frame-scale: 0.45;
+  transition: left var(--ds-duration-base) var(--ds-ease);
+}
+
+.collapsed .frameOverlay {
+  left: var(--ds-sidebar-width-collapsed);
+}
+
+/* Keep the page clear of the frame it now sits inside. */
+.framed {
+  padding: var(--ds-space-6) var(--ds-space-8) var(--ds-space-16);
+}
+
+/*
+ * Glass turned off in Settings → Display. Panels keep their shape and fall
+ * back to opaque surfaces, so nothing has to branch on the preference.
+ */
+.flat {
+  --ds-glass-bg: var(--ds-surface);
+  --ds-glass-filter: none;
+}
+
+/* Mobile: sidebar becomes a drawer */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 4, 12, 0.66);
+  z-index: calc(var(--ds-z-sidebar) - 1);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .shell,
+  .collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(84vw, var(--ds-sidebar-width));
+    transform: translateX(-102%);
+    transition: transform var(--ds-duration-base) var(--ds-ease);
+    box-shadow: var(--ds-shadow-lg);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  /* The sidebar is a drawer here, so the frame spans the whole window. */
+  .frameOverlay,
+  .collapsed .frameOverlay {
+    left: 0;
+  }
+
+  .framed {
+    padding: var(--ds-space-5) var(--ds-space-5) var(--ds-space-12);
+  }
+
+  /* The rail never applies on small screens; the drawer is always full width. */
+  .collapsed .brandText,
+  .collapsed .groupTitle,
+  .collapsed .linkLabel,
+  .collapsed .linkTag {
+    display: block;
+  }
+
+  .collapsed .link {
+    justify-content: flex-start;
+    padding: 9px var(--ds-space-2);
+  }
+
+  .iconButton {
+    display: grid;
+  }
+
+  .collapseButton {
+    display: none;
+  }
+
+  .topbar {
+    padding: 0 var(--ds-space-4);
+  }
+
+  .content {
+    padding: var(--ds-space-6) var(--ds-space-4) var(--ds-space-12);
+  }
+
+  .pageHint {
+    display: none;
+  }
+}

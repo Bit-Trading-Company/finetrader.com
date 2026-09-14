@@ -1,0 +1,31 @@
+/*
+ * CollectionDetails styles.
+ *
+ * These buttons used to be styled by `.auto-trade-button` in the AutoTrade
+ * page stylesheet, which only reached them because that page happened to
+ * import it globally. The auto-trader has since been rebuilt on CSS Modules,
+ * so the rule lives here with the component that uses it.
+ */
+
+.collection-details-button {
+  padding: 12px 24px;
+  background: var(--ds-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.collection-details-button:hover:not(:disabled) {
+  background: var(--ds-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 137, 54, 0.4);
+}
+
+.collection-details-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

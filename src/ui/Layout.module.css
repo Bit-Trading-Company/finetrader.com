@@ -1,0 +1,142 @@
+/* Page header */
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ds-space-5);
+  margin-bottom: var(--ds-space-6);
+}
+
+.pageHeadings {
+  min-width: 0;
+}
+
+.pageTitle {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-sm);
+  color: var(--ds-text);
+  letter-spacing: 0.02em;
+}
+
+.pageUnderline {
+  max-width: 190px;
+  margin-top: 2px;
+}
+
+.pageDescription {
+  margin-top: var(--ds-space-3);
+  color: var(--ds-text-muted);
+  max-width: 70ch;
+}
+
+.pageActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-shrink: 0;
+}
+
+/* Section */
+.section {
+  margin-bottom: var(--ds-space-8);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  margin-bottom: var(--ds-space-4);
+}
+
+.sectionTitle {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.sectionDescription {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+  margin-top: 2px;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--ds-space-4);
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Stat tiles */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ds-space-4);
+}
+
+.stat {
+  background: none;
+  border-left: 1px solid var(--ds-border-subtle);
+  padding: var(--ds-space-1) var(--ds-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.statLabel {
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ds-text-muted);
+}
+
+.statValue {
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ds-text-xl);
+  color: var(--ds-text);
+  overflow-wrap: anywhere;
+}
+
+.statHint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+}
+
+.statAccent .statValue {
+  color: var(--ds-accent-hover);
+}
+
+.statSuccess .statValue {
+  color: var(--ds-success);
+}
+
+.statDanger .statValue {
+  color: var(--color-red-400);
+}
+
+@media (max-width: 640px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--ds-space-4);
+  }
+
+  .pageActions {
+    flex-wrap: wrap;
+  }
+}

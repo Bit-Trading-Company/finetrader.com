@@ -1,0 +1,68 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.loading {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+}
+
+.walletCell {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+}
+
+.address {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.funded {
+  color: var(--ds-text);
+}
+
+.unknown {
+  color: var(--ds-text-faint);
+}
+
+.pending {
+  color: var(--ds-warning);
+}
+
+.selectors {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.selectorLabel {
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-faint);
+  margin-right: var(--ds-space-1);
+}
+
+.detailsHint {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+  white-space: nowrap;
+}

@@ -1,0 +1,25 @@
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+  align-items: stretch;
+}
+
+.reset {
+  align-self: flex-start;
+  margin-top: var(--ds-space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.reset:hover {
+  color: var(--ds-text);
+}

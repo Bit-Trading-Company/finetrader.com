@@ -1,0 +1,165 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  color: var(--ds-text-muted);
+}
+
+.required {
+  color: var(--ds-accent);
+  margin-left: 2px;
+}
+
+.hint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+}
+
+.error {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-danger);
+}
+
+/* Inputs */
+/*
+ * An input still needs a visible edge to read as one. It is an inset ring
+ * rather than a border so the control has no box drawn around it and its
+ * size never shifts between states.
+ */
+.control {
+  width: 100%;
+  background: var(--ds-surface-sunken);
+  border: none;
+  border-radius: var(--ds-radius-md);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
+  color: var(--ds-text);
+  font-family: inherit;
+  font-size: var(--ds-text-md);
+  padding: 9px 12px;
+  transition:
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.control::placeholder {
+  color: var(--ds-text-faint);
+}
+
+.control:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
+}
+
+.control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.invalid {
+  box-shadow: inset 0 0 0 1px var(--ds-danger);
+}
+
+/* Numbers, addresses and txids stay monospaced. */
+.mono {
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 13px) calc(50% + 2px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+  cursor: pointer;
+}
+
+/* A standalone checkbox: the control and its words, nothing drawn around it. */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-1) 0;
+  cursor: pointer;
+}
+
+/* Radio rows: options to choose between, so each is a drawn target. */
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border: none;
+  border-radius: var(--ds-radius-md);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
+  background: var(--ds-surface-sunken);
+  cursor: pointer;
+  transition:
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.choice:hover {
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
+  background: var(--ds-surface-hover);
+}
+
+.choiceSelected {
+  box-shadow: inset 0 0 0 1px var(--ds-accent);
+  background: var(--ds-accent-quiet);
+}
+
+.choiceDisabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.choiceInput {
+  margin: 2px 0 0;
+  accent-color: var(--ds-accent);
+  flex-shrink: 0;
+}
+
+/*
+ * Both are spans inside the label, so they need to be blocks: inline they run
+ * together on one line and the hint's margin is ignored.
+ */
+.choiceLabel {
+  display: block;
+  font-size: var(--ds-text-md);
+  color: var(--ds-text);
+}
+
+.choiceHint {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.choiceGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.choiceGroupRow {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.choiceGroupRow .choice {
+  flex: 1 1 180px;
+}

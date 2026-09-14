@@ -1,0 +1,111 @@
+/*
+ * A frosted sheet over the page, not a box drawn on it: no border, separated
+ * by translucency, an edge highlight and its own shadow. Blur is expensive,
+ * so cards are top-level panels — do not nest one inside another.
+ */
+.card {
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-md);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.raised {
+  background: var(--ds-glass-bg);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-lg);
+}
+
+/* Grouping without a surface: structure only, nothing painted. */
+.quiet {
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.interactive {
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-fast) var(--ds-ease),
+    transform var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease);
+}
+
+.interactive:hover {
+  background: var(--ds-glass-bg);
+  transform: translateY(-1px);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-lg);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.headings {
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ds-text);
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-shrink: 0;
+}
+
+.body {
+  padding: var(--ds-space-5);
+  min-width: 0;
+}
+
+.bodySm {
+  padding: var(--ds-space-4);
+}
+
+.bodyNone {
+  padding: 0;
+}
+
+.footer {
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-top: 1px solid var(--ds-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+}
+
+@media (max-width: 640px) {
+  .header,
+  .body,
+  .footer {
+    padding: var(--ds-space-4);
+  }
+
+  .header {
+    flex-direction: column;
+    gap: var(--ds-space-3);
+  }
+}

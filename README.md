@@ -1,10 +1,10 @@
 # Fine Trader
 
-A React Web3 dapp for automated Bitcoin Ordinals trading. Connect a Bitcoin wallet, browse collections, and run automated buy/sell strategies against marketplace APIs (Satflow, Magic Eden, UniSat, and more).
+A React Web3 dapp for automated Bitcoin Ordinals trading. Connect a Bitcoin wallet, browse collections, and run automated buy/sell strategies against marketplace APIs (Satflow and ord.net).
 
 ## Quick Start
 
-**Requirements:** Node.js `>=18.17.1` (see `.nvmrc`)
+**Requirements:** Node.js `>=20.19.0` (see `.nvmrc`)
 
 ```bash
 npm install
@@ -12,7 +12,7 @@ cp .env.example .env   # then add your API keys
 npm start
 ```
 
-The app opens at [http://localhost:3000](http://localhost:3000). No build step is needed for local development — `npm start` runs the CRA dev server with hot reload via CRACO.
+The app opens at [http://localhost:3000](http://localhost:3000). `npm start` runs the CRA dev server (via CRACO) with hot reload, and `src/setupProxy.js` mounts the same `/api/*` handlers the Vercel functions use in production.
 
 For a production build locally:
 
@@ -20,115 +20,113 @@ For a production build locally:
 npm run build
 ```
 
-To build and optionally serve the production bundle:
+## Documentation
 
-```bash
-npm run start:prod          # builds to ./build
-npm run start:prod -- --serve   # build + serve on port 3000
-```
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the app, API layer, wallets and trading engine fit together
+- [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) — open problems, including security and fund-safety notes (read before deploying)
+- [docs/ADDING_A_MARKETPLACE.md](docs/ADDING_A_MARKETPLACE.md) — the marketplace adapter contract and steps
 
 ## Environment Variables
 
 Copy `.env.example` to `.env` and fill in the values:
 
-| Variable | Required | Description |
-|---|---|---|
-| `MAGIC_EDEN_API_KEY` | Recommended | Magic Eden API key — [get one here](https://magiceden.io/developers) |
-| `UNISAT_API_KEY` | Recommended | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/) |
-| `SATFLOW_API_KEY` | Vercel only | Satflow API key for serverless proxy routes (set in Vercel project env) |
+| Variable          | Required | Description                                                                                                                       |
+| ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `SATFLOW_API_KEY` | Yes      | Satflow API key used by every `/api/satflow-*` route                                                                              |
+| `UNISAT_API_KEY`  | Yes      | UniSat Open API key for inscription/UTXO scanning — [get one here](https://developer.unisat.io/)                                  |
+| `ALLOWED_ORIGINS` | Optional | Extra browser origins (comma-separated) allowed to call `/api/*`. The site's own origin is always allowed; other websites get 403 |
 
-Without API keys, unauthenticated requests may be rate-limited or return 403.
+API keys are only read on the server (`server/`): from `.env` during development and from the Vercel project settings in production. Without them, upstream requests are unauthenticated and usually fail with 401/403/429. `/api/*` only answers requests from the site itself (or `ALLOWED_ORIGINS`), so other websites cannot use the keys through their visitors' browsers.
 
 ## Deployment (Vercel)
 
-This project is Vercel-ready out of the box:
+This project deploys to Vercel:
 
-- `vercel.json` configures the build output (`build/`) and API rewrites for Satflow routes
-- `api/` contains serverless functions that proxy marketplace APIs and keep keys server-side
-- `npm run vercel-build` (or `npm run build`) produces the static frontend
+- `vercel.json` configures the build output (`build/`) and rewrites the public `/api/satflow-*` URLs onto the Satflow function
+- `api/` holds one-line function entrypoints; the handlers live in `server/`
+- `npm run build` produces the static frontend
 
-Deploy by connecting the repo to Vercel. Set `MAGIC_EDEN_API_KEY`, `UNISAT_API_KEY`, and `SATFLOW_API_KEY` in the Vercel project environment settings.
-
-Google App Engine deployment is also supported via `app.yaml` if needed.
+Deploy by connecting the repo to Vercel. Set `SATFLOW_API_KEY` and `UNISAT_API_KEY` in the Vercel project environment settings.
 
 ## Routes
 
-| Path | Page | Description |
-|---|---|---|
-| `/` | Splash | Landing / entry screen |
-| `/auto-trade` | AutoTrade | Main automated trading interface |
-| `/dashboard` | Dashboard | Wallet and portfolio overview |
-| `/analytics` | Analytics | Trading analytics and charts |
-| `/home` | Homepage | Marketing / info page |
-| `/consolidator` | WalletConsolidator | UTXO consolidation tool |
-| `/extractor` | OrdinalExtractor | Scan and extract inscription UTXOs |
-| `/satflow-stats` | SatflowStats | Satflow collection statistics |
+| Path             | Page               | Description                        |
+| ---------------- | ------------------ | ---------------------------------- |
+| `/`              | Splash             | Landing / entry screen             |
+| `/auto-trade`    | AutoTrade          | Main automated trading interface   |
+| `/dashboard`     | Dashboard          | Wallet and portfolio overview      |
+| `/analytics`     | Analytics          | Trading analytics and charts       |
+| `/home`          | Homepage           | Legacy Golden Layout workspace     |
+| `/consolidator`  | WalletConsolidator | UTXO consolidation tool            |
+| `/extractor`     | OrdinalExtractor   | Scan and extract inscription UTXOs |
+| `/satflow-stats` | SatflowStats       | Satflow collection statistics      |
 
 ## Project Structure
 
 ```
 finetrader.com/
-├── api/                  # Vercel serverless functions (marketplace API proxies)
-│   ├── satflow.js        # Consolidated Satflow router (bids, listings, PSBTs, etc.)
-│   ├── unisat.js         # UniSat Open API proxy
-│   ├── magiceden-psbt.js # Magic Eden PSBT endpoints
-│   ├── collections.js    # Collection data
-│   └── ...
-├── config/               # Webpack / dev-server config (CRA internals)
+├── api/                  # Vercel function entrypoints (one line each; logic in server/)
+├── server/               # API handlers shared by Vercel (api/) and the dev server (src/setupProxy.js)
+│   ├── routes.js         # Public /api route table (a test keeps it in sync with vercel.json)
+│   ├── satflow.js        # Satflow v1 API + tRPC handlers (?op=...)
+│   ├── unisat.js         # UniSat indexer proxy
+│   ├── ordnet.js         # ord.net proxy
+│   └── lib/              # HTTP relay/validation, env-only API keys, TTL cache
+├── docs/                 # Architecture, known issues, adding a marketplace
+│   └── reference/        # Upstream API specs (Satflow OpenAPI)
 ├── public/               # Static assets served as-is (index.html, favicon, manifest)
-├── scripts/              # Node utility scripts
-│   ├── start-prod.js     # Production build (+ optional local serve)
-│   ├── build.js          # Build helpers
-│   └── ...               # CI / workflow helpers
 ├── src/
-│   ├── pages/            # Route-level views (one per URL)
-│   ├── components/       # Reusable UI
-│   │   └── layout/       # Trading UI: wallets, collections, PSBT signing, dispatch
-│   ├── context/          # React context (theme, app state)
-│   ├── hooks/            # Custom hooks (wallet connect, localStorage)
-│   ├── modules/          # Feature modules (bitprint wallet integration)
-│   ├── utils/            # Core logic: auto-trading, Bitcoin/PSBT, mempool, APIs
-│   ├── assets/           # Images, fonts, SVGs
-│   ├── App.js            # Route definitions
-│   ├── index.js          # App entry point + wallet providers
-│   └── setupProxy.js     # Dev-only API proxy (mirrors Vercel /api routes locally)
-├── craco.config.js       # Webpack overrides (Node polyfills for Bitcoin libs)
-├── vercel.json           # Vercel build config + API rewrites
-└── app.yaml              # Google App Engine config (optional)
+│   ├── index.js          # Entry point: MetaMask guards, global tokens/fonts, root providers
+│   ├── setupProxy.js     # Dev server: mounts server/ handlers on /api/*
+│   ├── app/              # App shell: routes (App.jsx), ErrorBoundary, theme context
+│   ├── pages/            # One folder per route, with its CSS and page-only helpers, components and hooks
+│   ├── components/       # Shared UI primitives (WizardStep)
+│   ├── features/
+│   │   ├── wallet/       # Wallet connect, proxy wallet generation/selection, funding (Dispatch)
+│   │   ├── marketplace/  # Collection browser, collection bids, manual buy/sell (Satflow)
+│   │   ├── psbt/         # PSBT create/sign tools (legacy /home workspace)
+│   │   └── explorer/     # Inscription and UTXO explorers (legacy /home workspace)
+│   ├── trading/          # Auto-trade engine + marketplace adapters (Satflow, ord.net)
+│   ├── lib/              # UI-free helpers: keys & PSBT signing, mempool URLs, UniSat proxy URLs
+│   ├── styles/           # tokens.css (color palette), fonts.css, global.css; all CSS applies app-wide
+│   └── assets/           # Images, fonts, SVGs
+├── craco.config.js       # Webpack/Jest overrides (Node polyfills, ESM transforms)
+└── vercel.json           # Vercel build config + API rewrites
 ```
 
 ### Key `src/` areas
 
-- **`pages/`** — Top-level screens wired in `App.js`. `AutoTrade.jsx` is the core automated trading UI.
-- **`components/layout/`** — Trading building blocks: wallet management, collection browser, PSBT creation/signing, buy/sell dispatch.
-- **`utils/`** — Business logic separated from UI:
-  - `simplifiedAutoTrading.js` / `autoTradingUtils.js` — automated buy/sell strategies
-  - `bitcoinUtils.js` — Bitcoin transaction helpers
-  - `extractorUtils.js` — inscription UTXO extraction
-  - `consolidatorUtils.js` — wallet UTXO consolidation
-  - `mempoolProvider.js` — mempool API abstraction
-  - `apiClient.js` — frontend API client
-- **`api/`** — Server-side proxies used in production on Vercel. In development, `setupProxy.js` routes the same `/api/*` paths to external services.
+- **`pages/`** — Route screens wired in `app/App.jsx`. `AutoTrade/` is the core automated trading UI (`components/` for the step UI, `hooks/` for settings, the trading run and the console); `Homepage/` is the legacy Golden Layout workspace.
+- **`components/`** — Shared UI primitives, e.g. `WizardStep` for the AutoTrade, Consolidator and Extractor wizards.
+- **`features/`** — UI shared across pages, grouped by domain (wallet, marketplace, PSBT tools, explorers).
+- **`trading/`** — Business logic for trading:
+  - `exchanges.js` — marketplace registry and the `MarketplaceAdapter` contract; `getTradingApi(exchange)` returns an adapter
+  - `autoTradeEngine.js` — auto-trade strategies (trading cycles, floor buys, buy/sell X per wallet)
+  - `satflow/` — Satflow adapter: API reads, listing, secure purchase
+  - `ordnet/` — ord.net adapter and trading integration
+  - `ordinals.js`, `chain.js` — exchange-independent token helpers and chain lookups (confirmations, balances)
+  - `fees.js`, `feeTransaction.js` — trading fee amounts and the fee transaction
+  - Adding a marketplace: [docs/ADDING_A_MARKETPLACE.md](docs/ADDING_A_MARKETPLACE.md)
+- **`lib/`** — `bitcoinUtils.js` (proxy wallet key derivation, PSBT signing), `mempoolProvider.js` (mempool.space / Blockstream URLs), `unisatProxy.js` (`/api/unisat` URLs)
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `npm start` | Start dev server (CRACO + hot reload) |
-| `npm run build` | Production build to `./build` |
-| `npm run vercel-build` | Alias for `build` (used by Vercel) |
-| `npm run start:prod` | Build for production; add `-- --serve` to serve locally |
-| `npm test` | Run tests (Jest) |
-| `npm run test:ci` | CI test run with coverage |
-| `npm run lint` | ESLint check |
-| `npm run lint:fix` | ESLint auto-fix |
-| `npm run format` | Prettier format |
+| Command            | Description                              |
+| ------------------ | ---------------------------------------- |
+| `npm start`        | Start dev server (CRACO + hot reload)    |
+| `npm run build`    | Production build to `./build`            |
+| `npm test`         | Run tests (Jest; `src/` and `server/`)   |
+| `npm run test:ci`  | CI test run with coverage                |
+| `npm run lint`     | ESLint check (`src/`, `api/`, `server/`) |
+| `npm run lint:fix` | ESLint auto-fix                          |
+| `npm run format`   | Prettier format                          |
 
 ## Tech Stack
 
 - **React 18** + Create React App (customized with CRACO)
-- **Bitcoin / Ordinals:** `@ordzaar/ord-connect`, `@ordzaar/ordit-sdk`, `bitcoinjs-lib`, `sats-connect`
-- **Wallets:** OKX, Magic Eden, Leather, UniSat, Xverse (via OrdConnect)
+- **Bitcoin / Ordinals:** `@ordzaar/ord-connect`, `@ordzaar/ordit-sdk`, `bitcoinjs-lib`, `@scure/btc-signer`
+- **Wallets:** OKX, Magic Eden Wallet, Leather, UniSat, Xverse (via OrdConnect)
+- **Marketplaces:** Satflow, ord.net
 - **Charts:** Recharts
 - **Deployment:** Vercel serverless functions + static hosting
 

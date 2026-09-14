@@ -1,0 +1,48 @@
+/*
+ * Design tokens: the app's color palette and font stacks as CSS custom
+ * properties.
+ *
+ * Names follow the Tailwind v1 scale the existing styles were written with;
+ * colors outside that palette are named by hue. Stylesheets reference them as
+ * var(--color-*). Semantic aliases (surface, text, accent, ...) can be layered
+ * on top of these during the redesign.
+ */
+:root {
+  --color-gray-100: #f7fafc;
+  --color-gray-300: #e2e8f0;
+  --color-gray-500: #a0aec0;
+  --color-gray-600: #718096;
+  --color-gray-700: #4a5568;
+  --color-gray-800: #2d3748;
+  --color-gray-900: #1a202c;
+  --color-cool-gray-700: #374151;
+  --color-navy-900: #1a2332;
+  --color-maroon-900: #2d1b1b;
+  --color-orange-400: #f6ad55;
+  --color-orange-500: #ed8936;
+  --color-orange-600: #dd6b20;
+  --color-orange-bright: #ff9900;
+  --color-amber-500: #ffc107;
+  --color-red-200: #fed7d7;
+  --color-red-400: #fc8181;
+  --color-red-600: #e53e3e;
+  --color-red-700: #c53030;
+  --color-green-200: #c6f6d5;
+  --color-green-400: #68d391;
+  --color-green-500: #48bb78;
+  --color-green-600: #38a169;
+  --color-green-700: #2f855a;
+  --color-blue-600: #3182ce;
+  /*
+ Font stacks: body text, and the Mix Doodle display font used for page titles.
+ Body text is Space Grotesk everywhere — the legacy stack led with `monospace`,
+ which is what made the old pages read as a terminal.
+ */
+  --font-family-app:
+    'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Helvetica Neue', Arial, sans-serif;
+  --font-family-display:
+    'Mix Doodle', monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
+}

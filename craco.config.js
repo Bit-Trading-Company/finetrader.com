@@ -31,7 +31,11 @@ module.exports = {
       // Exclude nested packages from source-map-loader to prevent build errors
       if (webpackConfig.module && webpackConfig.module.rules) {
         webpackConfig.module.rules = webpackConfig.module.rules.map((rule) => {
-          if (rule.enforce === 'pre' && rule.loader && rule.loader.includes('source-map-loader')) {
+          if (
+            rule.enforce === 'pre' &&
+            rule.loader &&
+            rule.loader.includes('source-map-loader')
+          ) {
             const existingExclude = Array.isArray(rule.exclude)
               ? rule.exclude
               : rule.exclude
@@ -55,6 +59,23 @@ module.exports = {
       }
 
       return webpackConfig;
+    },
+  },
+  jest: {
+    configure: (jestConfig) => {
+      // The Bitcoin libraries (@noble/*, @scure/*, bitcoinjs-lib and its deps)
+      // ship ESM-only builds, which CRA's Jest setup refuses to transform.
+      jestConfig.transformIgnorePatterns = [
+        '[/\\\\]node_modules[/\\\\](?!(@noble|@scure|micro-packed|bitcoinjs-lib|bip174|bs58|bs58check|base-x|uint8array-tools|varuint-bitcoin|valibot)[/\\\\]).+\\.(js|jsx|mjs|cjs|ts|tsx)$',
+        '^.+\\.module\\.(css|sass|scss)$',
+      ];
+      // API handler tests live next to the handlers in server/.
+      jestConfig.roots = [...(jestConfig.roots || []), '<rootDir>/server'];
+      jestConfig.testMatch = [
+        ...(jestConfig.testMatch || []),
+        '<rootDir>/server/**/*.test.js',
+      ];
+      return jestConfig;
     },
   },
 };

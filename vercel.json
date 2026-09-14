@@ -32,20 +32,20 @@
       "destination": "/api/satflow?op=activity-bids"
     },
     {
-      "source": "/api/satflow-create-psbt-non-custodial-bid-deposit",
-      "destination": "/api/satflow?op=create-psbt-non-custodial-bid-deposit"
-    },
-    {
-      "source": "/api/satflow-bid-place",
-      "destination": "/api/satflow?op=bid-place"
-    },
-    {
       "source": "/api/satflow-item",
       "destination": "/api/satflow?op=item"
     },
     {
+      "source": "/api/satflow-create-psbt-non-custodial-bid-deposit",
+      "destination": "/api/satflow?op=create-psbt-non-custodial-bid-deposit"
+    },
+    {
       "source": "/api/satflow-setup-utxos",
       "destination": "/api/satflow?op=setup-utxos"
+    },
+    {
+      "source": "/api/satflow-bid-place",
+      "destination": "/api/satflow?op=bid-place"
     },
     {
       "source": "/api/satflow-intent-secure-purchase",
@@ -56,20 +56,16 @@
       "destination": "/api/satflow?op=intent-satflow-purchase"
     },
     {
-      "source": "/api/satflow-list",
-      "destination": "/api/satflow?op=list"
-    },
-    {
       "source": "/api/satflow-intent-sell",
       "destination": "/api/satflow?op=intent-sell"
     },
     {
-      "source": "/api/satflow-purchase-broadcast",
-      "destination": "/api/satflow?op=purchase-broadcast"
+      "source": "/api/satflow-list",
+      "destination": "/api/satflow?op=list"
     },
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/satflow-purchase-broadcast",
+      "destination": "/api/satflow?op=purchase-broadcast"
     }
   ]
 }

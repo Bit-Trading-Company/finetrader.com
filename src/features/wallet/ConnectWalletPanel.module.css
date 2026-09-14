@@ -1,0 +1,65 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.wallet {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  background: var(--ds-surface-raised);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text);
+  font-size: var(--ds-text-md);
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    transform var(--ds-duration-fast) var(--ds-ease);
+}
+
+.wallet:hover {
+  background: var(--ds-surface-hover);
+  transform: translateY(-1px);
+}
+
+.icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: var(--ds-radius-sm);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--ds-text-sm);
+}
+
+.connected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.address {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
