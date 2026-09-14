@@ -1164,7 +1164,7 @@ optgroup {
 
 /* Warning message */
 .sign-psbt-container .warning-message {
-  background-color: #fef5e7;
+  background-color: var(--ds-accent-quiet);
   color: var(--ds-accent);
   padding: 12px;
   border-radius: 6px;
@@ -2194,7 +2194,7 @@ optgroup {
 }
 
 .status-message.warning {
-  background-color: #fef5e7;
+  background-color: var(--ds-accent-quiet);
   color: var(--ds-accent);
   border-left: 4px solid var(--ds-accent);
 }
@@ -3052,7 +3052,7 @@ optgroup {
 }
 
 .wallet-error-box.disconnected {
-  background-color: #fef5e7;
+  background-color: var(--ds-warning-quiet);
   color: var(--ds-warning);
   border: 1px solid var(--ds-warning);
 }

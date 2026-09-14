@@ -22,12 +22,17 @@ const SATS_PER_BTC = 100000000;
 /** Remembers which view the user prefers between visits. */
 const VIEW_KEY = 'fine-trading-auto-trade-view';
 
+/*
+ * The dashboard is the default. Someone arriving at the auto-trader wants to
+ * see the state of a run — wallets, balances, the order book — not be walked
+ * through setup they may already have done. A stored choice still wins.
+ */
 const readView = () => {
   try {
     const stored = window.localStorage.getItem(VIEW_KEY);
-    return stored === 'advanced' ? 'advanced' : 'simple';
+    return stored === 'simple' ? 'simple' : 'advanced';
   } catch {
-    return 'simple';
+    return 'advanced';
   }
 };
 
