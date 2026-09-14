@@ -67,13 +67,14 @@ const Splash = () => {
               </span>
             </h1>
 
+            {/*
+              One way in, and nothing to read on the way. The market and
+              everything else is a click away in the sidebar once inside.
+            */}
             <div className={styles.actions}>
               <Button as={Link} to="/auto-trade" size="lg">
                 Enter Fine Trader
               </Button>
-              <Link to="/dashboard" className={styles.secondary}>
-                Browse the market
-              </Link>
             </div>
           </header>
 

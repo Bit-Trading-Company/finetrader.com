@@ -13,8 +13,12 @@ import styles from './Field.module.css';
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
 /**
- * Label, hint and error around one control. Pass `htmlFor`, or let Field
- * generate an id and hand it to a single child via `renderControl`.
+ * Label, hint and error around one control.
+ *
+ * The label is tied to its control automatically: when Field wraps a single
+ * element that has no id of its own, it generates one and passes it down. So
+ * the common case needs nothing from the caller, and `htmlFor` is only for
+ * pointing at a control Field does not render itself.
  */
 export const Field = ({
   label,
@@ -24,26 +28,41 @@ export const Field = ({
   htmlFor,
   className = '',
   children,
-}) => (
-  <div className={joinClasses(styles.field, className)}>
-    {label && (
-      <label className={styles.label} htmlFor={htmlFor}>
-        {label}
-        {required && (
-          <span className={styles.required} aria-hidden="true">
-            *
-          </span>
-        )}
-      </label>
-    )}
-    {children}
-    {error ? (
-      <p className={styles.error}>{error}</p>
-    ) : (
-      hint && <p className={styles.hint}>{hint}</p>
-    )}
-  </div>
-);
+}) => {
+  const generatedId = useId();
+
+  // Only a lone element can be targeted unambiguously; anything else (a
+  // fragment, several controls) is left alone and can pass `htmlFor`.
+  const onlyChild = React.Children.count(children) === 1 ? children : null;
+  const canAdopt =
+    !htmlFor && React.isValidElement(onlyChild) && !onlyChild.props.id;
+
+  const controlId = htmlFor || (canAdopt ? generatedId : undefined);
+  const control = canAdopt
+    ? React.cloneElement(onlyChild, { id: controlId })
+    : children;
+
+  return (
+    <div className={joinClasses(styles.field, className)}>
+      {label && (
+        <label className={styles.label} htmlFor={controlId}>
+          {label}
+          {required && (
+            <span className={styles.required} aria-hidden="true">
+              *
+            </span>
+          )}
+        </label>
+      )}
+      {control}
+      {error ? (
+        <p className={styles.error}>{error}</p>
+      ) : (
+        hint && <p className={styles.hint}>{hint}</p>
+      )}
+    </div>
+  );
+};
 
 /** Single-line text input. `mono` for addresses, txids and figures. */
 export const TextInput = ({

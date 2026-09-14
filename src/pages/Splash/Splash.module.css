@@ -126,22 +126,6 @@
   animation-delay: 220ms;
 }
 
-.secondary {
-  color: var(--ds-text-muted);
-  text-decoration: none;
-  font-size: var(--ds-text-lg);
-  padding: 6px 4px;
-  border-bottom: 1px solid transparent;
-  transition:
-    color var(--ds-duration-fast) var(--ds-ease),
-    border-color var(--ds-duration-fast) var(--ds-ease);
-}
-
-.secondary:hover {
-  color: var(--ds-text);
-  border-bottom-color: var(--ds-border-strong);
-}
-
 /* Cast ------------------------------------------------------------------- */
 
 .castWrap {
