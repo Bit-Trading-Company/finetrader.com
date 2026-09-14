@@ -30,6 +30,25 @@ const GENERATOR_COMPRESSED =
 const sha256 = (data) => createHash('sha256').update(data).digest();
 const keyFrom = (label) => sha256(label).toString('hex');
 
+/**
+ * A P2TR input whose output key is the raw, untweaked pubkey. This is the
+ * shape `disableTweakSigner` exists for: signing it with the tweaked key
+ * produces a signature against the wrong key.
+ */
+const buildUntweakedP2trPsbt = (ownerPrivateKeyHex) => {
+  const xOnly = Buffer.from(getTaprootInternalPubkeyBytes(ownerPrivateKeyHex));
+  const script = Buffer.concat([Buffer.from([0x51, 0x20]), xOnly]);
+  const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+  psbt.addInput({
+    hash: '22'.repeat(32),
+    index: 0,
+    witnessUtxo: { script, value: 10000n },
+    tapInternalKey: xOnly,
+  });
+  psbt.addOutput({ script, value: 9000n });
+  return psbt.toBase64();
+};
+
 const buildP2trPsbt = (ownerPrivateKeyHex) => {
   const internalPubkey = Buffer.from(
     getTaprootInternalPubkeyBytes(ownerPrivateKeyHex)
@@ -122,6 +141,84 @@ describe('signPsbtWithProxyWallet', () => {
       )
     ).toBe(true);
     expect(result.hex).toBeUndefined();
+  });
+
+  /*
+   * ord.net's listing flow sends per-input signing instructions and expects
+   * them honoured exactly: sigHash values of 0, 1 and 131 appear in its own
+   * documented examples, and `disableTweakSigner` asks for the untweaked key.
+   * Getting either wrong yields a PSBT that looks signed but fails to
+   * broadcast, which costs a real listing attempt.
+   */
+  it('honours a sigHash from the signing instructions', async () => {
+    const privateKey = keyFrom('sighash-single-anyonecanpay');
+    // 131 = SIGHASH_SINGLE | SIGHASH_ANYONECANPAY, the marketplace pattern.
+    const result = await signPsbtWithProxyWallet(
+      buildP2trPsbt(privateKey),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [{ signingIndexes: [0], sigHash: 131 }],
+      }
+    );
+
+    const signed = bitcoin.Psbt.fromBase64(result.base64);
+    // A non-default sighash appends its flag byte, so 64 becomes 65.
+    expect(signed.data.inputs[0].tapKeySig).toHaveLength(65);
+    expect(signed.data.inputs[0].tapKeySig[64]).toBe(131);
+  });
+
+  it('signs with the default sighash as a 64-byte signature', async () => {
+    const privateKey = keyFrom('sighash-default');
+    const result = await signPsbtWithProxyWallet(
+      buildP2trPsbt(privateKey),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [{ signingIndexes: [0], sigHash: 0 }],
+      }
+    );
+
+    const signed = bitcoin.Psbt.fromBase64(result.base64);
+    expect(signed.data.inputs[0].tapKeySig).toHaveLength(64);
+  });
+
+  it('signs an untweaked output key when disableTweakSigner is set', async () => {
+    const privateKey = keyFrom('untweaked');
+    const psbt = buildUntweakedP2trPsbt(privateKey);
+
+    const result = await signPsbtWithProxyWallet(psbt, privateKey, 'mainnet', {
+      finalize: false,
+      inputSigningInstructions: [
+        { signingIndexes: [0], disableTweakSigner: true },
+      ],
+    });
+
+    const signed = bitcoin.Psbt.fromBase64(result.base64);
+    expect(signed.data.inputs[0].tapKeySig).toHaveLength(64);
+    expect(
+      signed.validateSignaturesOfInput(0, (pubkey, msghash, signature) =>
+        ecc.verifySchnorr(msghash, pubkey, signature)
+      )
+    ).toBe(true);
+  });
+
+  it('cannot sign an untweaked output key with the tweaked signer', async () => {
+    // The guard that makes the flag matter: without it, this input is unsignable.
+    const privateKey = keyFrom('untweaked');
+    await expect(
+      signPsbtWithProxyWallet(
+        buildUntweakedP2trPsbt(privateKey),
+        privateKey,
+        'mainnet',
+        {
+          finalize: false,
+          inputSigningInstructions: [{ signingIndexes: [0] }],
+        }
+      )
+    ).rejects.toThrow(/No inputs could be signed/);
   });
 
   it('refuses to sign inputs owned by a different key', async () => {

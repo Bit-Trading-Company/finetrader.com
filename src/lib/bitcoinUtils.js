@@ -677,6 +677,45 @@ export const signPsbtWithProxyWallet = async (
             bitcoin.crypto.taggedHash('TapTweak', Buffer.from(internalPubkey))
           );
 
+          /*
+           * Which key signs a Taproot input.
+           *
+           * Key-path spends sign with the tweaked key, which is the default.
+           * A marketplace can ask for the untweaked key instead by setting
+           * `disableTweakSigner` on its signing instruction — ord.net does
+           * this on parts of the listing flow. Tweaking anyway produces a
+           * signature that verifies against the wrong key: the PSBT still
+           * looks signed, and the broadcast fails later.
+           */
+          const signerForInput = (index) =>
+            instructionByIndex.get(index)?.disableTweakSigner
+              ? keyPair
+              : tweakedSigner;
+
+          /*
+           * Apply an instructed sighash to the input itself.
+           *
+           * bitcoinjs reads the sighash it signs with from `input.sighashType`
+           * and treats the argument passed to signTaprootInput purely as a
+           * whitelist. Passing the instruction there alone therefore signs
+           * with the wrong sighash, or throws when the input declares none —
+           * so the instruction is written onto the input first.
+           */
+          const applySighash = (index) => {
+            const instructed = instructionByIndex.get(index)?.sigHash;
+            if (instructed === undefined || instructed === null) return;
+            /*
+             * SIGHASH_DEFAULT is 0, which bitcoinjs already falls back to for
+             * an unset input — and updateInput rejects it as duplicate data.
+             * Writing it would be a no-op that throws, so leave it alone.
+             */
+            if (instructed === sighashDefault) return;
+            if (psbtForSigning.data.inputs[index].sighashType === instructed) {
+              return;
+            }
+            psbtForSigning.updateInput(index, { sighashType: instructed });
+          };
+
           if (strictSignAllTaprootWitness) {
             for (const j of targetIndexes) {
               const psbtInput = psbtForSigning.data.inputs[j];
@@ -703,6 +742,7 @@ export const signPsbtWithProxyWallet = async (
                 );
               }
 
+              applySighash(j);
               const sighashType =
                 instructionByIndex.get(j)?.sigHash ??
                 (psbtInput.sighashType !== undefined &&
@@ -715,7 +755,7 @@ export const signPsbtWithProxyWallet = async (
 
               psbtForSigning.signTaprootInput(
                 j,
-                tweakedSigner,
+                signerForInput(j),
                 undefined,
                 sighashTypes
               );
@@ -764,6 +804,7 @@ export const signPsbtWithProxyWallet = async (
                   continue;
                 }
 
+                applySighash(j);
                 const sighashType =
                   instructionByIndex.get(j)?.sigHash ??
                   (psbtInput.sighashType !== undefined &&
@@ -776,7 +817,7 @@ export const signPsbtWithProxyWallet = async (
 
                 psbtForSigning.signTaprootInput(
                   j,
-                  tweakedSigner,
+                  signerForInput(j),
                   undefined,
                   sighashTypes
                 );
