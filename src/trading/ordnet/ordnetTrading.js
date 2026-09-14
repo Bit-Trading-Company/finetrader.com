@@ -13,6 +13,7 @@ import {
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
 import { getTokenId } from '../ordinals';
+import { buildUnisatProxyUrl } from '../../lib/unisatProxy';
 
 const ECPair = ECPairFactory(ecc);
 const ORDNET_SESSION_PREFIX = 'fine-trading-ordnet-session:';
@@ -453,6 +454,110 @@ export const getFloorPrice = async (
   return entry?.floor ? Number(entry.floor) : null;
 };
 
+/*
+ * Collection membership cache.
+ *
+ * Which inscriptions belong to a collection barely changes, but who owns them
+ * and what they cost change constantly. Reading all three together meant
+ * re-scanning the whole collection every cycle, for every wallet — 10 reads
+ * per wallet per tick against a 30-per-minute budget, which 429s almost
+ * immediately with more than a couple of wallets.
+ *
+ * So membership is read once and reused, and the volatile halves come from
+ * the two cheap sources below.
+ */
+const MEMBERSHIP_TTL_MS = 15 * 60 * 1000;
+const membershipCache = new Map();
+
+/** Every inscription id in a collection, as a Set. Cached. */
+const getCollectionMembership = async (collectionSymbol, session) => {
+  const cached = membershipCache.get(collectionSymbol);
+  if (cached && Date.now() - cached.at < MEMBERSHIP_TTL_MS) return cached.ids;
+
+  const ids = new Set();
+  let cursor = null;
+
+  for (let page = 0; page < MAX_COLLECTION_SCAN_PAGES; page++) {
+    const data = await ordNetFetch(
+      `/collection/${encodeURIComponent(collectionSymbol)}/inscriptions`,
+      {
+        token: session.sessionToken,
+        query: { limit: 100, cursor, sort: 'oldest' },
+      }
+    );
+
+    for (const row of data.items || []) {
+      const id = row.inscriptionId || row.id;
+      if (id) ids.add(id);
+    }
+
+    cursor = data.pagination?.nextCursor || null;
+    if (!data.pagination?.hasNext || !cursor) break;
+  }
+
+  membershipCache.set(collectionSymbol, { at: Date.now(), ids });
+  return ids;
+};
+
+/**
+ * Inscriptions an address holds, from UniSat's owner-indexed API.
+ *
+ * ord.net has no holdings-by-owner endpoint, and UniSat's costs nothing
+ * against ord.net's rate limit. Returns inscription ids with the outpoint
+ * they sit on, so a pending move can be spotted.
+ */
+const fetchHeldInscriptions = async (address) => {
+  const held = new Map();
+  let cursor = 0;
+
+  for (let page = 0; page < 20; page++) {
+    const response = await fetch(
+      buildUnisatProxyUrl(
+        `address/${encodeURIComponent(address)}/inscription-utxo-data`,
+        { cursor: String(cursor), size: '100' }
+      ),
+      { headers: { accept: 'application/json' } }
+    );
+    if (!response.ok) break;
+
+    const body = await response.json();
+    const data = body?.data;
+    const utxos = Array.isArray(data?.utxo) ? data.utxo : [];
+
+    for (const utxo of utxos) {
+      for (const inscription of utxo.inscriptions || []) {
+        if (!inscription?.inscriptionId) continue;
+        held.set(inscription.inscriptionId, {
+          inscriptionId: inscription.inscriptionId,
+          inscriptionNumber: inscription.inscriptionNumber,
+          txid: utxo.txid,
+          vout: utxo.vout,
+        });
+      }
+    }
+
+    cursor += utxos.length;
+    if (utxos.length === 0) break;
+    if (typeof data?.total === 'number' && cursor >= data.total) break;
+  }
+
+  return held;
+};
+
+/**
+ * What a wallet holds in a collection, and what of it is listed on ord.net.
+ *
+ * Assembled from three sources rather than one scan, because each answers a
+ * different question at a very different price:
+ *
+ *   membership  — ord.net, cached, rarely changes
+ *   ownership   — UniSat, owner-indexed, free of ord.net's rate limit
+ *   listings    — ord.net, one exact read filtered to this seller
+ *
+ * That is one ord.net read per wallet per cycle instead of ten, and the
+ * listed half is no longer capped at the first 1000 inscriptions of a
+ * collection, which used to hide a listing in anything larger.
+ */
 export const fetchWalletOrdinals = async (
   ownerAddress,
   collectionSymbol = null,
@@ -461,36 +566,54 @@ export const fetchWalletOrdinals = async (
 ) => {
   if (!ownerAddress || !collectionSymbol) return [];
   const session = await getReadSession(options);
-  const owner = String(ownerAddress).toLowerCase();
+
+  // The seller's live listings: exact, and the authority on price.
+  const listingsResponse = await ordNetFetch('/listings', {
+    token: session.sessionToken,
+    query: {
+      sellerAddress: ownerAddress,
+      collectionSlug: collectionSymbol,
+      limit: 100,
+      ...(bypassCache ? { _t: Date.now() } : {}),
+    },
+  });
+
+  const listed = new Map();
+  for (const row of listingsResponse?.listings || []) {
+    const normalized = normalizeListing(row, collectionSymbol);
+    if (normalized) listed.set(normalized.inscriptionId, normalized);
+  }
+
+  const [membership, held] = await Promise.all([
+    getCollectionMembership(collectionSymbol, session),
+    fetchHeldInscriptions(ownerAddress),
+  ]);
+
   const results = [];
-  let cursor = null;
 
-  for (let page = 0; page < MAX_COLLECTION_SCAN_PAGES; page++) {
-    const data = await ordNetFetch(
-      `/collection/${encodeURIComponent(collectionSymbol)}/inscriptions`,
-      {
-        token: session.sessionToken,
-        query: {
-          limit: 100,
-          cursor,
-          sort: 'newest',
-          ...(bypassCache ? { _t: Date.now() } : {}),
-        },
-      }
-    );
+  // Listed items first: ord.net already told us these are this wallet's.
+  for (const item of listed.values()) results.push(item);
 
-    for (const row of data.items || []) {
-      const normalized = normalizeCollectionInscription(row, collectionSymbol);
-      if (
-        normalized?.owner &&
-        String(normalized.owner).toLowerCase() === owner
-      ) {
-        results.push(normalized);
-      }
-    }
-
-    cursor = data.pagination?.nextCursor || null;
-    if (!data.pagination?.hasNext || !cursor) break;
+  // Then anything held in the collection that is not currently listed.
+  for (const [inscriptionId, utxo] of held) {
+    if (listed.has(inscriptionId)) continue;
+    if (!membership.has(inscriptionId)) continue;
+    results.push({
+      inscriptionId,
+      id: inscriptionId,
+      tokenId: inscriptionId,
+      listingId: null,
+      inscriptionNumber: utxo.inscriptionNumber,
+      contentURI: null,
+      contentPreviewURI: null,
+      contentType: null,
+      listed: false,
+      listedPrice: null,
+      collectionSymbol,
+      owner: ownerAddress,
+      mempoolTxId: '',
+      _ordNetRaw: { source: 'unisat', ...utxo },
+    });
   }
 
   return results;
