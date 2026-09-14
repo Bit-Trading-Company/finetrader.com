@@ -99,6 +99,41 @@ const setStoredSession = (address, session) => {
   }
 };
 
+/*
+ * Write pacing.
+ *
+ * ord.net allows 8 writes per profile per 60-second window. A purchase is two
+ * of them (preflight, then submit), so a run doing four buys a minute is
+ * already at the ceiling — and a 429 mid-purchase is worse than a wait,
+ * because the preflight is spent and the listing may be gone by the retry.
+ *
+ * So writes queue behind a rolling window rather than racing into a refusal.
+ * Reads are not paced: their limit is far higher and the proxy caches them.
+ */
+const WRITE_LIMIT = 8;
+const WRITE_WINDOW_MS = 60000;
+/** Leaves room for the other tabs and calls sharing this profile. */
+const WRITE_HEADROOM = 1;
+
+const writeTimes = [];
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const awaitWriteSlot = async () => {
+  for (;;) {
+    const cutoff = Date.now() - WRITE_WINDOW_MS;
+    while (writeTimes.length > 0 && writeTimes[0] <= cutoff) writeTimes.shift();
+
+    if (writeTimes.length < WRITE_LIMIT - WRITE_HEADROOM) {
+      writeTimes.push(Date.now());
+      return;
+    }
+
+    // Wait for the oldest call to age out of the window, plus a little.
+    await sleep(writeTimes[0] - cutoff + 250);
+  }
+};
+
 /**
  * Low-level call into the ord.net proxy.
  *
@@ -107,7 +142,7 @@ const setStoredSession = (address, session) => {
  */
 export const ordNetFetch = async (
   path,
-  { method = 'GET', token, query, body } = {}
+  { method = 'GET', token, query, body, retried = false } = {}
 ) => {
   const params = new URLSearchParams({ path });
   if (query) {
@@ -117,6 +152,8 @@ export const ordNetFetch = async (
       }
     });
   }
+
+  if (method !== 'GET') await awaitWriteSlot();
 
   const response = await fetch(`/api/ordnet?${params.toString()}`, {
     method,
@@ -134,6 +171,19 @@ export const ordNetFetch = async (
     data = text ? JSON.parse(text) : null;
   } catch {
     data = null;
+  }
+
+  if (response.status === 429 && !retried) {
+    /*
+     * Rate limited despite the pacing — another tab or a read burst got
+     * there first. The windows are 60s fixed, so waiting one out is the
+     * whole remedy.
+     */
+    const retryAfter = Number(response.headers.get('retry-after'));
+    await sleep(
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 5000
+    );
+    return ordNetFetch(path, { method, token, query, body, retried: true });
   }
 
   if (!response.ok) {
