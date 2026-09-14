@@ -190,3 +190,12 @@ export const LogOutIcon = (props) => (
     <path d="m17 8.5 3.5 3.5L17 15.5" />
   </Svg>
 );
+
+/** About: what this thing is, and what it does not promise. */
+export const InfoIcon = (props) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5.5" />
+    <path d="M12 7.6v.9" />
+  </Svg>
+);

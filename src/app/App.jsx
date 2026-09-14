@@ -9,6 +9,7 @@ import AutoTrade from '../pages/AutoTrade/AutoTrade';
 import WalletConsolidator from '../pages/WalletConsolidator/WalletConsolidator';
 import OrdinalExtractor from '../pages/OrdinalExtractor/OrdinalExtractor';
 import DesignSystem from '../pages/DesignSystem/DesignSystem';
+import About from '../pages/About/About';
 import AppShell from './AppShell';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -58,6 +59,7 @@ function App() {
                       <Route path="/extractor" element={<OrdinalExtractor />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/about" element={<About />} />
                       <Route path="/design" element={<DesignSystem />} />
                     </Route>
                   </Routes>

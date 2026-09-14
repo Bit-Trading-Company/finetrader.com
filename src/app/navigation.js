@@ -10,6 +10,7 @@ import {
   ChartIcon,
   ConsolidateIcon,
   GridIcon,
+  InfoIcon,
   StoreIcon,
 } from '../ui/icons';
 
@@ -57,6 +58,18 @@ export const NAV_GROUPS = [
         label: 'Extractor',
         icon: GridIcon,
         description: 'Find and move inscription UTXOs',
+      },
+    ],
+  },
+  {
+    id: 'about',
+    title: 'Fine Trader',
+    items: [
+      {
+        to: '/about',
+        label: 'About',
+        icon: InfoIcon,
+        description: 'What this is, and the risks of using it',
       },
     ],
   },

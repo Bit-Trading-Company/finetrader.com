@@ -1143,7 +1143,7 @@ optgroup {
 
 /* Status messages */
 .sign-psbt-container .error-message {
-  background-color: var(--ds-danger);
+  background-color: var(--ds-danger-quiet);
   color: var(--ds-danger);
   padding: 12px;
   border-radius: 6px;
@@ -1153,7 +1153,7 @@ optgroup {
 }
 
 .sign-psbt-container .success-message {
-  background-color: var(--ds-success);
+  background-color: var(--ds-success-quiet);
   color: var(--ds-success);
   padding: 12px;
   border-radius: 6px;
@@ -2182,13 +2182,13 @@ optgroup {
 }
 
 .status-message.error {
-  background-color: var(--ds-danger);
+  background-color: var(--ds-danger-quiet);
   color: var(--ds-danger);
   border-left: 4px solid var(--ds-danger);
 }
 
 .status-message.success {
-  background-color: var(--ds-success);
+  background-color: var(--ds-success-quiet);
   color: var(--ds-success);
   border-left: 4px solid var(--ds-success);
 }
@@ -2520,7 +2520,7 @@ optgroup {
 
 .collections-error-box {
   padding: 12px;
-  background-color: var(--ds-danger);
+  background-color: var(--ds-danger-quiet);
   color: var(--ds-danger);
   border-radius: 6px;
   margin-bottom: 16px;
@@ -2744,7 +2744,7 @@ optgroup {
 
 .collection-details-error-box {
   padding: 12px;
-  background-color: var(--ds-danger);
+  background-color: var(--ds-danger-quiet);
   color: var(--ds-danger);
   border-radius: 6px;
   margin-bottom: 16px;
@@ -3058,7 +3058,7 @@ optgroup {
 }
 
 .wallet-error-box.error {
-  background-color: var(--ds-danger);
+  background-color: var(--ds-danger-quiet);
   color: var(--ds-danger);
   border: 1px solid var(--ds-danger);
 }
@@ -3771,7 +3771,7 @@ optgroup {
 /* Status Messages */
 .dispatch-error-box {
   padding: 12px;
-  background-color: var(--ds-danger);
+  background-color: var(--ds-danger-quiet);
   color: var(--ds-danger);
   border-radius: var(--ds-radius-md);
   margin-top: 16px;
@@ -3781,7 +3781,7 @@ optgroup {
 
 .dispatch-success-box {
   padding: 12px;
-  background-color: var(--ds-success);
+  background-color: var(--ds-success-quiet);
   color: var(--ds-success);
   border-radius: var(--ds-radius-md);
   margin-top: 16px;
