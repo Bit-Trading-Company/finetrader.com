@@ -12,8 +12,8 @@ import { useWalletSession } from '../../features/wallet/WalletSession';
 import { useProxyWalletBalances } from '../../features/wallet/useProxyWalletBalances';
 import { getCollectionSlug } from '../../features/marketplace/collectionsApi';
 import { getTradingApi } from '../../trading/exchanges';
-import { useTradingConsole } from './hooks/useTradingConsole';
-import { useAutoTradeSettings } from './hooks/useAutoTradeSettings';
+import { useActivityLog } from '../../lib/useActivityLog';
+import { useRunSettings } from '../../features/trading/RunSettingsContext';
 import { useAutoTradeRunner } from './hooks/useAutoTradeRunner';
 import { findTradingMode } from './constants';
 
@@ -49,8 +49,8 @@ export const useAutoTradeWorkspace = () => {
   }, []);
 
   const { consoleLogs, addConsoleLog, clearConsole, consoleRef } =
-    useTradingConsole();
-  const baseSettings = useAutoTradeSettings();
+    useActivityLog();
+  const baseSettings = useRunSettings();
 
   /*
    * The trading engine reads the wallet subset off `settings`, but the subset

@@ -11,7 +11,7 @@
   place-items: center;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid var(--ds-border-strong);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
   background: transparent;
   color: var(--ds-text-faint);
   font-family: var(--ds-font-display);
@@ -20,13 +20,13 @@
   cursor: help;
   transition:
     color var(--ds-duration-fast) var(--ds-ease),
-    border-color var(--ds-duration-fast) var(--ds-ease);
+    box-shadow var(--ds-duration-fast) var(--ds-ease);
 }
 
 .trigger:hover,
 .trigger:focus-visible {
   color: var(--ds-accent-hover);
-  border-color: var(--ds-accent);
+  box-shadow: inset 0 0 0 1px var(--ds-accent-quiet);
 }
 
 .bubble {
@@ -36,8 +36,10 @@
   width: max-content;
   max-width: 260px;
   padding: var(--ds-space-3);
-  background: var(--ds-surface-overlay);
-  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-md);
   border-radius: var(--ds-radius-md);
   box-shadow: var(--ds-shadow-md);
   color: var(--ds-text-muted);

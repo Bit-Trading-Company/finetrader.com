@@ -4,14 +4,16 @@
   gap: var(--ds-space-5);
 }
 
+/*
+ * These sit inside a panel, so they are separated by a rule rather than
+ * boxed — a box inside a box is the thing this redesign is getting rid of.
+ */
 .group {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-3);
-  padding: var(--ds-space-4);
-  background: var(--ds-surface-sunken);
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: var(--ds-radius-md);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-subtle);
 }
 
 .pair {

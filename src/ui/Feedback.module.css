@@ -5,7 +5,6 @@
   gap: 6px;
   padding: 3px 9px;
   border-radius: var(--ds-radius-pill);
-  border: 1px solid transparent;
   font-size: var(--ds-text-xs);
   font-weight: 600;
   line-height: 1.4;
@@ -14,38 +13,32 @@
 
 .neutral {
   background: var(--ds-surface-hover);
-  border-color: var(--ds-border);
   color: var(--ds-text-muted);
 }
 
 .accent {
   background: var(--ds-accent-quiet);
-  border-color: var(--ds-accent);
   color: var(--ds-accent-hover);
 }
 
 .success {
   background: var(--ds-success-quiet);
-  border-color: var(--ds-success);
   color: var(--ds-success);
 }
 
 .danger {
   background: var(--ds-danger-quiet);
-  border-color: var(--ds-danger);
-  color: var(--color-red-400);
+  color: var(--ds-danger);
 }
 
 .warning {
   background: var(--ds-warning-quiet);
-  border-color: var(--ds-warning);
   color: var(--ds-warning);
 }
 
 .info {
   background: var(--ds-info-quiet);
-  border-color: var(--ds-info);
-  color: var(--color-blue-600);
+  color: var(--ds-info);
 }
 
 .dot {
@@ -62,28 +55,29 @@
   gap: var(--ds-space-3);
   padding: var(--ds-space-4);
   border-radius: var(--ds-radius-md);
-  border: 1px solid var(--ds-border);
+  /* The tone is carried by the wash and the leading edge, not an outline. */
+  border-left: 2px solid var(--ds-border-strong);
   background: var(--ds-surface-raised);
   font-size: var(--ds-text-md);
 }
 
 .alertSuccess {
-  border-color: var(--ds-success);
+  border-left-color: var(--ds-success);
   background: var(--ds-success-quiet);
 }
 
 .alertDanger {
-  border-color: var(--ds-danger);
+  border-left-color: var(--ds-danger);
   background: var(--ds-danger-quiet);
 }
 
 .alertWarning {
-  border-color: var(--ds-warning);
+  border-left-color: var(--ds-warning);
   background: var(--ds-warning-quiet);
 }
 
 .alertInfo {
-  border-color: var(--ds-info);
+  border-left-color: var(--ds-info);
   background: var(--ds-info-quiet);
 }
 

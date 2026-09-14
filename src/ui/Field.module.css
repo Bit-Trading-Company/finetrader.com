@@ -27,17 +27,23 @@
 }
 
 /* Inputs */
+/*
+ * An input still needs a visible edge to read as one. It is an inset ring
+ * rather than a border so the control has no box drawn around it and its
+ * size never shifts between states.
+ */
 .control {
   width: 100%;
   background: var(--ds-surface-sunken);
-  border: 1px solid var(--ds-border);
+  border: none;
   border-radius: var(--ds-radius-md);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
   color: var(--ds-text);
   font-family: inherit;
   font-size: var(--ds-text-md);
   padding: 9px 12px;
   transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
     background-color var(--ds-duration-fast) var(--ds-ease);
 }
 
@@ -46,7 +52,7 @@
 }
 
 .control:hover:not(:disabled) {
-  border-color: var(--ds-border-strong);
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
 }
 
 .control:disabled {
@@ -55,7 +61,7 @@
 }
 
 .invalid {
-  border-color: var(--ds-danger);
+  box-shadow: inset 0 0 0 1px var(--ds-danger);
 }
 
 /* Numbers, addresses and txids stay monospaced. */
@@ -80,28 +86,38 @@
   cursor: pointer;
 }
 
-/* Checkbox and radio rows */
+/* A standalone checkbox: the control and its words, nothing drawn around it. */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-1) 0;
+  cursor: pointer;
+}
+
+/* Radio rows: options to choose between, so each is a drawn target. */
 .choice {
   display: flex;
   align-items: flex-start;
   gap: var(--ds-space-3);
   padding: var(--ds-space-3);
-  border: 1px solid var(--ds-border);
+  border: none;
   border-radius: var(--ds-radius-md);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
   background: var(--ds-surface-sunken);
   cursor: pointer;
   transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
     background-color var(--ds-duration-fast) var(--ds-ease);
 }
 
 .choice:hover {
-  border-color: var(--ds-border-strong);
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
   background: var(--ds-surface-hover);
 }
 
 .choiceSelected {
-  border-color: var(--ds-accent);
+  box-shadow: inset 0 0 0 1px var(--ds-accent);
   background: var(--ds-accent-quiet);
 }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Modal } from '../../ui';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
 import { useOrdConnect, useSign } from '@ordzaar/ord-connect';
 import { useWalletDisconnectState } from './useWalletDisconnectState';
@@ -133,17 +134,6 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
       fetchUtxos();
     }
   }, [isOpen, isWalletConnected, fetchUtxos]);
-
-  // Handle Escape key to close modal
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
 
   // Estimate transaction size in vbytes and calculate total fee
   useEffect(() => {
@@ -679,393 +669,381 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
   );
   const change = totalInputValue - totalOutputValue - estimatedFee;
 
-  if (!isOpen) return null;
-
+  /*
+   * Wrapped in the design system's Modal so funding looks like every other
+   * dialog and obeys the same rules — one popup at a time, portaled to the
+   * body, closed by Escape or the backdrop. Only the interior below is still
+   * the pre-redesign markup.
+   */
   return (
-    <div className="dispatch-overlay" onClick={onClose}>
-      <div className="dispatch-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="dispatch-header">
-          <h2>Dispatch BTC to Proxy Wallets</h2>
-          <button className="dispatch-close-button" onClick={onClose}>
-            ×
-          </button>
-        </div>
-
-        <div className="dispatch-content">
-          {!isWalletConnected ? (
-            <div className="dispatch-error-box">
-              <p>Please connect a wallet first</p>
-            </div>
-          ) : (
-            <>
-              {/* Mode Selection */}
-              <div className="dispatch-section">
-                <div
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      size="lg"
+      title="Fund wallets"
+      description="Send BTC from your connected wallet out to the Fine Trader wallets."
+    >
+      <div className="dispatch-content">
+        {!isWalletConnected ? (
+          <div className="dispatch-error-box">
+            <p>Please connect a wallet first</p>
+          </div>
+        ) : (
+          <>
+            {/* Mode Selection */}
+            <div className="dispatch-section">
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '16px',
+                }}
+              >
+                <h3 style={{ margin: 0 }}>Dispatch Mode</h3>
+                <select
+                  value={mode}
+                  onChange={(e) => {
+                    setMode(e.target.value);
+                    manuallyEditedRef.current = false; // Reset manual edit flag when switching modes
+                    if (e.target.value === 'simple') {
+                      // Reset to simple mode
+                      setSimpleAmount('');
+                      setSelectedUtxos([]);
+                      setWalletAmounts({});
+                    }
+                  }}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '16px',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    border: '1px solid #4a5568',
+                    backgroundColor: '#2d3748',
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    cursor: 'pointer',
                   }}
                 >
-                  <h3 style={{ margin: 0 }}>Dispatch Mode</h3>
-                  <select
-                    value={mode}
-                    onChange={(e) => {
-                      setMode(e.target.value);
-                      manuallyEditedRef.current = false; // Reset manual edit flag when switching modes
-                      if (e.target.value === 'simple') {
-                        // Reset to simple mode
-                        setSimpleAmount('');
-                        setSelectedUtxos([]);
-                        setWalletAmounts({});
-                      }
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '4px',
-                      border: '1px solid #4a5568',
-                      backgroundColor: '#2d3748',
-                      color: '#e2e8f0',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="simple">Simple</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
+                  <option value="simple">Simple</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+
+              {utxosLoading ? (
+                <div className="dispatch-loading">
+                  <p>Loading UTXOs...</p>
                 </div>
-
-                {utxosLoading ? (
-                  <div className="dispatch-loading">
-                    <p>Loading UTXOs...</p>
-                  </div>
-                ) : utxos.length === 0 ? (
-                  <div className="dispatch-error-box">
-                    <p>No confirmed UTXOs available</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Simple Mode */}
-                    {mode === 'simple' && (
-                      <div className="dispatch-simple-mode">
-                        <div style={{ marginBottom: '16px' }}>
-                          <label
-                            htmlFor="simple-amount"
-                            style={{
-                              display: 'block',
-                              marginBottom: '8px',
-                              color: '#e2e8f0',
-                              fontSize: '14px',
-                            }}
-                          >
-                            Amount to Dispatch (BTC)
-                          </label>
-                          <div
-                            style={{
-                              marginBottom: '8px',
-                              color: '#a0aec0',
-                              fontSize: '12px',
-                            }}
-                          >
-                            Available:{' '}
-                            <strong style={{ color: '#48bb78' }}>
-                              {formatBTC(totalAvailableBTC)} BTC
-                            </strong>
-                          </div>
-                          <input
-                            id="simple-amount"
-                            type="number"
-                            value={simpleAmount}
-                            onChange={(e) =>
-                              handleSimpleAmountChange(e.target.value)
-                            }
-                            min="0"
-                            max={totalAvailableBTC / 100000000}
-                            step="0.00000001"
-                            placeholder="0.00000000"
-                            style={{
-                              width: '100%',
-                              padding: '10px',
-                              borderRadius: '4px',
-                              border: '1px solid #4a5568',
-                              backgroundColor: '#1a202c',
-                              color: '#e2e8f0',
-                              fontSize: '16px',
-                            }}
-                          />
-                        </div>
-                        {selectedUtxos.length > 0 && (
-                          <div className="dispatch-total-info">
-                            <span>Auto-selected UTXOs: </span>
-                            <strong>{formatBTC(totalInputValue)} BTC</strong>
-                            <span
-                              style={{
-                                marginLeft: '16px',
-                                fontSize: '12px',
-                                color: '#a0aec0',
-                              }}
-                            >
-                              ({selectedUtxos.length} UTXO
-                              {selectedUtxos.length !== 1 ? 's' : ''})
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Advanced Mode */}
-                    {mode === 'advanced' && (
-                      <div className="dispatch-advanced-mode">
-                        <h4
+              ) : utxos.length === 0 ? (
+                <div className="dispatch-error-box">
+                  <p>No confirmed UTXOs available</p>
+                </div>
+              ) : (
+                <>
+                  {/* Simple Mode */}
+                  {mode === 'simple' && (
+                    <div className="dispatch-simple-mode">
+                      <div style={{ marginBottom: '16px' }}>
+                        <label
+                          htmlFor="simple-amount"
                           style={{
-                            marginBottom: '12px',
+                            display: 'block',
+                            marginBottom: '8px',
                             color: '#e2e8f0',
                             fontSize: '14px',
                           }}
                         >
-                          Select UTXOs
-                        </h4>
-                        <div className="dispatch-utxo-list">
-                          {utxos.map((utxo, index) => {
-                            const isSelected = selectedUtxos.some(
-                              (u) =>
-                                u.txid === utxo.txid && u.vout === utxo.vout
-                            );
-                            return (
-                              <div
-                                key={`${utxo.txid}-${utxo.vout}`}
-                                className={`dispatch-utxo-item ${
-                                  isSelected ? 'selected' : ''
-                                }`}
-                                onClick={() => toggleUtxo(utxo)}
-                              >
-                                <div className="dispatch-utxo-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    readOnly
-                                  />
-                                </div>
-                                <div className="dispatch-utxo-info">
-                                  <div className="dispatch-utxo-header">
-                                    <span className="dispatch-utxo-status">
-                                      <span
-                                        style={{
-                                          color: getStatusColor(utxo.status),
-                                          marginRight: '4px',
-                                        }}
-                                      >
-                                        {getStatusIcon(utxo.status)}
-                                      </span>
-                                      UTXO #{index + 1}
-                                    </span>
-                                    <span className="dispatch-utxo-value">
-                                      {formatBTC(utxo.value)} BTC
-                                    </span>
-                                  </div>
-                                  <div className="dispatch-utxo-txid">
-                                    {formatTxId(utxo.txid)}:{utxo.vout}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {selectedUtxos.length > 0 && (
-                          <div className="dispatch-total-info">
-                            <span>Total Selected: </span>
-                            <strong>{formatBTC(totalInputValue)} BTC</strong>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Wallet Distribution */}
-              {proxyWallets.length > 0 && selectedUtxos.length > 0 && (
-                <div className="dispatch-section">
-                  <h3>Distribution to Proxy Wallets</h3>
-                  <div className="dispatch-wallet-distribution">
-                    {proxyWallets.map((wallet) => {
-                      const amount = walletAmounts[wallet.index] || 0;
-                      return (
+                          Amount to Dispatch (BTC)
+                        </label>
                         <div
-                          key={wallet.index}
-                          className="dispatch-wallet-item"
+                          style={{
+                            marginBottom: '8px',
+                            color: '#a0aec0',
+                            fontSize: '12px',
+                          }}
                         >
-                          <div className="dispatch-wallet-header">
-                            <span className="dispatch-wallet-number">
-                              Wallet #{wallet.index + 1}
-                            </span>
-                            <div className="dispatch-wallet-amount-control">
-                              <input
-                                type="number"
-                                value={amount}
-                                onChange={(e) =>
-                                  handleAmountChange(
-                                    wallet.index,
-                                    e.target.value
-                                  )
-                                }
-                                min="0"
-                                placeholder="0"
-                                className="dispatch-amount-input"
-                              />
-                              <span className="dispatch-amount-btc">
-                                ({formatBTC(amount)} BTC)
-                              </span>
-                            </div>
-                          </div>
-                          <div className="dispatch-wallet-address">
-                            {shortenAddress(wallet.address)}
-                          </div>
+                          Available:{' '}
+                          <strong style={{ color: '#48bb78' }}>
+                            {formatBTC(totalAvailableBTC)} BTC
+                          </strong>
                         </div>
-                      );
-                    })}
-                  </div>
-                  <div className="dispatch-summary">
-                    <div className="dispatch-summary-row">
-                      <span>Total Input:</span>
-                      <strong>{formatBTC(totalInputValue)} BTC</strong>
-                    </div>
-                    <div className="dispatch-summary-row">
-                      <span>Total Output:</span>
-                      <strong>{formatBTC(totalOutputValue)} BTC</strong>
-                    </div>
-                    <div className="dispatch-summary-row">
-                      <span>Fee Rate:</span>
-                      <strong>{feeRate} sats/vbyte</strong>
-                    </div>
-                    <div className="dispatch-summary-row">
-                      <span>Total Fee:</span>
-                      <strong>
-                        {formatBTC(estimatedFee)} BTC ({estimatedFee} sats)
-                      </strong>
-                    </div>
-                    {change > 0 && (
-                      <div className="dispatch-summary-row">
-                        <span>Change:</span>
-                        <strong style={{ color: '#48bb78' }}>
-                          {formatBTC(change)} BTC
-                        </strong>
+                        <input
+                          id="simple-amount"
+                          type="number"
+                          value={simpleAmount}
+                          onChange={(e) =>
+                            handleSimpleAmountChange(e.target.value)
+                          }
+                          min="0"
+                          max={totalAvailableBTC / 100000000}
+                          step="0.00000001"
+                          placeholder="0.00000000"
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            borderRadius: '4px',
+                            border: '1px solid #4a5568',
+                            backgroundColor: '#1a202c',
+                            color: '#e2e8f0',
+                            fontSize: '16px',
+                          }}
+                        />
                       </div>
-                    )}
-                    <div className="dispatch-summary-row">
-                      <span>Total:</span>
-                      <strong
+                      {selectedUtxos.length > 0 && (
+                        <div className="dispatch-total-info">
+                          <span>Auto-selected UTXOs: </span>
+                          <strong>{formatBTC(totalInputValue)} BTC</strong>
+                          <span
+                            style={{
+                              marginLeft: '16px',
+                              fontSize: '12px',
+                              color: '#a0aec0',
+                            }}
+                          >
+                            ({selectedUtxos.length} UTXO
+                            {selectedUtxos.length !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Advanced Mode */}
+                  {mode === 'advanced' && (
+                    <div className="dispatch-advanced-mode">
+                      <h4
                         style={{
-                          color:
-                            totalOutputValue + estimatedFee > totalInputValue
-                              ? '#f56565'
-                              : '#e2e8f0',
+                          marginBottom: '12px',
+                          color: '#e2e8f0',
+                          fontSize: '14px',
                         }}
                       >
-                        {formatBTC(totalOutputValue + estimatedFee)} BTC
+                        Select UTXOs
+                      </h4>
+                      <div className="dispatch-utxo-list">
+                        {utxos.map((utxo, index) => {
+                          const isSelected = selectedUtxos.some(
+                            (u) => u.txid === utxo.txid && u.vout === utxo.vout
+                          );
+                          return (
+                            <div
+                              key={`${utxo.txid}-${utxo.vout}`}
+                              className={`dispatch-utxo-item ${
+                                isSelected ? 'selected' : ''
+                              }`}
+                              onClick={() => toggleUtxo(utxo)}
+                            >
+                              <div className="dispatch-utxo-checkbox">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  readOnly
+                                />
+                              </div>
+                              <div className="dispatch-utxo-info">
+                                <div className="dispatch-utxo-header">
+                                  <span className="dispatch-utxo-status">
+                                    <span
+                                      style={{
+                                        color: getStatusColor(utxo.status),
+                                        marginRight: '4px',
+                                      }}
+                                    >
+                                      {getStatusIcon(utxo.status)}
+                                    </span>
+                                    UTXO #{index + 1}
+                                  </span>
+                                  <span className="dispatch-utxo-value">
+                                    {formatBTC(utxo.value)} BTC
+                                  </span>
+                                </div>
+                                <div className="dispatch-utxo-txid">
+                                  {formatTxId(utxo.txid)}:{utxo.vout}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {selectedUtxos.length > 0 && (
+                        <div className="dispatch-total-info">
+                          <span>Total Selected: </span>
+                          <strong>{formatBTC(totalInputValue)} BTC</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Wallet Distribution */}
+            {proxyWallets.length > 0 && selectedUtxos.length > 0 && (
+              <div className="dispatch-section">
+                <h3>Distribution to Proxy Wallets</h3>
+                <div className="dispatch-wallet-distribution">
+                  {proxyWallets.map((wallet) => {
+                    const amount = walletAmounts[wallet.index] || 0;
+                    return (
+                      <div key={wallet.index} className="dispatch-wallet-item">
+                        <div className="dispatch-wallet-header">
+                          <span className="dispatch-wallet-number">
+                            Wallet #{wallet.index + 1}
+                          </span>
+                          <div className="dispatch-wallet-amount-control">
+                            <input
+                              type="number"
+                              value={amount}
+                              onChange={(e) =>
+                                handleAmountChange(wallet.index, e.target.value)
+                              }
+                              min="0"
+                              placeholder="0"
+                              className="dispatch-amount-input"
+                            />
+                            <span className="dispatch-amount-btc">
+                              ({formatBTC(amount)} BTC)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="dispatch-wallet-address">
+                          {shortenAddress(wallet.address)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="dispatch-summary">
+                  <div className="dispatch-summary-row">
+                    <span>Total Input:</span>
+                    <strong>{formatBTC(totalInputValue)} BTC</strong>
+                  </div>
+                  <div className="dispatch-summary-row">
+                    <span>Total Output:</span>
+                    <strong>{formatBTC(totalOutputValue)} BTC</strong>
+                  </div>
+                  <div className="dispatch-summary-row">
+                    <span>Fee Rate:</span>
+                    <strong>{feeRate} sats/vbyte</strong>
+                  </div>
+                  <div className="dispatch-summary-row">
+                    <span>Total Fee:</span>
+                    <strong>
+                      {formatBTC(estimatedFee)} BTC ({estimatedFee} sats)
+                    </strong>
+                  </div>
+                  {change > 0 && (
+                    <div className="dispatch-summary-row">
+                      <span>Change:</span>
+                      <strong style={{ color: '#48bb78' }}>
+                        {formatBTC(change)} BTC
                       </strong>
                     </div>
+                  )}
+                  <div className="dispatch-summary-row">
+                    <span>Total:</span>
+                    <strong
+                      style={{
+                        color:
+                          totalOutputValue + estimatedFee > totalInputValue
+                            ? '#f56565'
+                            : '#e2e8f0',
+                      }}
+                    >
+                      {formatBTC(totalOutputValue + estimatedFee)} BTC
+                    </strong>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Fee Input */}
-              {proxyWallets.length > 0 && selectedUtxos.length > 0 && (
-                <div className="dispatch-section">
-                  <h3>Transaction Fee</h3>
-                  <div className="dispatch-fee-controls">
-                    <label htmlFor="dispatch-fee-rate">
-                      Fee Rate (sats/vbyte):
-                    </label>
-                    <input
-                      id="dispatch-fee-rate"
-                      type="number"
-                      value={feeRate}
-                      onChange={(e) =>
-                        setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
-                      }
-                      min="1"
-                      placeholder="4"
-                    />
-                    <span className="dispatch-fee-total">
-                      Total: {estimatedFee} sats ({formatBTC(estimatedFee)} BTC)
-                    </span>
-                  </div>
+            {/* Fee Input */}
+            {proxyWallets.length > 0 && selectedUtxos.length > 0 && (
+              <div className="dispatch-section">
+                <h3>Transaction Fee</h3>
+                <div className="dispatch-fee-controls">
+                  <label htmlFor="dispatch-fee-rate">
+                    Fee Rate (sats/vbyte):
+                  </label>
+                  <input
+                    id="dispatch-fee-rate"
+                    type="number"
+                    value={feeRate}
+                    onChange={(e) =>
+                      setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                    min="1"
+                    placeholder="4"
+                  />
+                  <span className="dispatch-fee-total">
+                    Total: {estimatedFee} sats ({formatBTC(estimatedFee)} BTC)
+                  </span>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Action Button */}
-              <div className="dispatch-actions">
-                <button
-                  onClick={handleDispatch}
-                  disabled={
+            {/* Action Button */}
+            <div className="dispatch-actions">
+              <button
+                onClick={handleDispatch}
+                disabled={
+                  isDispatching ||
+                  isCreatingPsbt ||
+                  isSigning ||
+                  isBroadcasting ||
+                  signLoading ||
+                  selectedUtxos.length === 0 ||
+                  proxyWallets.length === 0 ||
+                  Object.keys(walletAmounts).length === 0
+                }
+                className="dispatch-button dispatch-button-primary"
+                style={{
+                  backgroundColor:
                     isDispatching ||
                     isCreatingPsbt ||
                     isSigning ||
                     isBroadcasting ||
-                    signLoading ||
-                    selectedUtxos.length === 0 ||
-                    proxyWallets.length === 0 ||
-                    Object.keys(walletAmounts).length === 0
-                  }
-                  className="dispatch-button dispatch-button-primary"
-                  style={{
-                    backgroundColor:
-                      isDispatching ||
-                      isCreatingPsbt ||
-                      isSigning ||
-                      isBroadcasting ||
-                      signLoading
-                        ? '#4a5568'
-                        : '#ed8936',
-                    color: 'white',
-                    width: '100%',
-                  }}
-                >
-                  {isDispatching ||
-                  isCreatingPsbt ||
-                  isSigning ||
-                  isBroadcasting
-                    ? isCreatingPsbt
-                      ? 'Creating PSBT...'
-                      : isSigning
-                        ? 'Signing PSBT...'
-                        : isBroadcasting
-                          ? 'Broadcasting...'
-                          : 'Processing...'
-                    : 'Dispatch'}
-                </button>
-              </div>
+                    signLoading
+                      ? '#4a5568'
+                      : '#ed8936',
+                  color: 'white',
+                  width: '100%',
+                }}
+              >
+                {isDispatching || isCreatingPsbt || isSigning || isBroadcasting
+                  ? isCreatingPsbt
+                    ? 'Creating PSBT...'
+                    : isSigning
+                      ? 'Signing PSBT...'
+                      : isBroadcasting
+                        ? 'Broadcasting...'
+                        : 'Processing...'
+                  : 'Dispatch'}
+              </button>
+            </div>
 
-              {/* Results */}
-              {txId && (
-                <div className="dispatch-result">
-                  <h3>Transaction Result</h3>
-                  <div className="dispatch-txid">
-                    <span>Transaction ID:</span>
-                    <a
-                      href={getMempoolTxUrl(
-                        txId,
-                        connectedNetwork || 'mainnet'
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {formatTxId(txId)}
-                    </a>
-                  </div>
+            {/* Results */}
+            {txId && (
+              <div className="dispatch-result">
+                <h3>Transaction Result</h3>
+                <div className="dispatch-txid">
+                  <span>Transaction ID:</span>
+                  <a
+                    href={getMempoolTxUrl(txId, connectedNetwork || 'mainnet')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {formatTxId(txId)}
+                  </a>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Status Messages */}
-              {error && <div className="dispatch-error-box">{error}</div>}
-              {success && <div className="dispatch-success-box">{success}</div>}
-            </>
-          )}
-        </div>
+            {/* Status Messages */}
+            {error && <div className="dispatch-error-box">{error}</div>}
+            {success && <div className="dispatch-success-box">{success}</div>}
+          </>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 };
 

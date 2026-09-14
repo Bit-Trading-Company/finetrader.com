@@ -1,0 +1,61 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.copy {
+  color: var(--ds-text-muted);
+  max-width: 62ch;
+}
+
+.mono {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.fee {
+  width: 120px;
+}
+
+/* Unboxed: these are the figures for the sweep, under one rule. */
+.preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--ds-space-4);
+  margin: 0;
+  padding: var(--ds-space-4) 0;
+  border-top: 1px solid var(--ds-border-subtle);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.preview dt {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+}
+
+.preview dd {
+  margin: 2px 0 0;
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-md);
+  color: var(--ds-text);
+}
+
+.blocker {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+}

@@ -1,7 +1,4 @@
 .panel {
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-md);
   overflow: hidden;
 }
 
@@ -17,8 +14,7 @@
 .title {
   font-size: var(--ds-text-sm);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--ds-text-faint);
 }
 

@@ -1,15 +1,16 @@
 /**
- * Live log of what the trader is doing.
+ * Live log of what a screen is doing — trading, consolidating, extracting.
  *
- * Entries come from `useTradingConsole` as `{ message, link, timestamp }`.
- * The engine writes plain text prefixed with a marker (✓, ✗, ⚠, 🛒 …); that
- * marker is read to tint the line, so failures stand out while scrolling
- * without changing what the engine emits.
+ * Entries come from `useActivityLog` as `{ message, link, timestamp }`. The
+ * work writes plain text prefixed with a marker (✓, ✗, ⚠, 🛒 …); that marker
+ * is read to tint the line, so failures stand out while scrolling without
+ * changing what the caller emits.
  */
 import React from 'react';
-import { Badge, Button } from '../../../ui';
-import { ExternalIcon } from '../../../ui/icons';
-import styles from './RunConsole.module.css';
+import { Badge } from './Feedback';
+import Button from './Button';
+import { ExternalIcon } from './icons';
+import styles from './ActivityLog.module.css';
 
 /** Classify a log line by the marker the engine put at the front. */
 const toneFor = (message) => {
@@ -22,24 +23,33 @@ const toneFor = (message) => {
 
 /**
  * @param {object} props
- * @param {{message: string, link?: string|null, timestamp?: string}[]} props.logs
- * @param {React.RefObject<HTMLElement>} props.consoleRef keeps the view pinned to the newest line
- * @param {boolean} props.isTrading
+ * @param {{message: string, link?: string|null, timestamp?: string}[]} props.entries
+ * @param {React.RefObject<HTMLElement>} props.scrollRef keeps the view pinned to the newest line
+ * @param {boolean} [props.busy] something is running right now
+ * @param {string} [props.busyLabel] what "running" is called on this screen
+ * @param {string} [props.emptyHint] what to say before anything has happened
  * @param {() => void} [props.onClear]
  */
-const RunConsole = ({ logs, consoleRef, isTrading, onClear }) => (
-  <div className={styles.console}>
+const ActivityLog = ({
+  entries,
+  scrollRef,
+  busy = false,
+  busyLabel = 'Running',
+  emptyHint = 'Nothing yet.',
+  onClear,
+}) => (
+  <div className={`ds-panel ${styles.console}`}>
     <div className={styles.header}>
       <span className={styles.title}>Activity</span>
       <span className={styles.headerRight}>
-        {logs.length > 0 && onClear && (
+        {entries.length > 0 && onClear && (
           <Button variant="ghost" size="sm" onClick={onClear}>
             Clear
           </Button>
         )}
-        {isTrading ? (
+        {busy ? (
           <Badge tone="success" dot>
-            Running
+            {busyLabel}
           </Badge>
         ) : (
           <Badge tone="neutral">Idle</Badge>
@@ -49,16 +59,14 @@ const RunConsole = ({ logs, consoleRef, isTrading, onClear }) => (
 
     <div
       className={styles.output}
-      ref={consoleRef}
+      ref={scrollRef}
       role="log"
       aria-live="polite"
     >
-      {logs.length === 0 ? (
-        <p className={styles.empty}>
-          Nothing yet. Start a run and the trader reports every step here.
-        </p>
+      {entries.length === 0 ? (
+        <p className={styles.empty}>{emptyHint}</p>
       ) : (
-        logs.map((entry, index) => (
+        entries.map((entry, index) => (
           // Logs are append-only and may repeat, so the index is the identity.
           <div key={index} className={styles.row}>
             {entry.timestamp && (
@@ -85,4 +93,4 @@ const RunConsole = ({ logs, consoleRef, isTrading, onClear }) => (
   </div>
 );
 
-export default RunConsole;
+export default ActivityLog;

@@ -6,15 +6,56 @@
  * and read the log without stepping through anything.
  */
 import React from 'react';
-import { Alert, Badge, Button, Card, StatGrid, StatTile } from '../../../ui';
+import {
+  ActivityLog,
+  Alert,
+  Badge,
+  Button,
+  Card,
+  DoodleDivider,
+} from '../../../ui';
+import { SettingsIcon } from '../../../ui/icons';
 import { formatCompactNumber, formatSatsAsBtc } from '../../../lib/format';
 import { getCollectionSlug } from '../../../features/marketplace/collectionsApi';
 import CollectionPicker from './CollectionPicker';
 import PendingPurchases from './PendingPurchases';
 import RunControls from './RunControls';
-import RunSettingsFields from './RunSettingsFields';
-import RunConsole from './RunConsole';
 import styles from './AdvancedView.module.css';
+
+const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
+
+/**
+ * The run at a glance.
+ *
+ * A row of equal cards gave every figure the same weight. What someone
+ * watching an auto-trader actually looks for is whether the engine is moving,
+ * so the state leads at display size and the wallets, balance and collection
+ * read as supporting figures on the same line.
+ */
+const RunRibbon = ({ isTrading, stateHint, readings }) => (
+  <div className={styles.ribbon}>
+    <div className={styles.state}>
+      <span
+        className={joinClasses(styles.stateDot, isTrading && styles.stateLive)}
+        aria-hidden="true"
+      />
+      <div>
+        <div className={styles.stateWord}>{isTrading ? 'Running' : 'Idle'}</div>
+        <div className={styles.stateHint}>{stateHint}</div>
+      </div>
+    </div>
+
+    <dl className={styles.readings}>
+      {readings.map(([label, value, hint]) => (
+        <div key={label} className={styles.reading}>
+          <dt className={styles.readingLabel}>{label}</dt>
+          <dd className={styles.readingValue}>{value}</dd>
+          <dd className={styles.readingHint}>{hint}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+);
 
 /**
  * Everything the API reports about the collection being traded. The picker
@@ -87,6 +128,7 @@ const AdvancedView = ({
   onOpenDispatch,
   onOpenBids,
   onOpenWallets,
+  onOpenRunSettings,
   startButton,
 }) => {
   const {
@@ -107,47 +149,42 @@ const AdvancedView = ({
     readiness,
   } = workspace;
 
+  const readings = [
+    [
+      'Wallets',
+      wallets.length,
+      wallets.length
+        ? `${session.activeWallets.length} trading · ${balances.totals.funded} funded`
+        : 'None yet',
+    ],
+    [
+      'Balance',
+      formatSatsAsBtc(balances.totals.confirmed),
+      balances.totals.pending
+        ? `${balances.totals.pending > 0 ? '+' : ''}${formatSatsAsBtc(balances.totals.pending)} pending`
+        : 'Confirmed',
+    ],
+    [
+      'Collection',
+      selectedCollection?.name || '—',
+      floorPriceSats
+        ? `Floor ${formatSatsAsBtc(floorPriceSats)}`
+        : 'No floor price',
+    ],
+  ];
+
+  const stateHint =
+    pendingPurchases.length > 0
+      ? `${pendingPurchases.length} purchases confirming`
+      : readiness.blocker || 'Ready to go';
+
   return (
     <div className={styles.layout}>
-      <StatGrid>
-        <StatTile
-          label="Fine Trader wallets"
-          value={wallets.length}
-          hint={
-            wallets.length
-              ? `${session.activeWallets.length} trading · ${balances.totals.funded} funded`
-              : 'None yet'
-          }
-        />
-        <StatTile
-          label="Total balance"
-          value={formatSatsAsBtc(balances.totals.confirmed)}
-          hint={
-            balances.totals.pending
-              ? `${balances.totals.pending > 0 ? '+' : ''}${formatSatsAsBtc(balances.totals.pending)} pending`
-              : 'Confirmed'
-          }
-        />
-        <StatTile
-          label="Collection"
-          value={selectedCollection?.name || '—'}
-          hint={
-            floorPriceSats
-              ? `Floor ${formatSatsAsBtc(floorPriceSats)}`
-              : 'No floor price'
-          }
-        />
-        <StatTile
-          label="Status"
-          value={isTrading ? 'Running' : 'Idle'}
-          tone={isTrading ? 'success' : 'default'}
-          hint={
-            pendingPurchases.length > 0
-              ? `${pendingPurchases.length} purchases confirming`
-              : readiness.blocker || 'Ready'
-          }
-        />
-      </StatGrid>
+      <RunRibbon
+        isTrading={isTrading}
+        stateHint={stateHint}
+        readings={readings}
+      />
 
       {balances.error && <Alert tone="warning">{balances.error}</Alert>}
 
@@ -171,25 +208,22 @@ const AdvancedView = ({
 
       <div className={styles.columns}>
         <div className={styles.main}>
-          <Card padding="none">
-            <div className={styles.panelHeader}>
-              <span className={styles.panelTitle}>Collections</span>
-            </div>
-
+          <Card title="Collections" padding="none">
             <div className={styles.panelBody}>
-              <div className={styles.collectionPanel}>
-                {selectedCollection && (
+              {selectedCollection && (
+                <>
                   <CollectionSummary
                     collection={selectedCollection}
                     floorPriceSats={floorPriceSats}
                   />
-                )}
-                <CollectionPicker
-                  selected={selectedCollection}
-                  onSelect={selectCollection}
-                  variant="table"
-                />
-              </div>
+                  <DoodleDivider className={styles.summaryRule} />
+                </>
+              )}
+              <CollectionPicker
+                selected={selectedCollection}
+                onSelect={selectCollection}
+                variant="table"
+              />
             </div>
           </Card>
 
@@ -199,10 +233,12 @@ const AdvancedView = ({
             network={network}
           />
 
-          <RunConsole
-            logs={consoleLogs}
-            consoleRef={consoleRef}
-            isTrading={isTrading}
+          <ActivityLog
+            entries={consoleLogs}
+            scrollRef={consoleRef}
+            busy={isTrading}
+            busyLabel="Trading"
+            emptyHint="Nothing yet. Start a run and the trader reports every step here."
             onClear={clearConsole}
           />
         </div>
@@ -220,20 +256,14 @@ const AdvancedView = ({
                 compact
               />
 
-              {/*
-                Inline rather than behind the Settings dialog: on the
-                dashboard these are part of what you are tuning, not a
-                one-off preference.
-              */}
-              <details className={styles.moreSettings}>
-                <summary className={styles.moreSummary}>Run settings</summary>
-                <div className={styles.moreBody}>
-                  <RunSettingsFields
-                    settings={settings}
-                    isTrading={isTrading}
-                  />
-                </div>
-              </details>
+              <button
+                type="button"
+                className={styles.settingsLink}
+                onClick={onOpenRunSettings}
+              >
+                <SettingsIcon size={15} />
+                <span>Run settings</span>
+              </button>
             </div>
           </Card>
         </aside>

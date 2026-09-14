@@ -1,21 +1,34 @@
 /**
- * AutoTrade settings: trading mode and exchange, timer, prices and amounts,
- * fees, prep delay, wallet randomizer and the mempool provider.
+ * Run settings: trading mode and exchange, timer, prices and amounts, fees,
+ * prep delay, wallet randomizer and the mempool provider.
+ *
+ * Held above the router rather than inside the auto-trader page, because the
+ * settings dialog is reachable from the sidebar on every screen and has to
+ * show the same values the running engine is using. It also means a run's
+ * settings survive navigating away and back.
  *
  * Which wallets take part is NOT here — that lives in the wallet session, so
  * the choice holds across pages. `useAutoTradeWorkspace` merges it in under
  * the keys the trading engine expects.
  */
-import { useState, useMemo, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useMemo,
+  useEffect,
+} from 'react';
 import {
   getMempoolApiProvider,
   setMempoolApiProvider,
   MEMPOOL_PROVIDERS,
-} from '../../../lib/mempoolProvider';
-import { TRADING_EXCHANGES } from '../../../trading/exchanges';
-import { FINE_TRADING_USE_FEES_KEY } from '../constants';
+} from '../../lib/mempoolProvider';
+import { TRADING_EXCHANGES } from '../../trading/exchanges';
 
-export const useAutoTradeSettings = () => {
+/** localStorage key for the "Pay the app fee" setting ('1' / '0'). */
+const FINE_TRADING_USE_FEES_KEY = 'fine-trading-use-fees';
+
+const useRunSettingsState = () => {
   // Step 5: Auto Trading
   const [tradingMode, setTradingMode] = useState('auto-buy-sell'); // Trading mode
   const [tradingExchange, setTradingExchange] = useState(
@@ -145,4 +158,32 @@ export const useAutoTradeSettings = () => {
     setCustomSellPrice,
     handleMempoolProviderChange,
   };
+};
+
+const RunSettingsContext = createContext(null);
+
+export const RunSettingsProvider = ({ children }) => {
+  const settings = useRunSettingsState();
+  const [runActive, setRunActive] = useState(false);
+
+  /*
+   * Not memoised: the settings object is rebuilt every render anyway, as it
+   * was when this was a plain hook inside the page.
+   */
+  const value = { ...settings, runActive, setRunActive };
+
+  return (
+    <RunSettingsContext.Provider value={value}>
+      {children}
+    </RunSettingsContext.Provider>
+  );
+};
+
+/** Every run setting, shared by the auto-trader and the settings dialog. */
+export const useRunSettings = () => {
+  const context = useContext(RunSettingsContext);
+  if (!context) {
+    throw new Error('useRunSettings must be used inside a RunSettingsProvider');
+  }
+  return context;
 };

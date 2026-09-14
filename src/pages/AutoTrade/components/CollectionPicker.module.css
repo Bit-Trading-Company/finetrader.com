@@ -34,24 +34,24 @@
   gap: var(--ds-space-3);
   padding: var(--ds-space-3);
   background: var(--ds-surface-raised);
-  border: 1px solid var(--ds-border);
+  border: none;
   border-radius: var(--ds-radius-md);
   color: var(--ds-text);
   text-align: left;
   cursor: pointer;
   transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
     background-color var(--ds-duration-fast) var(--ds-ease);
 }
 
 .card:hover {
   background: var(--ds-surface-hover);
-  border-color: var(--ds-border-strong);
 }
 
+/* Selection is marked by a leading edge, not a ring around the whole row. */
 .selected {
-  border-color: var(--ds-accent);
   background: var(--ds-accent-quiet);
+  box-shadow: inset 2px 0 0 var(--ds-accent);
 }
 
 .thumb,
@@ -104,10 +104,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--ds-space-3);
-  padding: var(--ds-space-4);
-  background: var(--ds-surface-sunken);
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-4) 0;
+  border-top: 1px solid var(--ds-border-subtle);
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .filter {
@@ -120,8 +119,7 @@
 .filterLabel {
   font-size: var(--ds-text-xs);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--ds-text-faint);
 }
 

@@ -37,10 +37,10 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   height: 100vh !important;
   display: flex !important;
   flex-direction: column !important;
-  background: var(--color-navy-900)
+  background: var(--ds-surface-raised)
     url('../../assets/images/png/backgrounds/background_8.PNG') center center /
     cover no-repeat !important;
-  color: var(--color-gray-300) !important;
+  color: var(--ds-text-muted) !important;
   font-family:
     monospace,
     'Mix Doodle',
@@ -152,17 +152,17 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   display: inline-block !important;
   text-align: center !important;
   padding: 8px 16px !important;
-  border: 1px solid var(--color-gray-700) !important;
+  border: 1px solid var(--ds-border) !important;
   border-radius: 6px !important;
   /* background-color: #2d3748 !important; */
-  color: var(--color-gray-300) !important;
+  color: var(--ds-text-muted) !important;
   font-size: 14px !important;
   transition: all 0.2s ease !important;
 }
 
 .analytics-container button:hover:not(:disabled) {
-  background-color: var(--color-gray-700) !important;
-  border-color: var(--color-orange-500) !important;
+  background-color: var(--ds-surface-hover) !important;
+  border-color: var(--ds-accent) !important;
 }
 
 .analytics-container button:active:not(:disabled) {
@@ -195,10 +195,10 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   display: block !important;
   width: 100% !important;
   padding: 8px 12px !important;
-  background-color: var(--color-gray-800) !important;
-  border: 1px solid var(--color-gray-700) !important;
+  background-color: var(--ds-surface-raised) !important;
+  border: 1px solid var(--ds-border) !important;
   border-radius: 4px !important;
-  color: var(--color-gray-300) !important;
+  color: var(--ds-text-muted) !important;
   font-size: 12px !important;
 }
 
@@ -206,7 +206,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container select:focus,
 .analytics-container textarea:focus {
   outline: none !important;
-  border-color: var(--color-orange-500) !important;
+  border-color: var(--ds-accent) !important;
 }
 
 .analytics-container input[type='number'],
@@ -218,12 +218,12 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container input[type='checkbox'] {
   width: 16px !important;
   height: 16px !important;
-  accent-color: var(--color-orange-500) !important;
+  accent-color: var(--ds-accent) !important;
 }
 
 .analytics-container select option {
-  background-color: var(--color-navy-900) !important;
-  color: var(--color-gray-300) !important;
+  background-color: var(--ds-surface-raised) !important;
+  color: var(--ds-text-muted) !important;
 }
 
 /* Override for specific elements - Headers use Oliver-Regular */
@@ -255,8 +255,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   font-family: 'Oliver-Regular', serif;
   background: linear-gradient(
     135deg,
-    var(--color-orange-500) 0%,
-    var(--color-orange-400) 100%
+    var(--ds-accent) 0%,
+    var(--ds-accent-hover) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -284,8 +284,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-connect-button {
   background: linear-gradient(
     135deg,
-    var(--color-orange-500) 0%,
-    var(--color-orange-600) 100%
+    var(--ds-accent) 0%,
+    var(--ds-accent) 100%
   );
   color: white;
   border: none;
@@ -318,8 +318,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   box-shadow: 0 6px 16px rgba(237, 137, 54, 0.4);
   background: linear-gradient(
     135deg,
-    var(--color-orange-400) 0%,
-    var(--color-orange-500) 100%
+    var(--ds-accent-hover) 0%,
+    var(--ds-accent) 100%
   );
 }
 
@@ -332,8 +332,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
-  background: var(--color-navy-900);
-  border: 1px solid var(--color-gray-700);
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   min-width: 320px;
@@ -354,11 +354,11 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-dropdown-header {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--color-gray-700);
+  border-bottom: 1px solid var(--ds-border);
   font-size: 14px;
   font-family: 'Oliver-Regular', serif;
   font-weight: normal;
-  color: var(--color-gray-100);
+  color: var(--ds-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -392,7 +392,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-wallet-item:focus {
-  outline: 2px solid var(--color-orange-bright);
+  outline: 2px solid var(--ds-accent);
   outline-offset: 2px;
 }
 
@@ -401,7 +401,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-wallet-item:hover {
-  border-color: var(--color-orange-bright);
+  border-color: var(--ds-accent);
   background-color: rgba(255, 153, 0, 0.05);
 }
 
@@ -448,7 +448,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-info-label {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-family:
     monospace,
     'Mix Doodle',
@@ -468,7 +468,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-info-value {
   font-size: 12px;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   font-family:
     monospace,
     'Mix Doodle',
@@ -487,10 +487,10 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-network-select {
-  background-color: var(--color-gray-900);
-  border: 1px solid var(--color-gray-700);
+  background-color: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   font-size: 11px;
   padding: 4px 8px;
   cursor: pointer;
@@ -499,7 +499,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-network-select:focus {
   outline: none;
-  border-color: var(--color-orange-500);
+  border-color: var(--ds-accent);
   box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.1);
 }
 
@@ -509,8 +509,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   padding: 10px;
   background: linear-gradient(
     135deg,
-    var(--color-red-600) 0%,
-    var(--color-red-700) 100%
+    var(--ds-danger) 0%,
+    var(--ds-danger) 100%
   );
   color: white;
   border: none;
@@ -538,8 +538,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-disconnect-button:hover {
   background: linear-gradient(
     135deg,
-    var(--color-red-400) 0%,
-    var(--color-red-600) 100%
+    var(--ds-danger) 0%,
+    var(--ds-danger) 100%
   );
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
@@ -549,9 +549,9 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-error-message {
   padding: 12px 16px;
   margin: 12px;
-  background: var(--color-maroon-900);
-  border: 1px solid var(--color-red-600);
-  color: var(--color-red-200);
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-danger);
+  color: var(--ds-danger);
   font-size: 14px;
   font-family:
     monospace,
@@ -617,35 +617,35 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container ::-webkit-scrollbar-track {
-  background: var(--color-gray-900) !important;
+  background: var(--ds-surface-sunken) !important;
 }
 
 .analytics-sidebar::-webkit-scrollbar-track,
 .analytics-content::-webkit-scrollbar-track,
 .analytics-wallet-list::-webkit-scrollbar-track {
-  background: var(--color-gray-900);
+  background: var(--ds-surface-sunken);
 }
 
 .analytics-container ::-webkit-scrollbar-thumb {
-  background: var(--color-gray-700) !important;
+  background: var(--ds-surface-hover) !important;
   border-radius: 4px !important;
 }
 
 .analytics-sidebar::-webkit-scrollbar-thumb,
 .analytics-content::-webkit-scrollbar-thumb,
 .analytics-wallet-list::-webkit-scrollbar-thumb {
-  background: var(--color-gray-700);
+  background: var(--ds-surface-hover);
   border-radius: 4px;
 }
 
 .analytics-container ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-orange-500) !important;
+  background: var(--ds-accent) !important;
 }
 
 .analytics-sidebar::-webkit-scrollbar-thumb:hover,
 .analytics-content::-webkit-scrollbar-thumb:hover,
 .analytics-wallet-list::-webkit-scrollbar-thumb:hover {
-  background: var(--color-orange-500);
+  background: var(--ds-accent);
 }
 
 /* Component Overrides for analytics */
@@ -658,13 +658,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-sidebar .component-header,
 .analytics-content .component-header {
-  color: var(--color-gray-100);
+  color: var(--ds-text);
   font-size: 18px;
   font-family: 'Oliver-Regular', serif;
   font-weight: normal;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  /* border-bottom: 2px solid #ed8936; */
+  /* border-bottom: 2px solid var(--ds-accent); */
 }
 
 /* ===========================================
@@ -676,7 +676,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   height: 100%;
   padding: 16px;
   background-color: transparent;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   overflow: auto;
 }
 
@@ -689,17 +689,17 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   border-radius: 6px;
   margin-bottom: 16px;
   transition: all 0.3s ease;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .wallet-connection-status-box.connected {
-  background-color: var(--color-navy-900);
-  border: 1px solid var(--color-green-500);
+  background-color: var(--ds-surface-raised);
+  border: 1px solid var(--ds-success);
 }
 
 .analytics-container .wallet-connection-status-box.disconnected {
-  background-color: var(--color-navy-900);
-  border: 1px solid var(--color-red-600);
+  background-color: var(--ds-surface-raised);
+  border: 1px solid var(--ds-danger);
 }
 
 .analytics-container .wallet-connection-status-text {
@@ -712,11 +712,11 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .wallet-connection-status-text.connected {
-  color: var(--color-green-500);
+  color: var(--ds-success);
 }
 
 .analytics-container .wallet-connection-status-text.disconnected {
-  color: var(--color-red-600);
+  color: var(--ds-danger);
 }
 
 .analytics-container .wallet-connection-status-icon {
@@ -725,22 +725,22 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .wallet-connection-address {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin: 4px 0 0 0;
   font-family: monospace;
 }
 
 .analytics-container .wallet-not-connected-box {
   padding: 40px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
   text-align: center;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .wallet-not-connected-text {
   font-size: 14px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin: 0;
 }
 
@@ -750,7 +750,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .wallet-connected-address {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin-bottom: 8px;
 }
 
@@ -763,28 +763,28 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .wallet-count-label {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-weight: 500;
 }
 
 .analytics-container .wallet-count-input {
   width: 80px;
   padding: 6px 8px;
-  background-color: var(--color-gray-800);
-  border: 1px solid var(--color-gray-700);
+  background-color: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   font-size: 12px;
 }
 
 .analytics-container .wallet-count-input:focus {
   outline: none;
-  border-color: var(--color-orange-500);
+  border-color: var(--ds-accent);
   box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.1);
 }
 
 .analytics-container .wallet-generate-button {
-  background-color: var(--color-orange-500);
+  background-color: var(--ds-accent);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -796,11 +796,11 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .wallet-generate-button:hover {
-  background-color: var(--color-orange-600);
+  background-color: var(--ds-accent);
 }
 
 .analytics-container .wallet-generate-button:disabled {
-  background-color: var(--color-gray-700);
+  background-color: var(--ds-surface-hover);
   cursor: not-allowed;
 }
 
@@ -810,26 +810,26 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   margin-bottom: 16px;
   font-size: 14px;
   transition: all 0.3s ease;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .wallet-error-box.disconnected {
   background-color: #2d2419;
-  color: #f6e05e;
-  border: 1px solid #d69e2e;
+  color: var(--ds-warning);
+  border: 1px solid var(--ds-warning);
 }
 
 .analytics-container .wallet-error-box.error {
-  background-color: var(--color-maroon-900);
-  color: var(--color-red-200);
-  border: 1px solid var(--color-red-600);
+  background-color: var(--ds-surface-raised);
+  color: var(--ds-danger);
+  border: 1px solid var(--ds-danger);
 }
 
 .analytics-container .wallet-generated-list {
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
   padding: 24px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   position: relative;
 }
 
@@ -837,13 +837,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 12px;
-  color: var(--color-gray-100);
+  color: var(--ds-text);
 }
 
 .analytics-container .wallet-generated-scroll {
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   position: relative;
 }
@@ -853,8 +853,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   max-height: 80vh;
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: var(--color-navy-900);
-  border: 1px solid var(--color-gray-700);
+  background-color: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   padding: 16px;
@@ -875,15 +875,15 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .wallet-generated-item:not(:last-child) {
-  border-bottom: 1px solid var(--color-gray-700);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .analytics-container .wallet-generated-item:hover {
-  background-color: var(--color-gray-800);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .wallet-generated-item.selected {
-  background-color: var(--color-gray-700);
+  background-color: var(--ds-surface-hover);
 }
 
 .analytics-container .wallet-generated-number {
@@ -893,7 +893,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .wallet-generated-address {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-family: monospace;
 }
 
@@ -902,7 +902,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   height: 100%;
   padding: 16px;
   background-color: transparent;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   overflow: auto;
 }
 
@@ -911,7 +911,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .runes-form-group {
@@ -922,24 +922,24 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .runes-form-label {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-weight: 500;
 }
 
 .analytics-container .runes-form-select,
 .analytics-container .runes-form-input {
   padding: 6px 8px;
-  background-color: var(--color-gray-800);
-  border: 1px solid var(--color-gray-700);
+  background-color: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   font-size: 12px;
 }
 
 .analytics-container .runes-form-select:focus,
 .analytics-container .runes-form-input:focus {
   outline: none;
-  border-color: var(--color-orange-500);
+  border-color: var(--ds-accent);
   box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.1);
 }
 
@@ -952,12 +952,12 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .runes-checkbox {
   width: 32px;
   height: 32px;
-  accent-color: var(--color-orange-500);
+  accent-color: var(--ds-accent);
 }
 
 .analytics-container .runes-checkbox-label {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
 }
 
 .analytics-container .runes-actions {
@@ -969,7 +969,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .runes-search-button {
-  background-color: var(--color-orange-500);
+  background-color: var(--ds-accent);
   color: white;
   border: none;
   padding: 8px 16px;
@@ -981,16 +981,16 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .runes-search-button:hover {
-  background-color: var(--color-orange-600);
+  background-color: var(--ds-accent);
 }
 
 .analytics-container .runes-search-button:disabled {
-  background-color: var(--color-gray-700);
+  background-color: var(--ds-surface-hover);
   cursor: not-allowed;
 }
 
 .analytics-container .runes-refresh-button {
-  background-color: #4299e1;
+  background-color: var(--ds-accent);
   color: white;
   border: none;
   padding: 8px 16px;
@@ -1002,28 +1002,28 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .runes-refresh-button:hover {
-  background-color: var(--color-blue-600);
+  background-color: var(--ds-accent);
 }
 
 .analytics-container .runes-refresh-button:disabled {
-  background-color: var(--color-gray-700);
+  background-color: var(--ds-surface-hover);
   cursor: not-allowed;
 }
 
 .analytics-container .runes-error-box {
   padding: 12px;
-  background-color: var(--color-maroon-900);
-  color: var(--color-red-200);
-  border: 1px solid var(--color-red-600);
+  background-color: var(--ds-surface-raised);
+  color: var(--ds-danger);
+  border: 1px solid var(--ds-danger);
   border-radius: 6px;
   margin-bottom: 16px;
   font-size: 14px;
 }
 
 .analytics-container .runes-list-container {
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   overflow: hidden;
 }
 
@@ -1041,11 +1041,11 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .runes-item:not(:last-child) {
-  border-bottom: 1px solid var(--color-gray-700);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .analytics-container .runes-item:hover {
-  background-color: var(--color-gray-800);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .runes-image-section {
@@ -1063,25 +1063,25 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   height: 120px;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .runes-image-placeholder {
   width: 120px;
   height: 120px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
 }
 
 .analytics-container .runes-image-name {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   text-align: center;
   word-break: break-word;
   max-width: 160px;
@@ -1097,32 +1097,32 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .runes-detail-label {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-weight: 500;
   margin-bottom: 2px;
 }
 
 .analytics-container .runes-detail-value {
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   font-weight: 600;
   font-size: 12px;
 }
 
 .analytics-container .runes-detail-value.positive {
-  color: var(--color-green-500);
+  color: var(--ds-success);
 }
 
 .analytics-container .runes-detail-value.negative {
-  color: var(--color-red-600);
+  color: var(--ds-danger);
 }
 
 .analytics-container .runes-detail-value.warning {
-  color: var(--color-orange-500);
+  color: var(--ds-accent);
 }
 
 .analytics-container .runes-detail-subvalue {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin-top: 2px;
 }
 
@@ -1134,19 +1134,19 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .runes-etching-label {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 .analytics-container .runes-etching-details {
-  background-color: var(--color-navy-900);
-  border: 1px solid var(--color-gray-700);
+  background-color: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 8px;
   font-size: 9px;
   font-family: monospace;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   max-height: 60px;
   overflow-y: auto;
   word-break: break-all;
@@ -1154,29 +1154,29 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .runes-no-data {
   padding: 80px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
   text-align: center;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .runes-no-data-text {
   font-size: 14px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin: 0;
 }
 
 .analytics-container .runes-loading {
   padding: 80px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
   text-align: center;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .runes-loading-text {
   font-size: 14px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin: 0;
 }
 
@@ -1460,13 +1460,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-gray-700);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .analytics-container .fine-buyer-back-button {
-  background: var(--color-gray-700);
-  color: var(--color-gray-300);
-  border: 1px solid var(--color-gray-700);
+  background: var(--ds-surface-hover);
+  color: var(--ds-text-muted);
+  border: 1px solid var(--ds-border);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 12px;
@@ -1489,9 +1489,9 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .fine-buyer-back-button:hover {
-  background: var(--color-gray-800);
-  border-color: var(--color-orange-500);
-  color: var(--color-orange-500);
+  background: var(--ds-surface-raised);
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
 }
 
 .analytics-container .fine-buyer-popup-overlay {
@@ -1509,8 +1509,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .fine-buyer-popup {
-  background: var(--color-navy-900);
-  border: 1px solid var(--color-gray-700);
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
   border-radius: 12px;
   max-width: 90vw;
   max-height: 90vh;
@@ -1526,21 +1526,21 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  border-bottom: 1px solid var(--color-gray-700);
-  background: var(--color-navy-900);
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-surface-raised);
 }
 
 .analytics-container .fine-buyer-popup-header h3 {
   margin: 0;
   font-size: 18px;
   font-family: 'Oliver-Regular', serif;
-  color: var(--color-gray-100);
+  color: var(--ds-text);
   font-weight: normal;
 }
 
 .analytics-container .fine-buyer-popup-close {
   background: transparent;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   border: none;
   font-size: 24px;
   line-height: 1;
@@ -1555,7 +1555,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .fine-buyer-popup-close:hover {
-  color: var(--color-orange-500);
+  color: var(--ds-accent);
 }
 
 .analytics-container .fine-buyer-popup-content {
@@ -1577,7 +1577,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   height: 100%;
   padding: 16px;
   background-color: transparent;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   overflow-y: auto;
 }
 
@@ -1586,10 +1586,10 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .wallet-analytics-error,
 .analytics-container .wallet-analytics-no-data {
   padding: 80px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
   text-align: center;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   margin: 20px 0;
 }
 
@@ -1597,12 +1597,12 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .wallet-analytics-loading-text,
 .analytics-container .wallet-analytics-error-text {
   font-size: 14px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin: 0;
 }
 
 .analytics-container .wallet-analytics-error-text {
-  color: var(--color-red-200);
+  color: var(--ds-danger);
 }
 
 .analytics-container .wallet-analytics-summary {
@@ -1611,9 +1611,9 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   gap: 16px;
   margin-bottom: 24px;
   padding: 20px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .wallet-analytics-summary-item {
@@ -1624,13 +1624,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .wallet-analytics-summary-label {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-weight: 500;
 }
 
 .analytics-container .wallet-analytics-summary-value {
   font-size: 14px;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   font-weight: 600;
   font-family: monospace;
 }
@@ -1638,26 +1638,26 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .wallet-analytics-section-header {
   font-size: 18px;
   font-family: 'Oliver-Regular', serif;
-  color: var(--color-gray-100);
+  color: var(--ds-text);
   font-weight: normal;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-gray-700);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .analytics-container .wallet-analytics-graph-container {
   margin-bottom: 32px;
   padding: 24px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .wallet-analytics-transactions-container {
   padding: 24px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .wallet-analytics-transactions-list {
@@ -1671,36 +1671,36 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .wallet-analytics-transactions-table thead {
-  background-color: var(--color-gray-800);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .wallet-analytics-transactions-table th {
   padding: 12px;
   text-align: left;
-  color: var(--color-gray-100);
+  color: var(--ds-text);
   font-weight: 600;
-  border-bottom: 2px solid var(--color-gray-700);
+  border-bottom: 2px solid var(--ds-border);
   font-family: 'Oliver-Regular', serif;
 }
 
 .analytics-container .wallet-analytics-transactions-table td {
   padding: 12px;
-  border-bottom: 1px solid var(--color-gray-700);
-  color: var(--color-gray-300);
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
 }
 
 .analytics-container .wallet-analytics-transactions-table tbody tr:hover {
-  background-color: var(--color-gray-800);
+  background-color: var(--ds-surface-raised);
 }
 
 .analytics-container .wallet-analytics-txid {
   font-family: monospace;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   cursor: pointer;
 }
 
 .analytics-container .wallet-analytics-txid:hover {
-  color: var(--color-orange-500);
+  color: var(--ds-accent);
 }
 
 .analytics-container .wallet-analytics-status {
@@ -1713,23 +1713,23 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .wallet-analytics-status.confirmed {
   background-color: #1a3a2e;
-  color: var(--color-green-500);
-  border: 1px solid var(--color-green-500);
+  color: var(--ds-success);
+  border: 1px solid var(--ds-success);
 }
 
 .analytics-container .wallet-analytics-status.pending {
   background-color: #3a2e1a;
-  color: var(--color-orange-500);
-  border: 1px solid var(--color-orange-500);
+  color: var(--ds-accent);
+  border: 1px solid var(--ds-accent);
 }
 
 .analytics-container .wallet-analytics-positive {
-  color: var(--color-green-500);
+  color: var(--ds-success);
   font-weight: 600;
 }
 
 .analytics-container .wallet-analytics-negative {
-  color: var(--color-red-600);
+  color: var(--ds-danger);
   font-weight: 600;
 }
 
@@ -1738,12 +1738,12 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   margin-top: 28px;
   padding: 16px 0 32px;
   width: 100%;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
 }
 
 .analytics-container .analytics-ordinals-subtitle {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   margin: -8px 0 20px;
   line-height: 1.5;
 }
@@ -1751,8 +1751,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .analytics-ordinals-code {
   font-family: monospace;
   font-size: 11px;
-  color: var(--color-orange-500);
-  background: var(--color-gray-800);
+  color: var(--ds-accent);
+  background: var(--ds-surface-raised);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -1762,11 +1762,11 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .analytics-ordinals-error,
 .analytics-container .analytics-ordinals-none {
   padding: 24px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   text-align: center;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   font-size: 14px;
 }
 
@@ -1777,13 +1777,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .analytics-ordinals-wallet-block {
   margin-bottom: 28px;
   padding: 20px;
-  background-color: var(--color-navy-900);
+  background-color: var(--ds-surface-raised);
   border-radius: 8px;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
 }
 
 .analytics-container .analytics-ordinals-wallet-block--selected {
-  border-color: var(--color-orange-500);
+  border-color: var(--ds-accent);
   box-shadow: 0 0 0 1px rgba(237, 137, 54, 0.35);
 }
 
@@ -1794,19 +1794,19 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   gap: 12px;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-gray-700);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .analytics-container .analytics-ordinals-wallet-label {
   font-family: 'Oliver-Regular', serif;
   font-size: 16px;
-  color: var(--color-gray-100);
+  color: var(--ds-text);
 }
 
 .analytics-container .analytics-ordinals-wallet-address {
   font-family: monospace;
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
 }
 
 .analytics-container .analytics-ordinals-selected-pill {
@@ -1816,8 +1816,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   padding: 4px 10px;
   border-radius: 999px;
   background: rgba(237, 137, 54, 0.2);
-  color: var(--color-orange-500);
-  border: 1px solid var(--color-orange-500);
+  color: var(--ds-accent);
+  border: 1px solid var(--ds-accent);
 }
 
 .analytics-container .analytics-ordinals-grid {
@@ -1827,17 +1827,17 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 }
 
 .analytics-container .analytics-ordinals-card {
-  background: var(--color-gray-800);
+  background: var(--ds-surface-raised);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--color-gray-700);
+  border: 1px solid var(--ds-border);
   display: flex;
   flex-direction: column;
 }
 
 .analytics-container .analytics-ordinals-card-media {
   aspect-ratio: 1;
-  background: var(--color-gray-900);
+  background: var(--ds-surface-sunken);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1855,7 +1855,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   height: 100%;
   border: 0;
   display: block;
-  background: var(--color-gray-900);
+  background: var(--ds-surface-sunken);
 }
 
 .analytics-container .analytics-ordinals-card-text {
@@ -1868,8 +1868,8 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
   font-family: monospace;
   font-size: 10px;
   line-height: 1.4;
-  background: var(--color-gray-900);
-  color: var(--color-gray-300);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
   box-sizing: border-box;
   overflow: auto;
 }
@@ -1877,13 +1877,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .analytics-ordinals-card-text-loading {
   padding: 12px;
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--ds-text-faint);
   text-align: center;
 }
 
 .analytics-container .analytics-ordinals-card-placeholder {
   font-size: 11px;
-  color: var(--color-gray-600);
+  color: var(--ds-text-faint);
   padding: 12px;
   text-align: center;
 }
@@ -1897,7 +1897,7 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 .analytics-container .analytics-ordinals-card-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-gray-300);
+  color: var(--ds-text-muted);
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1907,13 +1907,13 @@ body:has(.analytics-container) p:where(:not(.ds-root *)) {
 
 .analytics-container .analytics-ordinals-card-collection {
   font-size: 11px;
-  color: var(--color-orange-500);
+  color: var(--ds-accent);
   margin-top: 6px;
 }
 
 .analytics-container .analytics-ordinals-card-meta {
   font-size: 10px;
-  color: var(--color-gray-600);
+  color: var(--ds-text-faint);
   margin-top: 4px;
   font-family: monospace;
 }

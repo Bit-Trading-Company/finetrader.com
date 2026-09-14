@@ -2,11 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" type="image/png" />
+    <link
+      rel="shortcut icon"
+      href="%PUBLIC_URL%/favicon.png"
+      type="image/png"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      UI and figure faces. Space Grotesk carries the interface — a grotesque
+      with enough oddity in its letterforms to stop the app reading as a stock
+      dashboard, while staying legible at 13px. JetBrains Mono sets every
+      price, balance and address, where tabular figures matter more than
+      character. The hand-drawn Mix Doodle display face ships with the app.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <!-- Primary Meta Tags -->
     <meta name="title" content="FINE TRADING - Bitcoin Trading Platform" />
     <meta
@@ -16,14 +33,20 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="FINE TRADING - Bitcoin Trading Dashboard" />
+    <meta
+      property="og:title"
+      content="FINE TRADING - Bitcoin Trading Dashboard"
+    />
     <meta
       property="og:description"
       content="Advanced bitcoin trading and wallet management platform"
     />
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="FINE TRADING - Bitcoin Trading Platform" />
+    <meta
+      property="twitter:title"
+      content="FINE TRADING - Bitcoin Trading Platform"
+    />
     <meta
       property="twitter:description"
       content="Advanced bitcoin trading and wallet management platform"
@@ -36,22 +59,28 @@
         // Block MetaMask from auto-connecting (this is a Bitcoin-only app)
         // Suppress MetaMask errors globally
         const originalError = console.error;
-        console.error = function(...args) {
+        console.error = function (...args) {
           const errorString = args.join(' ');
           // Suppress MetaMask-specific errors
-          if (errorString.includes('MetaMask') ||
-              errorString.includes('ethereum') ||
-              errorString.includes('chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn')) {
+          if (
+            errorString.includes('MetaMask') ||
+            errorString.includes('ethereum') ||
+            errorString.includes(
+              'chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn'
+            )
+          ) {
             return; // Silently ignore MetaMask errors
           }
           originalError.apply(console, args);
         };
 
         // Prevent unhandled promise rejections from MetaMask
-        window.addEventListener('unhandledrejection', function(event) {
-          if (event.reason &&
-              (event.reason.message?.includes('MetaMask') ||
-               event.reason.message?.includes('ethereum'))) {
+        window.addEventListener('unhandledrejection', function (event) {
+          if (
+            event.reason &&
+            (event.reason.message?.includes('MetaMask') ||
+              event.reason.message?.includes('ethereum'))
+          ) {
             event.preventDefault(); // Suppress MetaMask errors
           }
         });

@@ -98,7 +98,12 @@ export const Select = ({
   </select>
 );
 
-/** Checkbox rendered as a selectable row, so the whole row is clickable. */
+/**
+ * Checkbox rendered as a row, so the whole row is clickable.
+ *
+ * Unlike `ChoiceGroup`, a standalone checkbox gets no surface of its own —
+ * there is nothing to pick between, so a box around it is just a box.
+ */
 export const Checkbox = ({
   label,
   hint,
@@ -109,8 +114,7 @@ export const Checkbox = ({
 }) => (
   <label
     className={joinClasses(
-      styles.choice,
-      checked && styles.choiceSelected,
+      styles.check,
       disabled && styles.choiceDisabled,
       className
     )}

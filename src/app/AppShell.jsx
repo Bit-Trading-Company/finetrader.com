@@ -13,15 +13,21 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { NAV_GROUPS, findNavItem } from './navigation';
 import { useWalletConnection } from '../features/wallet/useWalletConnection';
 import { useWalletSession } from '../features/wallet/WalletSession';
-import { useWalletManager } from '../features/wallet/WalletManagerContext';
+import { DIALOG, useDialogs } from './DialogContext';
 import FineTraderWalletsModal from '../features/wallet/FineTraderWalletsModal';
+import Dispatch from '../features/wallet/Dispatch';
+import { useDisplayPreferences } from './DisplayPreferences';
+import SettingsDialog from './SettingsDialog';
 import HeaderWalletMenu from './HeaderWalletMenu';
 import SidebarWalletStatus from './SidebarWalletStatus';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
+  LogOutIcon,
   MenuIcon,
+  PlugIcon,
+  SettingsIcon,
 } from '../ui/icons';
 import styles from './AppShell.module.css';
 
@@ -41,7 +47,8 @@ const AppShell = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const connection = useWalletConnection();
   const session = useWalletSession();
-  const { isOpen, openWalletManager, closeWalletManager } = useWalletManager();
+  const { isDialogOpen, openDialog, closeDialog } = useDialogs();
+  const { prefs } = useDisplayPreferences();
   const current = findNavItem(location.pathname);
 
   // Close the mobile drawer whenever the route changes.
@@ -71,7 +78,18 @@ const AppShell = () => {
 
   return (
     <div
-      className={['ds-root', styles.shell, collapsed ? styles.collapsed : '']
+      /*
+       * Display preferences are applied here as classes and token overrides
+       * rather than read by each component, so a panel never has to know
+       * whether glass is on to draw itself.
+       */
+      style={prefs.pageArt ? undefined : { '--ds-page-art-opacity': 0 }}
+      className={[
+        'ds-root',
+        styles.shell,
+        collapsed ? styles.collapsed : '',
+        prefs.glass ? '' : styles.flat,
+      ]
         .filter(Boolean)
         .join(' ')}
     >
@@ -82,13 +100,14 @@ const AppShell = () => {
         aria-label="Main navigation"
       >
         <Link to="/auto-trade" className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">
-            F
-          </span>
           <span className={styles.brandText}>Fine Trader</span>
         </Link>
 
-        <SidebarWalletStatus session={session} onOpen={openWalletManager} />
+        <SidebarWalletStatus
+          session={session}
+          onOpen={() => openDialog(DIALOG.wallets)}
+          collapsed={collapsed}
+        />
 
         <nav className={styles.nav}>
           {NAV_GROUPS.map((group) => (
@@ -132,6 +151,52 @@ const AppShell = () => {
             </div>
           ))}
         </nav>
+
+        {/*
+          Not destinations, so they sit below the navigation rather than in
+          it — but they are the two things reached from every screen, so they
+          are one click away wherever you are.
+        */}
+        <div className={styles.sidebarActions}>
+          <div className={styles.groupTitle}>Account</div>
+          <button
+            type="button"
+            className={styles.link}
+            onClick={() => openDialog(DIALOG.settings)}
+            title="Settings"
+          >
+            <span className={styles.linkIcon}>
+              <SettingsIcon />
+            </span>
+            <span className={styles.linkLabel}>Settings</span>
+          </button>
+
+          {connection.isWalletConnected ? (
+            <button
+              type="button"
+              className={styles.link}
+              onClick={connection.disconnect}
+              title="Disconnect wallet"
+            >
+              <span className={styles.linkIcon}>
+                <LogOutIcon />
+              </span>
+              <span className={styles.linkLabel}>Disconnect</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.link}
+              onClick={() => openDialog(DIALOG.wallets)}
+              title="Connect wallet"
+            >
+              <span className={styles.linkIcon}>
+                <PlugIcon />
+              </span>
+              <span className={styles.linkLabel}>Connect wallet</span>
+            </button>
+          )}
+        </div>
 
         <div className={styles.sidebarFooter}>
           <button
@@ -178,18 +243,46 @@ const AppShell = () => {
             <HeaderWalletMenu
               session={session}
               connection={connection}
-              onOpenWallets={openWalletManager}
+              onOpenWallets={() => openDialog(DIALOG.wallets)}
             />
           </div>
         </header>
 
-        <main className={styles.content}>
+        {/*
+          The drawn frame holds the content area rather than travelling with
+          what is inside it: it is fixed over the column, never a scroll
+          target, and passes clicks straight through.
+        */}
+        {prefs.frame && (
+          <div
+            className={`ds-frame ${styles.frameOverlay}`}
+            aria-hidden="true"
+          />
+        )}
+
+        <main
+          className={[styles.content, prefs.frame ? styles.framed : '']
+            .filter(Boolean)
+            .join(' ')}
+        >
           <Outlet />
         </main>
       </div>
 
-      {/* Mounted once here so every page manages the same wallets. */}
-      <FineTraderWalletsModal open={isOpen} onClose={closeWalletManager} />
+      {/*
+        Mounted once here so every page manages and funds the same wallets,
+        and so the manager can open the funding dialog without owning it.
+      */}
+      <FineTraderWalletsModal
+        open={isDialogOpen(DIALOG.wallets)}
+        onClose={closeDialog}
+      />
+      <Dispatch
+        isOpen={isDialogOpen(DIALOG.funding)}
+        onClose={closeDialog}
+        proxyWallets={session.wallets}
+      />
+      <SettingsDialog />
     </div>
   );
 };

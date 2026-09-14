@@ -18,8 +18,11 @@ import {
   StatGrid,
   StatTile,
 } from '../../ui';
+import { FundIcon } from '../../ui/icons';
 import { formatSatsAsBtc } from '../../lib/format';
+import ConnectWalletPanel from './ConnectWalletPanel';
 import { useWalletConnection } from './useWalletConnection';
+import { DIALOG, useDialogs } from '../../app/DialogContext';
 import {
   useWalletSession,
   DEFAULT_WALLET_COUNT,
@@ -40,6 +43,7 @@ export const WALLET_EXPLAINER = [
 const FineTraderWalletsModal = ({ open, onClose }) => {
   const session = useWalletSession();
   const { network } = useWalletConnection();
+  const { openDialog } = useDialogs();
   const { wallets, isGenerating, error, isWalletConnected, generateWallets } =
     session;
 
@@ -115,19 +119,28 @@ const FineTraderWalletsModal = ({ open, onClose }) => {
           {error && <Alert tone="danger">{error}</Alert>}
           {balances.error && <Alert tone="warning">{balances.error}</Alert>}
 
+          {/*
+            An explanation of what is missing is not much use without the way
+            to fix it, so the connect choices sit right here rather than
+            sending the reader back to the page behind the dialog.
+          */}
           {!isWalletConnected && (
-            <Alert tone="info">
-              Connect a wallet first — the signature it gives is what derives
-              these.
-            </Alert>
+            <div className={styles.connect}>
+              <p className={styles.connectCopy}>
+                Connect a wallet first — the signature it gives is what derives
+                these.
+              </p>
+              <ConnectWalletPanel />
+            </div>
           )}
 
+          {/*
+            The hint sits under the whole row rather than inside the field:
+            the field is only as wide as a two-digit number, and a sentence
+            wrapped into that column is unreadable.
+          */}
           <div className={styles.generate}>
-            <Field
-              label="How many wallets"
-              hint={`Up to ${MAX_WALLET_COUNT}. Deriving again re-creates the earlier ones unchanged.`}
-              className={styles.count}
-            >
+            <Field label="How many wallets" className={styles.count}>
               <NumberInput
                 min="1"
                 max={MAX_WALLET_COUNT}
@@ -144,15 +157,28 @@ const FineTraderWalletsModal = ({ open, onClose }) => {
               {wallets.length > 0 ? 'Derive again' : 'Generate wallets'}
             </Button>
             {wallets.length > 0 && (
-              <Button
-                variant="ghost"
-                onClick={balances.refresh}
-                loading={balances.isLoading}
-              >
-                Refresh balances
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  iconLeft={<FundIcon size={16} />}
+                  onClick={() => openDialog(DIALOG.funding)}
+                >
+                  Fund wallets
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={balances.refresh}
+                  loading={balances.isLoading}
+                >
+                  Refresh balances
+                </Button>
+              </>
             )}
           </div>
+          <p className={styles.generateHint}>
+            Up to {MAX_WALLET_COUNT}. Deriving again re-creates the earlier ones
+            unchanged.
+          </p>
 
           {wallets.length > 0 && (
             <WalletTable

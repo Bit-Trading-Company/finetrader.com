@@ -1,8 +1,12 @@
+/*
+ * Spans the sidebar like the navigation rows below it. It is the app's
+ * running state, not a card parked in the corner.
+ */
 .wrap {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--ds-space-1);
+  gap: var(--ds-space-2);
 }
 
 .status {
@@ -11,26 +15,30 @@
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
-  padding: var(--ds-space-3);
-  border-radius: var(--ds-radius-md);
-  border: 1px solid var(--ds-border);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: none;
   background: var(--ds-surface-raised);
   color: var(--ds-text);
   text-align: left;
   cursor: pointer;
-  transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
-    background-color var(--ds-duration-fast) var(--ds-ease);
+  box-shadow: inset 2px 0 0 transparent;
+  transition: background-color var(--ds-duration-fast) var(--ds-ease);
 }
 
 .status:hover {
   background: var(--ds-surface-hover);
-  border-color: var(--ds-border-strong);
+}
+
+/* Icon rail: centre the glyph in the width the labels used to fill. */
+.railed {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* No wallets yet: this is the next thing to do, so it reads as an action. */
 .prompt {
-  border-color: var(--ds-accent);
+  box-shadow: inset 2px 0 0 var(--ds-accent);
   background: var(--ds-accent-quiet);
 }
 
@@ -70,6 +78,7 @@
 
 .info {
   flex-shrink: 0;
+  margin-right: var(--ds-space-3);
 }
 
 .tipLine {

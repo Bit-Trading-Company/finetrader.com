@@ -1,0 +1,77 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.fee {
+  width: 120px;
+}
+
+/* Found inscriptions: rows under rules, not a stack of cards. */
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  border-top: 1px solid var(--ds-border-subtle);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-1);
+  border-bottom: 1px solid var(--ds-border-subtle);
+  cursor: pointer;
+  transition: background-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.row:hover {
+  background: var(--ds-surface-hover);
+}
+
+.check {
+  accent-color: var(--ds-accent);
+  flex-shrink: 0;
+}
+
+.rowLabel {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+  min-width: 6ch;
+}
+
+.rowMeta {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row > :last-child {
+  margin-left: auto;
+}
+
+.blocker {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-faint);
+}

@@ -25,56 +25,167 @@
   min-width: 0;
 }
 
+/* Run ribbon ---------------------------------------------------------------
+ *
+ * Unboxed on purpose. The figures here are context for the run, not four
+ * separate things to compare, so they share one line under one rule instead
+ * of sitting in four identical cards.
+ */
+
+.ribbon {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-6);
+  padding-bottom: var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.stateDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+/*
+ * The only motion on the page that nobody triggered: it means the engine is
+ * live and spending money, which is worth catching the eye.
+ */
+.stateLive {
+  background: var(--ds-success);
+  animation: pulse 1.8s var(--ds-ease) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.stateWord {
+  font-size: var(--ds-display-sm);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+  letter-spacing: -0.015em;
+}
+
+.stateHint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.readings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-8);
+  margin: 0;
+}
+
+.reading {
+  min-width: 0;
+}
+
+.readingLabel {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+}
+
+.readingValue {
+  margin: 2px 0 0;
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-lg);
+  color: var(--ds-text);
+  white-space: nowrap;
+}
+
+.readingHint {
+  display: block;
+  margin: 0;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+}
+
+/* Wallet bar: the dashboard's link into the Fine Trader wallets manager. */
+.walletBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  padding-bottom: var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.walletBarText {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.walletBarActions {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+/* Run panel --------------------------------------------------------------- */
+
 .runPanel {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-5);
 }
 
-.walletActions {
+/*
+ * The run settings used to be duplicated inline here. One place to change
+ * them, reachable from both views, beats two that drift apart.
+ */
+.settingsLink {
   display: flex;
+  align-items: center;
   gap: var(--ds-space-2);
-}
-
-.emptyCopy {
-  max-width: 58ch;
-  margin: 0 auto var(--ds-space-5);
+  padding: var(--ds-space-3) 0 0;
+  border: none;
+  border-top: 1px solid var(--ds-border-subtle);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
   color: var(--ds-text-muted);
+  transition: color var(--ds-duration-fast) var(--ds-ease);
 }
 
-/* EmptyState centres its text; forms inside it need normal alignment back. */
-.emptyForm {
-  max-width: 30rem;
-  margin: 0 auto;
-  text-align: left;
+.settingsLink:hover {
+  color: var(--ds-accent-hover);
 }
 
-@media (max-width: 1100px) {
-  .columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* Selected collection summary ---------------------------------------------
+ *
+ * No surface of its own: it is the head of the collections panel, not a
+ * second panel inside it. A drawn rule separates it from the picker below.
+ */
 
-  .side {
-    position: static;
-  }
-}
-
-/* Selected collection summary --------------------------------------------- */
-
-.collectionPanel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-space-4);
+.panelBody {
+  padding: var(--ds-space-4);
 }
 
 .summary {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-4);
-  padding: var(--ds-space-4);
-  background: var(--ds-surface-sunken);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-md);
+}
+
+.summaryRule {
+  margin: var(--ds-space-4) 0;
 }
 
 .summaryHead {
@@ -114,8 +225,6 @@
 
 .summaryStat dt {
   font-size: var(--ds-text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--ds-text-faint);
 }
 
@@ -126,91 +235,41 @@
   color: var(--ds-text);
 }
 
-.panelHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--ds-space-3);
-  padding: var(--ds-space-3) var(--ds-space-4) 0;
-  border-bottom: 1px solid var(--ds-border-subtle);
-}
-
-.panelBody {
-  padding: var(--ds-space-4);
-}
-
-.moreSettings {
-  border-top: 1px solid var(--ds-border-subtle);
-  padding-top: var(--ds-space-4);
-}
-
-.moreSummary {
-  cursor: pointer;
-  font-size: var(--ds-text-sm);
-  font-weight: 600;
-  color: var(--ds-text-muted);
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-}
-
-.moreSummary::-webkit-details-marker {
-  display: none;
-}
-
-/* A chevron that turns as the section opens. */
-.moreSummary::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform var(--ds-duration-fast) var(--ds-ease);
-}
-
-.moreSettings[open] .moreSummary::before {
-  transform: rotate(45deg);
-}
-
-.moreSummary:hover {
-  color: var(--ds-text);
-}
-
-.moreBody {
-  padding-top: var(--ds-space-4);
-}
-
-/* Wallet bar: the dashboard's link into the Fine Trader wallets manager. */
-.walletBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--ds-space-3);
-  padding: var(--ds-space-3) var(--ds-space-4);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-md);
-}
-
-.walletBarText {
-  font-size: var(--ds-text-sm);
+.emptyCopy {
+  max-width: 58ch;
+  margin: 0 auto var(--ds-space-5);
   color: var(--ds-text-muted);
 }
 
-.walletBarActions {
+/* EmptyState centres its text; forms inside it need normal alignment back. */
+.emptyForm {
+  max-width: 30rem;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.walletActions {
   display: flex;
   gap: var(--ds-space-2);
 }
 
-.panelTitle {
-  font-size: var(--ds-text-sm);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ds-text-faint);
-  padding-bottom: var(--ds-space-3);
+@media (max-width: 1100px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .ribbon {
+    align-items: flex-start;
+    gap: var(--ds-space-4);
+  }
+
+  .readings {
+    gap: var(--ds-space-5);
+  }
 }

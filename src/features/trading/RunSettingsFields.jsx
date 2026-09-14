@@ -1,6 +1,9 @@
 /**
  * Settings that apply to every run, rather than to one strategy.
  *
+ * Where the app talks to the chain is not here — that is a network choice
+ * rather than a run choice, and lives in `NetworkSettingsFields`.
+ *
  * Shared by the wizard (inside a modal, where fewer choices on screen is the
  * point) and the dashboard (inline, where an advanced user wants them in
  * front of them).
@@ -9,17 +12,11 @@
  * table next to the balances, not in a list of bare addresses.
  */
 import React from 'react';
-import { Checkbox, Field, NumberInput, Select } from '../../../ui';
-import {
-  MEMPOOL_PROVIDERS,
-  getMempoolProviderLabel,
-} from '../../../lib/mempoolProvider';
+import { Checkbox, Field, NumberInput } from '../../ui';
 import styles from './RunSettingsFields.module.css';
 
 const RunSettingsFields = ({ settings, isTrading }) => {
   const {
-    mempoolProvider,
-    handleMempoolProviderChange,
     useFees,
     setUseFees,
     prepDelay,
@@ -30,22 +27,6 @@ const RunSettingsFields = ({ settings, isTrading }) => {
 
   return (
     <div className={styles.fields}>
-      <Field
-        label="Block explorer"
-        hint="Used for balances, fee rates and broadcasting."
-      >
-        <Select
-          value={mempoolProvider}
-          onChange={(e) => handleMempoolProviderChange(e.target.value)}
-        >
-          {Object.values(MEMPOOL_PROVIDERS).map((provider) => (
-            <option key={provider} value={provider}>
-              {getMempoolProviderLabel(provider)}
-            </option>
-          ))}
-        </Select>
-      </Field>
-
       <Field
         label="Delay between attempts"
         hint="How long to pause before retrying a step that needs the chain to catch up."

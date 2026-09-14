@@ -13,7 +13,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../ui';
-import { ScribbleUnderline } from '../../ui/Scribble';
 import castImage from '../../assets/images/png/fine-trader.png';
 import styles from './Splash.module.css';
 
@@ -66,7 +65,6 @@ const Splash = () => {
               <span className={styles.dots} aria-hidden="true">
                 ..
               </span>
-              <ScribbleUnderline animate className={styles.underline} />
             </h1>
 
             <div className={styles.actions}>

@@ -8,11 +8,9 @@
 import {
   BoltIcon,
   ChartIcon,
+  ConsolidateIcon,
   GridIcon,
-  PaletteIcon,
   StoreIcon,
-  ToolsIcon,
-  WalletIcon,
 } from '../ui/icons';
 
 /**
@@ -41,27 +39,24 @@ export const NAV_GROUPS = [
         label: 'Market',
         icon: StoreIcon,
         description: 'Browse collections, buy and sell by hand',
-        legacy: true,
       },
     ],
   },
   {
-    id: 'wallets',
-    title: 'Wallets',
+    id: 'tools',
+    title: 'Tools',
     items: [
       {
         to: '/consolidator',
-        label: 'Wallets',
-        icon: WalletIcon,
-        description: 'Proxy wallets, funding, consolidation',
-        legacy: true,
+        label: 'Consolidator',
+        icon: ConsolidateIcon,
+        description: 'Sweep proxy wallet funds into one address',
       },
       {
         to: '/extractor',
-        label: 'Inscriptions',
+        label: 'Extractor',
         icon: GridIcon,
         description: 'Find and move inscription UTXOs',
-        legacy: true,
       },
     ],
   },
@@ -74,32 +69,12 @@ export const NAV_GROUPS = [
         label: 'Analytics',
         icon: ChartIcon,
         description: 'Wallet holdings and purchase history',
-        legacy: true,
       },
       {
         to: '/satflow-stats',
         label: 'Collection stats',
         icon: ChartIcon,
         description: 'Satflow collection statistics',
-        legacy: true,
-      },
-    ],
-  },
-  {
-    id: 'tools',
-    title: 'Tools',
-    items: [
-      {
-        to: '/design',
-        label: 'Design system',
-        icon: PaletteIcon,
-        description: 'The primitives this interface is built from',
-      },
-      {
-        to: '/home',
-        label: 'Legacy workspace',
-        icon: ToolsIcon,
-        description: 'The old multi-panel workspace',
         legacy: true,
       },
     ],

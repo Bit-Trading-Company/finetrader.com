@@ -1,13 +1,16 @@
 /**
- * Trading console state: the log list (capped at 1000 entries), addConsoleLog,
- * clearConsole and a ref that keeps the log view scrolled to the newest entry.
+ * Activity log state, shared by every screen that reports what it is doing —
+ * the auto-trader, the consolidator, the extractor.
+ *
+ * Holds the log list (capped at 1000 entries), `log`, `clear`, and a ref that
+ * keeps the view scrolled to the newest entry.
  *
  * Each entry is `{ message, link, timestamp }` — renderers must read
  * `.message`, not the entry itself.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-export const useTradingConsole = () => {
+export const useActivityLog = () => {
   const [consoleLogs, setConsoleLogs] = useState([]);
 
   // Add console log (defined early so it can be used in useEffect hooks)
@@ -38,5 +41,15 @@ export const useTradingConsole = () => {
     }
   }, [consoleLogs]);
 
-  return { consoleLogs, addConsoleLog, clearConsole, consoleRef };
+  return {
+    entries: consoleLogs,
+    log: addConsoleLog,
+    clear: clearConsole,
+    scrollRef: consoleRef,
+    // Names the auto-trader's engine and workspace already pass around.
+    consoleLogs,
+    addConsoleLog,
+    clearConsole,
+    consoleRef,
+  };
 };

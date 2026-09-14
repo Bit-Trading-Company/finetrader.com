@@ -1,13 +1,39 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
+/**
+ * Extractor: pull inscriptions out of their UTXOs and send them somewhere safe.
+ *
+ * Same guided shape as the consolidator — connect, choose the wallets, set a
+ * destination, scan, extract. Wallets come from the shared `WalletSession`, so
+ * the set derived on the auto-trader is the set scanned here.
+ *
+ * A UTXO can hold more than one inscription. Extracting one moves the others
+ * in that UTXO with it, so those are never selected for you; the row says so
+ * and you have to opt in.
+ *
+ * The PSBT building and broadcasting live in `extractorUtils`; this file is
+ * the screen.
+ */
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useSign } from '@ordzaar/ord-connect';
+import {
+  ActivityLog,
+  Alert,
+  Badge,
+  Button,
+  Checkbox,
+  Field,
+  NumberInput,
+  Page,
+  PageHeader,
+  Steps,
+  TextInput,
+} from '../../ui';
+import { useActivityLog } from '../../lib/useActivityLog';
+import { shortenAddress } from '../../lib/format';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
-import WalletManagement from '../../features/wallet/WalletManagement';
+import { useWalletSession } from '../../features/wallet/WalletSession';
+import ConnectWalletPanel from '../../features/wallet/ConnectWalletPanel';
+import WalletSubsetPanel from '../../features/wallet/WalletSubsetPanel';
+import { DIALOG, useDialogs } from '../../app/DialogContext';
 import {
   fetchAllInscriptionUtxos,
   buildInscriptionExtractionPsbtBase64,
@@ -19,884 +45,487 @@ import {
   fetchUtxos,
   isValidBitcoinAddress,
 } from '../WalletConsolidator/consolidatorUtils';
-import background_8 from '../../assets/images/png/backgrounds/background_8.PNG';
-import { selectActiveWallets } from '../../features/wallet/walletSelection';
-import '../WalletConsolidator/WalletConsolidator.css';
-import { useEventHub } from '../../lib/eventHub';
-import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
-import WizardStep from '../../components/WizardStep';
+import styles from './OrdinalExtractor.module.css';
 
-const StepStatus = {
-  PENDING: null,
-  COMPLETE: 'complete',
-  IN_PROGRESS: 'in_progress',
+/** Flatten the scan into one row per inscription, the unit you pick. */
+const toRows = (byWallet) => {
+  const rows = [];
+  for (const [walletKey, entry] of Object.entries(byWallet)) {
+    const utxos = Array.isArray(entry?.utxos) ? entry.utxos : [];
+    for (const utxo of utxos) {
+      const inscriptions = Array.isArray(utxo.inscriptions)
+        ? utxo.inscriptions
+        : [];
+      for (const inscription of inscriptions) {
+        if (!inscription?.inscriptionId) continue;
+        rows.push({
+          walletKey,
+          address: entry.address,
+          txid: utxo.txid,
+          vout: utxo.vout,
+          satoshi: utxo.satoshi,
+          scriptPk: utxo.scriptPk,
+          inscriptionsCount: inscriptions.length,
+          inscription,
+        });
+      }
+    }
+  }
+  return rows;
 };
 
-const OrdinalExtractor = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [stepStatuses, setStepStatuses] = useState({
-    1: null,
-    2: null,
-    3: null,
-    4: null,
-  });
+const labelFor = (inscription) =>
+  inscription?.inscriptionNumber != null
+    ? `#${inscription.inscriptionNumber}`
+    : inscription.inscriptionId;
 
-  // Wallet connection (connect/disconnect reload the page on success)
+const OrdinalExtractor = () => {
   const {
     network,
     address: connectedAddress,
     publicKey: connectedPublicKey,
     isWalletConnected,
-    connect,
-    disconnect,
   } = useWalletConnection();
-
   const { sign } = useSign();
+  const session = useWalletSession();
+  const { openDialog } = useDialogs();
+  const { entries: logEntries, log, clear, scrollRef } = useActivityLog();
 
-  // Proxy wallets from WalletManagement
-  const [wallets, setWallets] = useState([]);
+  const { wallets, activeWallets } = session;
 
-  // Destination config (where the 546 output is sent)
-  const [useConnectedWalletAsDestination, setUseConnectedWalletAsDestination] =
-    useState(true);
+  const [useConnectedDestination, setUseConnectedDestination] = useState(true);
   const [customDestination, setCustomDestination] = useState('');
-  const [destinationError, setDestinationError] = useState('');
-
-  // Extraction config
-  const [feeRate, setFeeRate] = useState(1);
-  const [useCustomWalletSubset, setUseCustomWalletSubset] = useState(false);
-  const [selectedWalletIndices, setSelectedWalletIndices] = useState(new Set());
   const [includeConnectedWallet, setIncludeConnectedWallet] = useState(true);
+  const [feeRate, setFeeRate] = useState(1);
 
-  // Inscription data
   const [isScanning, setIsScanning] = useState(false);
-  const [inscriptionUtxosByWallet, setInscriptionUtxosByWallet] = useState({});
-  const [selectedInscriptionIds, setSelectedInscriptionIds] = useState(
-    () => new Set()
-  );
-
-  // Run state
+  const [scanned, setScanned] = useState({});
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [isExtracting, setIsExtracting] = useState(false);
-  const stopRequestedRef = useRef(false);
-  const [consoleLogs, setConsoleLogs] = useState([]);
-  const consoleRef = useRef(null);
+  const stopRequested = useRef(false);
 
-  const glEventHub = useEventHub();
+  const destination = useConnectedDestination
+    ? connectedAddress?.ordinals || ''
+    : customDestination.trim();
+  const destinationValid =
+    Boolean(destination) && isValidBitcoinAddress(destination, network);
+  const destinationError =
+    !useConnectedDestination && customDestination.trim() && !destinationValid
+      ? 'That is not a valid Bitcoin address for this network.'
+      : undefined;
 
-  const addLog = useCallback((message, link = null) => {
-    setConsoleLogs((prev) => {
-      const next = [
-        ...prev,
-        { message, link, timestamp: new Date().toLocaleTimeString() },
-      ];
-      return next.slice(-1200);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (consoleRef.current) {
-      requestAnimationFrame(() => {
-        if (consoleRef.current)
-          consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
-      });
-    }
-  }, [consoleLogs]);
-
-  // Listen for wallet generation
-  useEffect(() => {
-    const handleWalletsGenerated = (generatedWallets) => {
-      setWallets(generatedWallets);
-      setSelectedWalletIndices(new Set(generatedWallets.map((_, i) => i)));
-      setStepStatuses((prev) => ({ ...prev, 2: StepStatus.COMPLETE }));
-      setInscriptionUtxosByWallet({});
-    };
-    glEventHub.on('wallets-generated', handleWalletsGenerated);
-    return () => glEventHub.off('wallets-generated', handleWalletsGenerated);
-  }, [glEventHub]);
-
-  // Keep all wallets selected when custom subset is off
-  useEffect(() => {
-    if (wallets.length > 0 && !useCustomWalletSubset) {
-      setSelectedWalletIndices(new Set(wallets.map((_, i) => i)));
-    }
-  }, [wallets, useCustomWalletSubset]);
-
-  // Step 1 status from wallet connection
-  useEffect(() => {
-    if (isWalletConnected) {
-      setStepStatuses((prev) => ({ ...prev, 1: StepStatus.COMPLETE }));
-    } else {
-      setStepStatuses((prev) => ({ ...prev, 1: null }));
-    }
-  }, [isWalletConnected]);
-
-  const getDestinationAddress = () => {
-    if (useConnectedWalletAsDestination)
-      return connectedAddress?.ordinals || '';
-    return customDestination.trim();
-  };
-
-  // Sync destination validity
-  useEffect(() => {
-    const dest = getDestinationAddress();
-    if (dest && isValidBitcoinAddress(dest, network)) {
-      setStepStatuses((prev) => ({ ...prev, 3: StepStatus.COMPLETE }));
-      setDestinationError('');
-    } else if (!useConnectedWalletAsDestination && customDestination.trim()) {
-      setDestinationError('Invalid Bitcoin address');
-      setStepStatuses((prev) => ({ ...prev, 3: null }));
-    } else {
-      setStepStatuses((prev) => ({ ...prev, 3: null }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    useConnectedWalletAsDestination,
-    customDestination,
-    connectedAddress,
-    network,
-  ]);
-
-  const handleConnect = async (wallet) => {
-    try {
-      await connect(wallet);
-    } catch (err) {
-      console.error('Wallet connection error:', err);
-    }
-  };
-
-  const handleDisconnect = () => {
-    try {
-      disconnect();
-    } catch (err) {
-      console.error('Error disconnecting wallet:', err);
-    }
-  };
-
-  const getActiveProxyWallets = useCallback(
-    () =>
-      selectActiveWallets(wallets, {
-        useCustomSubset: useCustomWalletSubset,
-        selectedIndices: selectedWalletIndices,
-      }),
-    [wallets, useCustomWalletSubset, selectedWalletIndices]
+  const rows = useMemo(() => toRows(scanned), [scanned]);
+  const selectedRows = rows.filter((row) =>
+    selectedIds.has(row.inscription.inscriptionId)
   );
 
-  const selectableInscriptions = useMemo(() => {
-    const rows = [];
-    for (const [walletKey, entry] of Object.entries(inscriptionUtxosByWallet)) {
-      const address = entry?.address;
-      const utxos = Array.isArray(entry?.utxos) ? entry.utxos : [];
-      for (const u of utxos) {
-        const ins = Array.isArray(u.inscriptions) ? u.inscriptions : [];
-        for (const one of ins) {
-          if (!one?.inscriptionId) continue;
-          rows.push({
-            walletKey,
-            address,
-            txid: u.txid,
-            vout: u.vout,
-            satoshi: u.satoshi,
-            scriptPk: u.scriptPk,
-            inscriptionsCount: ins.length,
-            inscription: one,
-          });
-        }
-      }
-    }
-    return rows;
-  }, [inscriptionUtxosByWallet]);
-
-  const toggleSelection = useCallback((inscriptionId, checked) => {
-    setSelectedInscriptionIds((prev) => {
-      const next = new Set(prev);
-      checked ? next.add(inscriptionId) : next.delete(inscriptionId);
-      return next;
-    });
-  }, []);
-
-  const selectAllSingles = useCallback(() => {
-    setSelectedInscriptionIds((prev) => {
-      const next = new Set(prev);
-      for (const row of selectableInscriptions) {
-        if (row.inscriptionsCount === 1 && row.inscription?.inscriptionId) {
-          next.add(row.inscription.inscriptionId);
-        }
-      }
-      return next;
-    });
-  }, [selectableInscriptions]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedInscriptionIds(new Set());
-  }, []);
-
-  const handleScan = async () => {
-    const dest = getDestinationAddress();
-    if (!dest || !isValidBitcoinAddress(dest, network)) {
-      addLog('✗ Set a valid destination address first.');
-      return;
-    }
-
+  const handleScan = useCallback(async () => {
     setIsScanning(true);
-    setInscriptionUtxosByWallet({});
-    setSelectedInscriptionIds(new Set());
+    setScanned({});
+    setSelectedIds(new Set());
 
     try {
-      const map = {};
-      const tasks = [];
+      const found = {};
+      const targets = [];
 
-      // Connected wallet scan
       if (includeConnectedWallet && connectedAddress?.ordinals) {
-        tasks.push(async () => {
-          const addr = connectedAddress.ordinals;
-          addLog(`Scanning connected wallet for inscription UTXOs...`);
-          const utxos = await fetchAllInscriptionUtxos(addr, {
-            pageSize: 16,
-          });
-          map[`connected:${addr}`] = { address: addr, utxos };
-          addLog(
-            `Found ${utxos.length} inscription UTXO(s) in connected wallet.`
-          );
+        targets.push({
+          key: `connected:${connectedAddress.ordinals}`,
+          address: connectedAddress.ordinals,
+          what: 'connected wallet',
+        });
+      }
+      for (const wallet of activeWallets) {
+        targets.push({
+          key: `proxy:${wallet.address}`,
+          address: wallet.address,
+          what: shortenAddress(wallet.address),
         });
       }
 
-      // Proxy wallets scan
-      const activeProxyWallets = getActiveProxyWallets();
-      for (const w of activeProxyWallets) {
-        tasks.push(async () => {
-          addLog(
-            `Scanning proxy wallet ${w.address.slice(0, 8)}... for inscription UTXOs...`
-          );
-          const utxos = await fetchAllInscriptionUtxos(w.address, {
-            pageSize: 16,
-          });
-          map[`proxy:${w.address}`] = { address: w.address, utxos };
-          addLog(
-            `Found ${utxos.length} inscription UTXO(s) in proxy wallet ${w.address.slice(0, 8)}...`
-          );
+      // Sequential on purpose: the inscription API rate-limits a burst.
+      for (const target of targets) {
+        log(`Scanning ${target.what}…`);
+        const utxos = await fetchAllInscriptionUtxos(target.address, {
+          pageSize: 16,
         });
+        found[target.key] = { address: target.address, utxos };
+        log(`Found ${utxos.length} inscription UTXO(s) in ${target.what}.`);
       }
 
-      // Run sequentially to reduce rate limiting. Tasks are queued as
-      // functions: invoking them while queueing would start every scan at once.
-      for (const task of tasks) await task();
+      setScanned(found);
 
-      setInscriptionUtxosByWallet(map);
-      // Default selection: select all inscriptions from UTXOs that have exactly 1 inscription.
-      // For multi-inscription UTXOs, require explicit user selection.
-      const nextSelected = new Set();
-      for (const entry of Object.values(map)) {
-        const utxos = Array.isArray(entry.utxos) ? entry.utxos : [];
-        for (const u of utxos) {
-          const ins = Array.isArray(u.inscriptions) ? u.inscriptions : [];
-          if (ins.length === 1 && ins[0]?.inscriptionId) {
-            nextSelected.add(ins[0].inscriptionId);
+      // Pre-select only the unambiguous ones. A UTXO holding several
+      // inscriptions moves all of them together, so that is the reader's call.
+      const preselected = new Set();
+      for (const entry of Object.values(found)) {
+        for (const utxo of entry.utxos || []) {
+          const inscriptions = Array.isArray(utxo.inscriptions)
+            ? utxo.inscriptions
+            : [];
+          if (inscriptions.length === 1 && inscriptions[0]?.inscriptionId) {
+            preselected.add(inscriptions[0].inscriptionId);
           }
         }
       }
-      setSelectedInscriptionIds(nextSelected);
-      setStepStatuses((prev) => ({ ...prev, 4: StepStatus.COMPLETE }));
-    } catch (e) {
-      addLog(`✗ Scan failed: ${e?.message || String(e)}`);
+      setSelectedIds(preselected);
+    } catch (error) {
+      log(`✗ Scan failed: ${error?.message || String(error)}`);
     } finally {
       setIsScanning(false);
     }
-  };
+  }, [includeConnectedWallet, connectedAddress, activeWallets, log]);
 
-  const extractOneConnected = async ({
-    address,
-    inscriptionUtxo,
-    destinationAddress,
-  }) => {
-    // Build a PSBT using mempool utxos for fee input selection.
-    const allUtxos = await fetchUtxos(address, network);
-    const feeUtxo = await pickLargestNonOrdinalFeeUtxo(allUtxos, {
-      exclude: [{ txid: inscriptionUtxo.txid, vout: inscriptionUtxo.vout }],
-    });
+  /** Extract from the browser wallet, which signs its own PSBT. */
+  const extractFromConnected = useCallback(
+    async (row) => {
+      const allUtxos = await fetchUtxos(row.address, network);
+      const feeUtxo = await pickLargestNonOrdinalFeeUtxo(allUtxos, {
+        exclude: [{ txid: row.txid, vout: row.vout }],
+      });
 
-    const { psbtBase64 } = await buildInscriptionExtractionPsbtBase64({
-      inscriptionUtxo: {
-        txid: inscriptionUtxo.txid,
-        vout: inscriptionUtxo.vout,
-        value: inscriptionUtxo.satoshi,
-        scriptPk: inscriptionUtxo.scriptPk,
-        inscriptions: inscriptionUtxo.inscriptions,
-      },
-      inscription: inscriptionUtxo.inscription,
-      feeUtxo: feeUtxo || null,
-      destinationAddress,
-      changeAddress: address,
-      feeRate,
-      network,
-      walletPublicKeyHex: connectedPublicKey?.ordinals || null,
-    });
+      const { psbtBase64 } = await buildInscriptionExtractionPsbtBase64({
+        inscriptionUtxo: {
+          txid: row.txid,
+          vout: row.vout,
+          value: row.satoshi,
+          scriptPk: row.scriptPk,
+          inscriptions: [row.inscription],
+        },
+        inscription: row.inscription,
+        feeUtxo: feeUtxo || null,
+        destinationAddress: destination,
+        changeAddress: row.address,
+        feeRate,
+        network,
+        walletPublicKeyHex: connectedPublicKey?.ordinals || null,
+      });
 
-    const result = await sign(address, psbtBase64, {
-      finalize: true,
-      extractTx: true,
-    });
+      const result = await sign(row.address, psbtBase64, {
+        finalize: true,
+        extractTx: true,
+      });
+      if (!result?.hex) {
+        throw new Error('Connected wallet signing returned no tx hex');
+      }
+      return broadcastTxHex({ txHex: result.hex, network });
+    },
+    [network, destination, feeRate, connectedPublicKey, sign]
+  );
 
-    const txHex = result?.hex;
-    if (!txHex) throw new Error('Connected wallet signing returned no tx hex');
-    return await broadcastTxHex({ txHex, network });
-  };
-
-  const handleStartExtraction = async () => {
-    const destinationAddress = getDestinationAddress();
-    if (
-      !destinationAddress ||
-      !isValidBitcoinAddress(destinationAddress, network)
-    ) {
-      addLog('✗ Invalid destination address');
-      return;
-    }
-
-    stopRequestedRef.current = false;
+  const handleExtract = useCallback(async () => {
+    stopRequested.current = false;
     setIsExtracting(true);
-    setConsoleLogs([]);
+    clear();
+    log(`Extracting ${selectedRows.length} inscription(s) to ${destination}`);
+    log(`Fee rate: ${feeRate} sat/vbyte · network: ${network}`);
 
     try {
-      addLog(`Starting extraction...`);
-      addLog(`Destination (546 outputs): ${destinationAddress}`);
-      addLog(`Fee rate: ${feeRate} sat/vbyte`);
-
-      const entries = Object.entries(inscriptionUtxosByWallet);
-      if (entries.length === 0) {
-        addLog('✗ No scanned inscription data. Run "Scan" first.');
-        return;
-      }
-
-      const selectedRows = selectableInscriptions.filter((row) =>
-        selectedInscriptionIds.has(row.inscription.inscriptionId)
-      );
-
-      if (selectedRows.length === 0) {
-        addLog(
-          '✗ No inscriptions selected. Select inscriptions to extract first.'
-        );
-        return;
-      }
-
-      addLog(`Selected ${selectedRows.length} inscription(s) to extract.`);
-
       for (const row of selectedRows) {
-        if (stopRequestedRef.current) break;
-
-        const addr = row.address;
-        const key = row.walletKey;
-        const ins = row.inscription;
-        const label =
-          ins?.inscriptionNumber != null
-            ? `#${ins.inscriptionNumber}`
-            : ins.inscriptionId;
+        if (stopRequested.current) break;
+        const label = labelFor(row.inscription);
 
         if (row.inscriptionsCount > 1) {
-          addLog(
-            `  ⚠ Multi-inscription UTXO: extracting ${label} will move other inscriptions in ${row.txid.slice(0, 8)}...:${row.vout} too.`
+          log(
+            `  ⚠ ${label} shares a UTXO with ${row.inscriptionsCount - 1} other inscription(s); they move with it.`
           );
         }
-
-        addLog(
-          `  Extracting ${label} from ${row.txid.slice(0, 8)}...:${row.vout} (${row.satoshi} sats)...`
-        );
+        log(`  Extracting ${label} from ${row.txid.slice(0, 8)}…:${row.vout}`);
 
         try {
-          if (key.startsWith('connected:')) {
-            const { txid, txUrl } = await extractOneConnected({
-              address: addr,
-              inscriptionUtxo: {
-                txid: row.txid,
-                vout: row.vout,
-                satoshi: row.satoshi,
-                scriptPk: row.scriptPk,
-                inscriptions: [ins],
-                inscription: ins,
-              },
-              destinationAddress,
-            });
-            addLog(
-              `  ✓ Extracted ${label}. TXID: ${txid.slice(0, 16)}...`,
-              txUrl
-            );
-          } else if (key.startsWith('proxy:')) {
-            const w = wallets.find((x) => x.address === addr);
-            if (!w?.privateKey)
-              throw new Error('Proxy wallet missing privateKey');
-            const { txid, txUrl } = await extractInscriptionFromProxyWallet({
-              wallet: w,
-              inscriptionUtxo: {
-                txid: row.txid,
-                vout: row.vout,
-                value: row.satoshi,
-                satoshi: row.satoshi,
-                scriptPk: row.scriptPk,
-                scriptpubkey: row.scriptPk,
-                inscriptions: [ins],
-              },
-              inscription: ins,
-              destinationAddress,
-              feeRate,
-              network,
-            });
-            addLog(
-              `  ✓ Extracted ${label}. TXID: ${txid.slice(0, 16)}...`,
-              txUrl
-            );
-          }
-        } catch (e) {
-          addLog(`  ✗ Failed to extract ${label}: ${e?.message || String(e)}`);
+          const { txid, txUrl } = row.walletKey.startsWith('connected:')
+            ? await extractFromConnected(row)
+            : await extractInscriptionFromProxyWallet({
+                wallet: wallets.find((w) => w.address === row.address),
+                inscriptionUtxo: {
+                  txid: row.txid,
+                  vout: row.vout,
+                  value: row.satoshi,
+                  satoshi: row.satoshi,
+                  scriptPk: row.scriptPk,
+                  scriptpubkey: row.scriptPk,
+                  inscriptions: [row.inscription],
+                },
+                inscription: row.inscription,
+                destinationAddress: destination,
+                feeRate,
+                network,
+              });
+          log(`  ✓ Extracted ${label}. ${txid.slice(0, 16)}…`, txUrl);
+        } catch (error) {
+          log(`  ✗ ${label}: ${error?.message || String(error)}`);
         }
 
-        if (!stopRequestedRef.current) {
-          await new Promise((r) => setTimeout(r, 400));
+        if (!stopRequested.current) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
         }
       }
-
-      addLog(`\n✓ Extraction run complete.`);
+      log('✓ Extraction run complete.');
     } finally {
       setIsExtracting(false);
     }
-  };
+  }, [
+    selectedRows,
+    destination,
+    feeRate,
+    network,
+    wallets,
+    extractFromConnected,
+    log,
+    clear,
+  ]);
 
-  const handleStop = () => {
-    stopRequestedRef.current = true;
-    addLog('Stop requested...');
-  };
+  const toggleRow = (id, checked) =>
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
-  const destinationAddress = getDestinationAddress();
-  const isDestinationValid =
-    destinationAddress && isValidBitcoinAddress(destinationAddress, network);
+  const canExtract =
+    isWalletConnected &&
+    destinationValid &&
+    selectedRows.length > 0 &&
+    !isExtracting;
 
-  return (
-    <div
-      className="consolidator-container"
-      style={{ backgroundImage: `url(${background_8})` }}
-    >
-      <div className="consolidator-content">
-        <h1 className="consolidator-title">Ordinal Extractor</h1>
-        <p className="consolidator-subtitle">
-          Extract inscriptions into 546-sat UTXOs (postage) and send them to a
-          destination
-        </p>
-
-        {/* Step 1: Connect Wallet */}
-        <WizardStep
-          classPrefix="consolidator"
-          number={1}
-          title="Connect Wallet"
-          isActive={currentStep === 1}
-          isComplete={stepStatuses[1] === StepStatus.COMPLETE}
-          onSelect={() => setCurrentStep(1)}
-        >
-          {!isWalletConnected ? (
-            <div className="consolidator-wallet-list">
-              {CONNECT_WALLET_LIST.map((w, i) => (
-                <button
-                  key={i}
-                  className="consolidator-wallet-item"
-                  onClick={() => handleConnect(w.wallet)}
-                >
-                  <img
-                    src={w.icon}
-                    alt={w.wallet}
-                    className="consolidator-wallet-icon"
-                  />
-                  <span>{w.wallet}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="consolidator-connected-info">
-              <p className="consolidator-connected-address">
-                ✓ Connected: {connectedAddress?.ordinals?.slice(0, 10)}...
-                {connectedAddress?.ordinals?.slice(-8)}
-              </p>
-              <button
-                onClick={handleDisconnect}
-                className="consolidator-btn consolidator-btn--secondary"
+  const steps = [
+    {
+      id: 'connect',
+      title: 'Connect your wallet',
+      done: isWalletConnected,
+      summary: isWalletConnected
+        ? shortenAddress(connectedAddress?.ordinals || '')
+        : undefined,
+      render: () => <ConnectWalletPanel />,
+    },
+    {
+      id: 'wallets',
+      title: 'Choose the wallets to scan',
+      done: activeWallets.length > 0 || includeConnectedWallet,
+      summary:
+        activeWallets.length > 0
+          ? `${activeWallets.length} of ${wallets.length}`
+          : undefined,
+      render: () => (
+        <div className={styles.stack}>
+          <Checkbox
+            label="Also scan my connected wallet"
+            hint="Inscriptions held by the browser wallet itself, not just the Fine Trader wallets."
+            checked={includeConnectedWallet}
+            onChange={(event) =>
+              setIncludeConnectedWallet(event.target.checked)
+            }
+          />
+          <WalletSubsetPanel
+            session={session}
+            onManage={() => openDialog(DIALOG.wallets)}
+            emptyHint="No Fine Trader wallets yet. Derive them once and every page in the app uses the same set."
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'destination',
+      title: 'Set the destination address',
+      done: destinationValid,
+      summary: destinationValid ? shortenAddress(destination) : undefined,
+      render: () => (
+        <div className={styles.stack}>
+          <Field label="Where the inscriptions go">
+            <div className={styles.choices}>
+              <Button
+                variant={useConnectedDestination ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setUseConnectedDestination(true)}
               >
-                Disconnect
-              </button>
-              {stepStatuses[1] === StepStatus.COMPLETE && (
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="consolidator-btn"
-                >
-                  Continue to Step 2 →
-                </button>
-              )}
+                My connected wallet
+              </Button>
+              <Button
+                variant={useConnectedDestination ? 'secondary' : 'primary'}
+                size="sm"
+                onClick={() => setUseConnectedDestination(false)}
+              >
+                Another address
+              </Button>
             </div>
-          )}
-        </WizardStep>
+          </Field>
 
-        {/* Step 2: Load Proxy Wallets */}
-        <WizardStep
-          classPrefix="consolidator"
-          number={2}
-          title={
-            <>
-              Load Proxy Wallets (optional)
-              {wallets.length > 0 && (
-                <span className="consolidator-badge">{wallets.length}</span>
-              )}
-            </>
-          }
-          isActive={currentStep === 2}
-          isComplete={stepStatuses[2] === StepStatus.COMPLETE}
-          onSelect={() => setCurrentStep(2)}
-        >
-          <WalletManagement glEventHub={glEventHub} />
-
-          <div style={{ marginTop: '14px' }}>
-            <label className="consolidator-checkbox-label">
-              <input
-                type="checkbox"
-                checked={includeConnectedWallet}
-                onChange={(e) => setIncludeConnectedWallet(e.target.checked)}
-                disabled={isExtracting || !isWalletConnected}
-              />
-              <span>Include connected wallet in scan/extraction</span>
-            </label>
-          </div>
-
-          {wallets.length > 0 && (
-            <div style={{ marginTop: '10px' }}>
-              <label className="consolidator-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={useCustomWalletSubset}
-                  onChange={(e) => {
-                    setUseCustomWalletSubset(e.target.checked);
-                    if (!e.target.checked) {
-                      setSelectedWalletIndices(
-                        new Set(wallets.map((_, i) => i))
-                      );
-                    }
-                  }}
-                  disabled={isExtracting}
-                />
-                <span>Select specific proxy wallets</span>
-              </label>
-
-              {useCustomWalletSubset && wallets.length > 0 && (
-                <div className="consolidator-wallet-checkboxes">
-                  <div className="consolidator-wallet-check-actions">
-                    <button
-                      className="consolidator-btn consolidator-btn--tiny"
-                      onClick={() =>
-                        setSelectedWalletIndices(
-                          new Set(wallets.map((_, i) => i))
-                        )
-                      }
-                      disabled={isExtracting}
-                    >
-                      Select all
-                    </button>
-                    <button
-                      className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                      onClick={() => setSelectedWalletIndices(new Set())}
-                      disabled={isExtracting}
-                    >
-                      Deselect all
-                    </button>
-                  </div>
-                  {wallets.map((wallet, i) => (
-                    <label key={i} className="consolidator-wallet-checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={selectedWalletIndices.has(i)}
-                        onChange={(e) => {
-                          const next = new Set(selectedWalletIndices);
-                          e.target.checked ? next.add(i) : next.delete(i);
-                          setSelectedWalletIndices(next);
-                        }}
-                        disabled={isExtracting}
-                      />
-                      <span className="consolidator-wallet-label">
-                        Wallet #{i + 1}: {wallet.address.slice(0, 8)}...
-                        {wallet.address.slice(-6)}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={() => setCurrentStep(3)}
-            className="consolidator-btn"
-            style={{ marginTop: '16px' }}
-            disabled={!isWalletConnected}
-          >
-            Continue to Step 3 →
-          </button>
-        </WizardStep>
-
-        {/* Step 3: Destination */}
-        <WizardStep
-          classPrefix="consolidator"
-          number={3}
-          title="Set Destination Address"
-          isActive={currentStep === 3}
-          isComplete={stepStatuses[3] === StepStatus.COMPLETE}
-          onSelect={() => setCurrentStep(3)}
-        >
-          <div className="consolidator-destination-section">
-            <label className="consolidator-radio-label">
-              <input
-                type="radio"
-                name="destMode"
-                checked={useConnectedWalletAsDestination}
-                onChange={() => {
-                  setUseConnectedWalletAsDestination(true);
-                  setDestinationError('');
-                }}
-                disabled={isExtracting}
-              />
-              <span>
-                Send extracted 546 UTXOs to connected ordinals address
-              </span>
-            </label>
-
-            {useConnectedWalletAsDestination && connectedAddress?.ordinals && (
-              <div className="consolidator-address-preview">
-                <span className="consolidator-address-label">Address:</span>
-                <span className="consolidator-address-value">
-                  {connectedAddress.ordinals}
-                </span>
-              </div>
-            )}
-
-            <label
-              className="consolidator-radio-label"
-              style={{ marginTop: '16px' }}
+          {!useConnectedDestination && (
+            <Field
+              label="Destination address"
+              hint="Each inscription arrives in its own 546-sat output."
+              error={destinationError}
             >
-              <input
-                type="radio"
-                name="destMode"
-                checked={!useConnectedWalletAsDestination}
-                onChange={() => setUseConnectedWalletAsDestination(false)}
-                disabled={isExtracting}
+              <TextInput
+                value={customDestination}
+                mono
+                placeholder="bc1…"
+                invalid={Boolean(destinationError)}
+                onChange={(event) => setCustomDestination(event.target.value)}
               />
-              <span>Use custom destination address</span>
-            </label>
-
-            {!useConnectedWalletAsDestination && (
-              <div className="consolidator-custom-address">
-                <input
-                  type="text"
-                  className={`consolidator-address-input ${destinationError ? 'error' : ''}`}
-                  placeholder="Enter Bitcoin address"
-                  value={customDestination}
-                  onChange={(e) => {
-                    setCustomDestination(e.target.value);
-                    setDestinationError('');
-                  }}
-                  disabled={isExtracting}
-                />
-                {destinationError && (
-                  <p className="consolidator-error-text">{destinationError}</p>
-                )}
-              </div>
-            )}
-
-            {isDestinationValid && (
-              <button
-                onClick={() => setCurrentStep(4)}
-                className="consolidator-btn"
-                style={{ marginTop: '20px' }}
-              >
-                Continue to Step 4 →
-              </button>
-            )}
-          </div>
-        </WizardStep>
-
-        {/* Step 4: Scan + Extract */}
-        <WizardStep
-          classPrefix="consolidator"
-          number={4}
-          title="Scan and Extract"
-          isActive={currentStep === 4}
-          isComplete={stepStatuses[4] === StepStatus.COMPLETE}
-          onSelect={() => setCurrentStep(4)}
-        >
-          <div className="consolidator-controls">
-            <div className="consolidator-control-group">
-              <label className="consolidator-label">
-                Fee Rate (sat/vbyte):
-              </label>
-              <input
-                type="number"
-                value={feeRate}
-                onChange={(e) =>
-                  setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
-                }
-                disabled={isExtracting || isScanning}
-                min="1"
-                max="500"
-                className="consolidator-number-input"
-              />
-              <p className="consolidator-hint">
-                First version uses estimated fee; if you see “insufficient
-                change”, lower fee rate or ensure there’s a fee UTXO.
-              </p>
-            </div>
-
-            <button
+            </Field>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'scan',
+      title: 'Find inscriptions',
+      done: rows.length > 0,
+      summary: rows.length > 0 ? `${rows.length} found` : undefined,
+      render: () => (
+        <div className={styles.stack}>
+          <div className={styles.controls}>
+            <Button
               onClick={handleScan}
-              className="consolidator-btn consolidator-btn--secondary"
-              disabled={
-                !isWalletConnected ||
-                !isDestinationValid ||
-                isScanning ||
-                isExtracting
-              }
+              loading={isScanning}
+              disabled={!isWalletConnected}
             >
-              {isScanning ? 'Scanning...' : '🔎 Scan for inscription UTXOs'}
-            </button>
-
-            {selectableInscriptions.length > 0 && (
-              <div className="consolidator-preview-card">
-                <h4 className="consolidator-preview-title">
-                  Select inscriptions to extract
-                </h4>
-                <p className="consolidator-hint" style={{ marginTop: 0 }}>
-                  Singles are auto-selected after scan. Multi-inscription UTXOs
-                  require explicit selection; extracting one will move the
-                  others too.
-                </p>
-
-                <div className="consolidator-wallet-check-actions">
-                  <button
-                    className="consolidator-btn consolidator-btn--tiny"
-                    onClick={selectAllSingles}
-                    disabled={isExtracting || isScanning}
-                  >
-                    Select all singles
-                  </button>
-                  <button
-                    className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                    onClick={clearSelection}
-                    disabled={isExtracting || isScanning}
-                  >
-                    Clear selection
-                  </button>
-                  <span
-                    className="consolidator-hint"
-                    style={{ marginLeft: '8px' }}
-                  >
-                    Selected: {selectedInscriptionIds.size}
-                  </span>
-                </div>
-
-                <div
-                  className="consolidator-preview-wallets"
-                  style={{ maxHeight: 260 }}
+              Scan wallets
+            </Button>
+            {rows.length > 0 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setSelectedIds(
+                      new Set(
+                        rows
+                          .filter((row) => row.inscriptionsCount === 1)
+                          .map((row) => row.inscription.inscriptionId)
+                      )
+                    )
+                  }
                 >
-                  {selectableInscriptions.map((row, i) => {
-                    const ins = row.inscription;
-                    const id = ins.inscriptionId;
-                    const checked = selectedInscriptionIds.has(id);
-                    return (
-                      <label
-                        key={`${row.walletKey}:${row.txid}:${row.vout}:${id}:${i}`}
-                        className="consolidator-wallet-checkbox-row"
-                        style={{ padding: '6px 4px' }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) =>
-                            toggleSelection(id, e.target.checked)
-                          }
-                          disabled={isExtracting || isScanning}
-                        />
-                        <span className="consolidator-wallet-label">
-                          {ins.inscriptionNumber != null
-                            ? `#${ins.inscriptionNumber}`
-                            : id.slice(0, 10)}
-                          {' — '}
-                          {row.address?.slice(0, 8)}...
-                          {row.address?.slice(-6)}
-                          {' — '}
-                          {row.txid.slice(0, 8)}...:{row.vout}
-                          {' — '}
-                          size {row.satoshi} sats
-                          {row.inscriptionsCount > 1 ? ' — MULTI' : ''}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="consolidator-action-row">
-              <button
-                onClick={isExtracting ? handleStop : handleStartExtraction}
-                className={`consolidator-btn consolidator-btn--large ${
-                  isExtracting
-                    ? 'consolidator-btn--stop'
-                    : 'consolidator-btn--start'
-                }`}
-                disabled={
-                  !isWalletConnected ||
-                  !isDestinationValid ||
-                  (!isExtracting && isScanning)
-                }
-              >
-                {isExtracting ? '⏹ Stop Extraction' : '⚡ Start Extraction'}
-              </button>
-            </div>
-          </div>
-
-          {/* Console */}
-          <div className="consolidator-console">
-            <div className="consolidator-console-header">
-              <h3>Console Output</h3>
-              {consoleLogs.length > 0 && (
-                <button
-                  className="consolidator-btn consolidator-btn--tiny consolidator-btn--secondary"
-                  onClick={() => setConsoleLogs([])}
+                  Select the safe ones
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
                 >
                   Clear
-                </button>
-              )}
-            </div>
-            <div className="consolidator-console-logs" ref={consoleRef}>
-              {consoleLogs.length === 0 ? (
-                <p className="consolidator-console-empty">
-                  No logs yet. Scan and start extraction to see output here.
-                </p>
-              ) : (
-                consoleLogs.map((log, i) => (
-                  <div key={i} className="consolidator-console-log">
-                    <span className="consolidator-console-time">
-                      {log.timestamp}
-                    </span>
-                    <span className="consolidator-console-message">
-                      {log.message}
-                    </span>
-                    {log.link && (
-                      <a
-                        href={log.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="consolidator-console-link"
-                      >
-                        View tx
-                      </a>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
+                </Button>
+              </>
+            )}
           </div>
-        </WizardStep>
-      </div>
-    </div>
+
+          {rows.length > 0 && (
+            <ul className={styles.rows}>
+              {rows.map((row) => {
+                const id = row.inscription.inscriptionId;
+                const shared = row.inscriptionsCount > 1;
+                return (
+                  <li key={`${row.txid}:${row.vout}:${id}`}>
+                    <label className={styles.row}>
+                      <input
+                        type="checkbox"
+                        className={styles.check}
+                        checked={selectedIds.has(id)}
+                        onChange={(event) =>
+                          toggleRow(id, event.target.checked)
+                        }
+                      />
+                      <span className={styles.rowLabel}>
+                        {labelFor(row.inscription)}
+                      </span>
+                      <code className={styles.rowMeta}>
+                        {shortenAddress(row.address)} · {row.satoshi} sats
+                      </code>
+                      {shared && (
+                        <Badge tone="warning">
+                          shares a UTXO with {row.inscriptionsCount - 1}
+                        </Badge>
+                      )}
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'extract',
+      title: 'Extract',
+      done: false,
+      render: () => (
+        <div className={styles.stack}>
+          <div className={styles.controls}>
+            <Field label="Fee rate" hint="sat/vbyte" className={styles.fee}>
+              <NumberInput
+                min="1"
+                value={feeRate}
+                disabled={isExtracting}
+                onChange={(event) =>
+                  setFeeRate(Math.max(1, Number(event.target.value) || 1))
+                }
+              />
+            </Field>
+            <Button
+              size="lg"
+              variant={isExtracting ? 'danger' : 'primary'}
+              disabled={!canExtract && !isExtracting}
+              onClick={
+                isExtracting
+                  ? () => {
+                      stopRequested.current = true;
+                      log('Stop requested — finishing the current one.');
+                    }
+                  : handleExtract
+              }
+            >
+              {isExtracting
+                ? 'Stop'
+                : `Extract ${selectedRows.length || ''}`.trim()}
+            </Button>
+          </div>
+          {!canExtract && !isExtracting && (
+            <p className={styles.blocker}>
+              {!isWalletConnected
+                ? 'Connect a wallet first.'
+                : !destinationValid
+                  ? 'Set a valid destination address.'
+                  : 'Scan, then select at least one inscription.'}
+            </p>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Page variant="extractor">
+      <PageHeader
+        title="Extractor"
+        description="Move inscriptions into their own 546-sat outputs and send them somewhere safe."
+        actions={
+          rows.length > 0 && (
+            <Badge tone="neutral">{selectedRows.length} selected</Badge>
+          )
+        }
+      />
+
+      {isExtracting && (
+        <Alert tone="info">
+          An extraction is in progress. Leaving this page stops it.
+        </Alert>
+      )}
+
+      <Steps steps={steps} />
+
+      <ActivityLog
+        entries={logEntries}
+        scrollRef={scrollRef}
+        busy={isExtracting || isScanning}
+        busyLabel={isScanning ? 'Scanning' : 'Extracting'}
+        emptyHint="Nothing yet. Scan your wallets and every inscription found is reported here."
+        onClear={clear}
+      />
+    </Page>
   );
 };
 

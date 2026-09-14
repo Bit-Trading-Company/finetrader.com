@@ -8,11 +8,19 @@
  *   import { Button, Card, PageHeader } from '../../ui';
  */
 export { default as Button } from './Button';
+export { default as IconButton } from './IconButton';
 export { default as Card } from './Card';
+export { default as Page } from './Page';
+export { default as PageArt } from './PageArt';
+export { default as Steps } from './Steps';
+export { default as ActivityLog } from './ActivityLog';
 export { default as CopyField } from './CopyField';
 export { default as Modal } from './Modal';
 export { default as InfoTip } from './Tooltip';
 export { default as Tabs } from './Tabs';
+export { default as Toggle } from './Toggle';
+export { default as Switch } from './Switch';
+export { default as SettingsLayout } from './SettingsLayout';
 export { default as Table } from './Table';
 export {
   Field,

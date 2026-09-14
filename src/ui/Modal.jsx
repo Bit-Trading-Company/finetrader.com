@@ -5,11 +5,16 @@
  * moves focus into the dialog on open so keyboard users are not left behind
  * on the page underneath.
  *
+ * Rendered through a portal onto `document.body`, so a positioned or
+ * transformed ancestor on the page cannot capture the fixed overlay and strand
+ * the dialog somewhere down the page.
+ *
  * <Modal open={open} onClose={close} title="Settings" footer={<Button/>}>
  *   …
  * </Modal>
  */
 import React, { useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CloseIcon } from './icons';
 import styles from './Modal.module.css';
 
@@ -58,8 +63,13 @@ const Modal = ({
 
   if (!open) return null;
 
-  return (
-    <div className={styles.overlay} onKeyDown={handleKeyDown}>
+  return createPortal(
+    /*
+     * `ds-root` travels with the portal: the dialog lands on <body>, outside
+     * the shell, and without it the content inside falls back to the legacy
+     * global typography.
+     */
+    <div className={`ds-root ${styles.overlay}`} onKeyDown={handleKeyDown}>
       {/*
         The backdrop is a button so it is reachable and announced; the dialog
         below it stops clicks from bubbling out to it.
@@ -101,7 +111,8 @@ const Modal = ({
 
         {footer && <footer className={styles.footer}>{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

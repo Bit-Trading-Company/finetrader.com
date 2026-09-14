@@ -7,16 +7,20 @@
  * funds or change collection is normal rather than exceptional.
  */
 import React, { useState } from 'react';
-import { Badge, Button, Card } from '../../../ui';
+import { ActivityLog, Badge, Button, Card } from '../../../ui';
+import { SettingsIcon } from '../../../ui/icons';
 import { formatSatsAsBtc } from '../../../lib/format';
-import ConnectWalletPanel from './ConnectWalletPanel';
+import ConnectWalletPanel from '../../../features/wallet/ConnectWalletPanel';
 import CollectionPicker from './CollectionPicker';
 import RunControls from './RunControls';
-import RunConsole from './RunConsole';
 import styles from './SimpleFlow.module.css';
 
 const Step = ({ number, title, summary, done, open, onToggle, children }) => (
-  <li className={[styles.step, open ? styles.open : ''].join(' ')}>
+  <li
+    className={['ds-panel', styles.step, open ? styles.open : '']
+      .filter(Boolean)
+      .join(' ')}
+  >
     <button
       type="button"
       className={styles.head}
@@ -46,6 +50,7 @@ const SimpleFlow = ({
   onOpenDispatch,
   onOpenBids,
   onOpenWallets,
+  onOpenRunSettings,
   startButton,
 }) => {
   const {
@@ -198,10 +203,20 @@ const SimpleFlow = ({
 
           <div className={styles.runSide}>
             {startButton}
-            <RunConsole
-              logs={consoleLogs}
-              consoleRef={consoleRef}
-              isTrading={isTrading}
+            <button
+              type="button"
+              className={styles.settingsLink}
+              onClick={onOpenRunSettings}
+            >
+              <SettingsIcon size={15} />
+              <span>Run settings</span>
+            </button>
+            <ActivityLog
+              entries={consoleLogs}
+              scrollRef={consoleRef}
+              busy={isTrading}
+              busyLabel="Trading"
+              emptyHint="Nothing yet. Start a run and the trader reports every step here."
               onClear={clearConsole}
             />
           </div>

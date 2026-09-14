@@ -57,9 +57,9 @@
 }
 
 .navigation-tree-back-button {
-  background: var(--color-gray-700);
-  color: var(--color-gray-300);
-  border: 1px solid var(--color-gray-700);
+  background: var(--ds-surface-hover);
+  color: var(--ds-text-muted);
+  border: 1px solid var(--ds-border);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 12px;
@@ -83,9 +83,9 @@
 }
 
 .navigation-tree-back-button:hover {
-  background: var(--color-gray-800);
-  border-color: var(--color-orange-500);
-  color: var(--color-orange-500);
+  background: var(--ds-surface-raised);
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
 }
 
 .navigation-tree-back-button:focus {
@@ -122,7 +122,7 @@
   height: 24px;
   border-radius: 12px;
   border: none;
-  background-color: var(--color-gray-700);
+  background-color: var(--ds-surface-hover);
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s ease;
@@ -131,11 +131,11 @@
 }
 
 .navigation-tree-toggle-button:hover {
-  background-color: var(--color-gray-800);
+  background-color: var(--ds-surface-raised);
 }
 
 .navigation-tree-toggle-button:active {
-  background-color: var(--color-orange-500);
+  background-color: var(--ds-accent);
 }
 .navigation-tree-toggle-slider {
   width: 18px;
@@ -153,11 +153,11 @@
 }
 
 .navigation-tree-toggle-button.active {
-  background-color: var(--color-orange-500);
+  background-color: var(--ds-accent);
 }
 
 .navigation-tree-toggle-button.active:hover {
-  background-color: #dd7826;
+  background-color: var(--ds-accent-hover);
 }
 .navigation-tree-toggle-button:focus {
   outline: 2px solid rgba(255, 255, 255, 0.5);

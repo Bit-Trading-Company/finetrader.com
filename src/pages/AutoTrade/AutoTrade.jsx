@@ -5,20 +5,20 @@
  * — sharing the wallets, collection, settings and running engine held by
  * `useAutoTradeWorkspace`. Switching between them never interrupts a run.
  *
- * Funding (`Dispatch`) and bidding (`CollectionOfferModal`) are still the
- * pre-redesign components. They learn about wallets through an event hub, so
- * the session is mirrored onto one for them (see `useWalletSessionBridge`).
+ * Bidding (`CollectionOfferModal`) is still a pre-redesign component. It
+ * learns about wallets through an event hub, so the session is mirrored onto
+ * one for it (see `useWalletSessionBridge`). Funding and the wallets manager
+ * are app-level dialogs owned by the shell, so this page only asks for them.
  */
-import React, { useCallback, useState } from 'react';
-import Dispatch from '../../features/wallet/Dispatch';
+import React, { useCallback, useEffect } from 'react';
 import CollectionOfferModal from '../../features/marketplace/CollectionOfferModal';
 import { useEventHub } from '../../lib/eventHub';
 import { useWalletSessionBridge } from '../../features/wallet/WalletSession';
-import { useWalletManager } from '../../features/wallet/WalletManagerContext';
-import { Alert, Button, PageHeader, Tabs } from '../../ui';
+import { DIALOG, useDialogs } from '../../app/DialogContext';
+import { Alert, Button, IconButton, Page, PageHeader, Toggle } from '../../ui';
+import { SettingsIcon } from '../../ui/icons';
 import AdvancedView from './components/AdvancedView';
 import SimpleFlow from './components/SimpleFlow';
-import RunSettingsModal from './components/RunSettingsModal';
 import { useAutoTradeWorkspace } from './useAutoTradeWorkspace';
 import styles from './AutoTrade.module.css';
 
@@ -72,13 +72,27 @@ const AutoTrade = () => {
     isTrading,
   } = workspace;
 
-  const { openWalletManager } = useWalletManager();
-  const [showDispatch, setShowDispatch] = useState(false);
-  const [showBids, setShowBids] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const { isDialogOpen, openDialog, closeDialog } = useDialogs();
 
-  // Legacy funding and bidding panels listen on a hub rather than the
-  // session, so keep one fed for them.
+  // Both views offer "Run settings"; they land on the section, not the dialog.
+  const openRunSettings = useCallback(
+    () => openDialog(DIALOG.settings, 'run'),
+    [openDialog]
+  );
+
+  /*
+   * The settings dialog is mounted by the shell and has no view of the
+   * engine, so tell the shared settings whether a run is going — that is what
+   * locks the fields the runner is reading.
+   */
+  const { setRunActive } = settings;
+  useEffect(() => {
+    setRunActive(isTrading);
+    return () => setRunActive(false);
+  }, [isTrading, setRunActive]);
+
+  // The legacy bidding panel listens on a hub rather than the session, so
+  // keep one fed for it.
   const glEventHub = useEventHub();
   useWalletSessionBridge(glEventHub);
 
@@ -88,27 +102,42 @@ const AutoTrade = () => {
     if (!session.selectedWallet && wallets.length > 0) {
       session.selectWallet(wallets[0]);
     }
-    setShowBids(true);
-  }, [session, wallets]);
+    openDialog(DIALOG.bids);
+  }, [session, wallets, openDialog]);
 
   const startButton = <StartButton workspace={workspace} />;
 
   return (
-    <div className={styles.page}>
+    <Page
+      variant="trade"
+      overlays={
+        <>
+          <CollectionOfferModal
+            glEventHub={glEventHub}
+            collectionSymbol={collectionSlug || ''}
+            isOpen={isDialogOpen(DIALOG.bids)}
+            onClose={closeDialog}
+          />
+        </>
+      }
+    >
       <PageHeader
         title="Auto-trader"
         actions={
           <div className={styles.headerActions}>
-            <Tabs
-              items={VIEWS}
+            <Toggle
+              options={VIEWS}
               value={view}
               onChange={setView}
-              variant="pills"
-              ariaLabel="Auto-trader views"
+              ariaLabel="Auto-trader view"
             />
-            <Button variant="ghost" onClick={() => setShowSettings(true)}>
-              Settings
-            </Button>
+            <IconButton
+              label="Settings"
+              active={isDialogOpen(DIALOG.settings)}
+              onClick={() => openDialog(DIALOG.settings)}
+            >
+              <SettingsIcon />
+            </IconButton>
           </div>
         }
       />
@@ -122,41 +151,23 @@ const AutoTrade = () => {
       {view === 'simple' ? (
         <SimpleFlow
           workspace={workspace}
-          onOpenDispatch={() => setShowDispatch(true)}
+          onOpenDispatch={() => openDialog(DIALOG.funding)}
           onOpenBids={openBids}
-          onOpenWallets={openWalletManager}
+          onOpenWallets={() => openDialog(DIALOG.wallets)}
+          onOpenRunSettings={openRunSettings}
           startButton={startButton}
         />
       ) : (
         <AdvancedView
           workspace={workspace}
-          onOpenDispatch={() => setShowDispatch(true)}
+          onOpenDispatch={() => openDialog(DIALOG.funding)}
           onOpenBids={openBids}
-          onOpenWallets={openWalletManager}
+          onOpenWallets={() => openDialog(DIALOG.wallets)}
+          onOpenRunSettings={openRunSettings}
           startButton={startButton}
         />
       )}
-
-      <Dispatch
-        isOpen={showDispatch}
-        onClose={() => setShowDispatch(false)}
-        proxyWallets={wallets}
-      />
-
-      <CollectionOfferModal
-        glEventHub={glEventHub}
-        collectionSymbol={collectionSlug || ''}
-        isOpen={showBids}
-        onClose={() => setShowBids(false)}
-      />
-
-      <RunSettingsModal
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-        settings={settings}
-        isTrading={isTrading}
-      />
-    </div>
+    </Page>
   );
 };
 

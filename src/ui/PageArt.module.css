@@ -1,0 +1,20 @@
+.art {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: cover;
+  /*
+   * Two knobs multiplied: the variant's own strength, and the display
+   * preference the shell sets to 0 when artwork is switched off.
+   */
+  opacity: calc(var(--art-strength, 0.45) * var(--ds-page-art-opacity, 1));
+  transition: opacity var(--ds-duration-slow) var(--ds-ease);
+  -webkit-mask-image: radial-gradient(
+    125% 62% at 50% 8%,
+    transparent 28%,
+    #000 88%
+  );
+  mask-image: radial-gradient(125% 62% at 50% 8%, transparent 28%, #000 88%);
+}

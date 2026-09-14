@@ -88,7 +88,7 @@ const PendingPurchases = ({ purchases, wallets, network }) => {
   ];
 
   return (
-    <div className={styles.panel}>
+    <div className={`ds-panel ${styles.panel}`}>
       <div className={styles.head}>
         <span className={styles.title}>Confirming</span>
         <Badge tone="warning">{purchases.length} in flight</Badge>

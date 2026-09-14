@@ -60,14 +60,13 @@
 }
 
 .pills .tab {
-  border: 1px solid var(--ds-border);
+  border: none;
   border-radius: var(--ds-radius-pill);
   padding: 6px 14px;
-  background: var(--ds-surface);
+  background: var(--ds-surface-raised);
 }
 
 .pills .selected {
-  border-color: var(--ds-accent);
   background: var(--ds-accent-quiet);
   color: var(--ds-accent-hover);
 }

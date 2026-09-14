@@ -1,15 +1,19 @@
 /**
- * Step 1: connect a browser wallet.
+ * Connect a browser wallet: the choice of extensions, or who is connected.
+ *
+ * Shared by every place that needs a connection before it can do anything —
+ * the auto-trader's first step and the wallets manager, which cannot derive
+ * anything without a signature.
  *
  * Connecting and disconnecting both reload the page (see
  * `useWalletConnection`), so there is no post-connect state to manage here —
  * the app comes back up already connected.
  */
 import React from 'react';
-import { CONNECT_WALLET_LIST } from '../../../features/wallet/walletOptions';
-import { useWalletConnection } from '../../../features/wallet/useWalletConnection';
-import { shortenAddress } from '../../../lib/format';
-import { Badge, Button } from '../../../ui';
+import { CONNECT_WALLET_LIST } from './walletOptions';
+import { useWalletConnection } from './useWalletConnection';
+import { shortenAddress } from '../../lib/format';
+import { Badge, Button } from '../../ui';
 import styles from './ConnectWalletPanel.module.css';
 
 const ConnectWalletPanel = () => {

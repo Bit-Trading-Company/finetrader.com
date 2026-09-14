@@ -16,20 +16,25 @@ import {
   DoodleDivider,
   EmptyState,
   Field,
+  IconButton,
   Loading,
   Marker,
   NumberInput,
   PageHeader,
   Section,
   Select,
+  SettingsLayout,
   Spinner,
   StatGrid,
   StatTile,
+  Switch,
   Table,
   Tabs,
   TextInput,
+  Toggle,
   Toolbar,
 } from '../../ui';
+import { BoltIcon, EyeIcon, SettingsIcon } from '../../ui/icons';
 import styles from './DesignSystem.module.css';
 
 const SURFACE_TOKENS = [
@@ -114,6 +119,8 @@ const DesignSystem = () => {
   const [exchange, setExchange] = useState('satflow');
   const [useFees, setUseFees] = useState(true);
   const [amount, setAmount] = useState(1);
+  const [view, setView] = useState('simple');
+  const [frameOn, setFrameOn] = useState(false);
 
   return (
     <div className={`ds-root ${styles.page}`}>
@@ -192,6 +199,98 @@ const DesignSystem = () => {
               onChange={setPill}
             />
           </div>
+        </Section>
+
+        <Section
+          title="Toggles and switches"
+          description="A toggle changes how one thing is shown; tabs move between different things. A switch takes effect the moment it is flipped — use a checkbox inside a form the reader submits."
+        >
+          <div className={styles.stack}>
+            <div className={styles.row}>
+              <Toggle
+                options={[
+                  { id: 'simple', label: 'Simple' },
+                  { id: 'advanced', label: 'Advanced' },
+                ]}
+                value={view}
+                onChange={setView}
+                ariaLabel="Example view"
+              />
+              <IconButton label="Settings">
+                <SettingsIcon />
+              </IconButton>
+              <IconButton label="Settings" variant="surface" active>
+                <SettingsIcon />
+              </IconButton>
+            </div>
+
+            <Switch
+              label="Hand-drawn frame"
+              hint="Switches read as settings, so they carry their own label and hint."
+              checked={frameOn}
+              onChange={setFrameOn}
+            />
+          </div>
+        </Section>
+
+        <Section
+          title="Surfaces"
+          description="Two global classes carry the app's character. `ds-panel` is the frosted sheet every top-level panel uses — never nest one inside another. `ds-frame` is the hand-drawn border, reserved for the whole content column and off unless the reader turns it on."
+        >
+          <div className={styles.grid}>
+            <div className={`ds-panel ${styles.sample}`}>
+              <strong>ds-panel</strong>
+              <p>
+                Frosted, borderless, separated by translucency and an edge
+                highlight rather than an outline.
+              </p>
+            </div>
+            <div className={`ds-frame ${styles.sampleFramed}`}>
+              <strong>ds-frame</strong>
+              <p>
+                The marker border, thinned with --ds-frame-scale. One per screen
+                at most.
+              </p>
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Settings layout"
+          description="Categories on the left, the chosen one on the right — for dialogs holding more than one kind of setting."
+        >
+          <SettingsLayout
+            sections={[
+              {
+                id: 'run',
+                label: 'Run',
+                icon: <BoltIcon size={16} />,
+                description: 'What a run does.',
+                render: () => (
+                  <Checkbox
+                    label="Pay the app fee"
+                    hint="Adds the Fine Trader fee output to trades."
+                    checked={useFees}
+                    onChange={(e) => setUseFees(e.target.checked)}
+                  />
+                ),
+              },
+              {
+                id: 'display',
+                label: 'Display',
+                icon: <EyeIcon size={16} />,
+                description: 'How the app looks.',
+                render: () => (
+                  <Switch
+                    label="Frosted panels"
+                    hint="Turn off for flat surfaces."
+                    checked={frameOn}
+                    onChange={setFrameOn}
+                  />
+                ),
+              },
+            ]}
+          />
         </Section>
 
         <Section title="Forms">

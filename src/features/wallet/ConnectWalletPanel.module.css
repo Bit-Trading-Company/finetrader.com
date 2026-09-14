@@ -10,7 +10,6 @@
   gap: var(--ds-space-3);
   padding: var(--ds-space-3);
   background: var(--ds-surface-raised);
-  border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius-md);
   color: var(--ds-text);
   font-size: var(--ds-text-md);
@@ -18,14 +17,12 @@
   cursor: pointer;
   text-align: left;
   transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
     background-color var(--ds-duration-fast) var(--ds-ease),
     transform var(--ds-duration-fast) var(--ds-ease);
 }
 
 .wallet:hover {
   background: var(--ds-surface-hover);
-  border-color: var(--ds-border-strong);
   transform: translateY(-1px);
 }
 
@@ -33,6 +30,7 @@
   width: 26px;
   height: 26px;
   flex-shrink: 0;
+  object-fit: contain;
   border-radius: var(--ds-radius-sm);
 }
 
@@ -40,6 +38,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--ds-text-sm);
 }
 
 .connected {

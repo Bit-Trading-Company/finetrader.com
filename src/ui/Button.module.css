@@ -13,7 +13,6 @@
   cursor: pointer;
   transition:
     background-color var(--ds-duration-fast) var(--ds-ease),
-    border-color var(--ds-duration-fast) var(--ds-ease),
     color var(--ds-duration-fast) var(--ds-ease),
     transform var(--ds-duration-fast) var(--ds-ease);
 }
@@ -54,15 +53,14 @@
   background: var(--ds-accent-hover);
 }
 
+/* Told apart from primary by weight of fill, not by an outline. */
 .secondary {
   background: var(--ds-surface-raised);
-  border-color: var(--ds-border);
   color: var(--ds-text);
 }
 
 .secondary:hover:not(:disabled) {
   background: var(--ds-surface-hover);
-  border-color: var(--ds-border-strong);
 }
 
 .ghost {

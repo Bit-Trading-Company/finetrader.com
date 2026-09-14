@@ -1,35 +1,44 @@
+/*
+ * A frosted sheet over the page, not a box drawn on it: no border, separated
+ * by translucency, an edge highlight and its own shadow. Blur is expensive,
+ * so cards are top-level panels — do not nest one inside another.
+ */
 .card {
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
+  background: var(--ds-glass-bg);
+  -webkit-backdrop-filter: var(--ds-glass-filter);
+  backdrop-filter: var(--ds-glass-filter);
   border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-sm);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-md);
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
 .raised {
-  background: var(--ds-surface-raised);
-  box-shadow: var(--ds-shadow-md);
+  background: var(--ds-glass-bg);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-lg);
 }
 
+/* Grouping without a surface: structure only, nothing painted. */
 .quiet {
-  background: transparent;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   box-shadow: none;
 }
 
 .interactive {
   cursor: pointer;
   transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
+    background var(--ds-duration-fast) var(--ds-ease),
     transform var(--ds-duration-fast) var(--ds-ease),
     box-shadow var(--ds-duration-fast) var(--ds-ease);
 }
 
 .interactive:hover {
-  border-color: var(--ds-border-strong);
+  background: var(--ds-glass-bg);
   transform: translateY(-1px);
-  box-shadow: var(--ds-shadow-md);
+  box-shadow: var(--ds-glass-edge), var(--ds-shadow-lg);
 }
 
 .header {

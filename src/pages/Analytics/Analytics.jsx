@@ -1,7 +1,19 @@
+/**
+ * Analytics: what the Fine Trader wallets hold and what they paid for it.
+ *
+ * The page frame is the redesigned shell — header, navigation, wallet menu and
+ * artwork all come from it, so the duplicate header and wallet dropdown this
+ * page used to carry are gone, along with its own copy of the wallet manager.
+ *
+ * The three sections below are still pre-redesign components. They learn about
+ * wallets through an event hub rather than the session, so the session is
+ * mirrored onto one for them — which is what makes the wallets derived on any
+ * other page the wallets reported on here.
+ */
 import React, { useState, useEffect, useRef } from 'react';
-import WalletManagement from '../../features/wallet/WalletManagement';
 import WalletAnalytics from './WalletAnalytics';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
+import { useWalletSessionBridge } from '../../features/wallet/WalletSession';
 import { fetchWalletOrdinals } from '../../trading/satflow/satflowApi';
 import {
   getMempoolAddressTxsUrl,
@@ -9,11 +21,10 @@ import {
   getMempoolApiBaseUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
+import { Page, PageHeader } from '../../ui';
 import './Analytics.css';
-import lineImage from '../../assets/images/png/line.png';
-import { truncateMiddle, shortenAddress } from '../../lib/format';
 import { useEventHub } from '../../lib/eventHub';
-import { CONNECT_WALLET_LIST } from '../../features/wallet/walletOptions';
+import styles from './Analytics.module.css';
 
 const ordinalPreviewUrl = (item) => {
   const raw = item._satflowRaw;
@@ -211,8 +222,8 @@ const ProxyWalletOrdinalsSection = ({ glEventHub }) => {
         <h2 className="component-header">Wallet ordinals</h2>
         <div className="analytics-ordinals-empty">
           <p className="analytics-ordinals-empty-text">
-            Generate proxy wallets in the sidebar, then select one to view its
-            ordinals from Satflow.
+            Generate Fine Trader wallets from the sidebar, then select one to
+            view its ordinals from Satflow.
           </p>
         </div>
       </section>
@@ -225,7 +236,7 @@ const ProxyWalletOrdinalsSection = ({ glEventHub }) => {
         <h2 className="component-header">Wallet ordinals</h2>
         <div className="analytics-ordinals-empty">
           <p className="analytics-ordinals-empty-text">
-            Select a proxy wallet in the sidebar to load its ordinals.
+            Select a Fine Trader wallet to load its ordinals.
           </p>
         </div>
       </section>
@@ -883,212 +894,32 @@ const ProxyWalletPurchasesSection = ({ glEventHub, network = 'mainnet' }) => {
 };
 
 const Analytics = () => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const dropdownRef = useRef(null);
-
-  // Create a shared event hub for WalletManagement and WalletAnalytics
+  const { network } = useWalletConnection();
   const glEventHub = useEventHub();
-
-  const {
-    network,
-    address: connectedAddress,
-    publicKey: connectedPublicKey,
-    format: connectedFormat,
-    chain,
-    isWalletConnected,
-    connect,
-    disconnect,
-    changeNetwork,
-  } = useWalletConnection({ onError: setErrorMessage });
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Handle wallet connection (the page reloads on success)
-  const handleConnect = async (wallet) => {
-    setErrorMessage('');
-    try {
-      const status = await connect(wallet);
-      if (status === 'timeout') {
-        setErrorMessage(
-          'No wallet pop-up? The extension is not responding. Try reloading your browser.'
-        );
-      } else if (status === 'connected') {
-        setIsDropdownOpen(false);
-      }
-    } catch (error) {
-      console.error('Wallet connection error:', error);
-      setErrorMessage('Failed to connect wallet. Please try again.');
-    }
-  };
-
-  // Handle disconnect (the page reloads)
-  const handleDisconnect = () => {
-    try {
-      setIsDropdownOpen(false);
-      disconnect();
-    } catch (error) {
-      console.error('Error disconnecting wallet:', error);
-      setErrorMessage('Failed to disconnect wallet. Please try again.');
-    }
-  };
-
-  // Handle network change
-  const handleNetworkChange = (event) => changeNetwork(event.target.value);
+  useWalletSessionBridge(glEventHub);
 
   return (
-    <div className="analytics-container">
-      <div className="analytics-container-content">
-        {/* Header */}
-        <header className="analytics-header">
-          <div className="analytics-header-content">
-            <h1 className="analytics-title">WALLET ANALYTICS</h1>
+    <Page variant="analytics">
+      <PageHeader
+        title="Analytics"
+        description="What the Fine Trader wallets hold, and what they paid for it."
+      />
 
-            <div className="analytics-wallet-section" ref={dropdownRef}>
-              <button
-                className="analytics-connect-button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              >
-                {isWalletConnected
-                  ? shortenAddress(connectedAddress.ordinals)
-                  : 'Connect'}
-              </button>
-
-              {isDropdownOpen && (
-                <div className="analytics-dropdown">
-                  {!isWalletConnected ? (
-                    <>
-                      <div className="analytics-dropdown-header">
-                        Connect Wallet
-                      </div>
-                      <div className="analytics-wallet-list">
-                        {CONNECT_WALLET_LIST.map((walletItem, i) => (
-                          <button
-                            key={i}
-                            className="analytics-wallet-item"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleConnect(walletItem.wallet);
-                            }}
-                          >
-                            <img
-                              src={walletItem.icon}
-                              alt={`${walletItem.wallet} icon`}
-                              className="analytics-wallet-icon"
-                            />
-                            <span className="analytics-wallet-name">
-                              {walletItem.wallet}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                      {errorMessage && (
-                        <div className="analytics-error-message">
-                          {errorMessage}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="analytics-dropdown-header">
-                        Wallet Info
-                      </div>
-                      <div className="analytics-wallet-info">
-                        <div className="analytics-info-row">
-                          <span className="analytics-info-label">Address:</span>
-                          <span className="analytics-info-value">
-                            {truncateMiddle(connectedAddress.ordinals)}
-                          </span>
-                        </div>
-                        <div className="analytics-info-row">
-                          <span className="analytics-info-label">
-                            Public Key:
-                          </span>
-                          <span className="analytics-info-value">
-                            {truncateMiddle(connectedPublicKey.ordinals)}
-                          </span>
-                        </div>
-                        <div className="analytics-info-row">
-                          <span className="analytics-info-label">Format:</span>
-                          <span className="analytics-info-value">
-                            {connectedFormat.ordinals}
-                          </span>
-                        </div>
-                        <div className="analytics-info-row">
-                          <span className="analytics-info-label">Chain:</span>
-                          <span className="analytics-info-value">{chain}</span>
-                        </div>
-                        <div className="analytics-info-row">
-                          <span className="analytics-info-label">Network:</span>
-                          <select
-                            onChange={handleNetworkChange}
-                            className="analytics-network-select"
-                            value={network}
-                          >
-                            <option value="mainnet">mainnet</option>
-                            <option value="testnet">testnet</option>
-                            <option value="signet">signet</option>
-                          </select>
-                        </div>
-                        <button
-                          onClick={handleDisconnect}
-                          className="analytics-disconnect-button"
-                        >
-                          Disconnect
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          <img
-            src={lineImage}
-            alt="separator"
-            className="analytics-header-separator"
-          />
-        </header>
-
-        {/* Main Content */}
-        <div className="analytics-main">
-          {/* Sidebar */}
-          <aside className="analytics-sidebar">
-            <WalletManagement glEventHub={glEventHub} />
-          </aside>
-          <div className="analytics-sidebar-separator-container">
-            <img
-              src={lineImage}
-              alt="separator"
-              className="analytics-sidebar-separator"
-            />
-          </div>
-
-          {/* Content Area */}
-          <main className="analytics-content">
-            <WalletAnalytics glEventHub={glEventHub} network={network} />
-            <ProxyWalletOrdinalsSection glEventHub={glEventHub} />
-            <ProxyWalletPurchasesSection
-              glEventHub={glEventHub}
-              network={network}
-            />
-          </main>
-        </div>
+      <div className={`ds-panel ${styles.panel}`}>
+        <WalletAnalytics glEventHub={glEventHub} network={network} />
       </div>
-    </div>
+
+      <div className={`ds-panel ${styles.panel}`}>
+        <ProxyWalletOrdinalsSection glEventHub={glEventHub} />
+      </div>
+
+      <div className={`ds-panel ${styles.panel}`}>
+        <ProxyWalletPurchasesSection
+          glEventHub={glEventHub}
+          network={network}
+        />
+      </div>
+    </Page>
   );
 };
 
