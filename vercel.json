@@ -66,6 +66,10 @@
     {
       "source": "/api/satflow-purchase-broadcast",
       "destination": "/api/satflow?op=purchase-broadcast"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

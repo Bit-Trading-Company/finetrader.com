@@ -44,10 +44,25 @@ describe('API route parity', () => {
     }
   );
 
-  it('mounts every vercel.json rewrite in development', () => {
-    vercelConfig.rewrites.forEach((rewrite) => {
-      expect(devPaths).toContain(rewrite.source);
-    });
+  it('mounts every vercel.json API rewrite in development', () => {
+    /*
+     * Only the /api rewrites. The last entry is the SPA fallback that sends
+     * unmatched paths to index.html so client routes survive a refresh in
+     * production; the dev server already does that itself.
+     */
+    vercelConfig.rewrites
+      .filter((rewrite) => rewrite.source.startsWith('/api/'))
+      .forEach((rewrite) => {
+        expect(devPaths).toContain(rewrite.source);
+      });
+  });
+
+  it('sends unmatched paths to the SPA, after the API rewrites', () => {
+    const { rewrites } = vercelConfig;
+    const fallback = rewrites[rewrites.length - 1];
+    expect(fallback).toEqual({ source: '/(.*)', destination: '/index.html' });
+    // Anything matching earlier wins, so no /api route can reach the fallback.
+    expect(rewrites.filter((r) => r.source === '/(.*)')).toHaveLength(1);
   });
 
   it('mounts every api/ function in development', () => {
