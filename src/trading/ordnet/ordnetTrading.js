@@ -8,6 +8,7 @@ import {
   deriveAddressFromPrivateKey,
 } from '../../lib/bitcoinUtils';
 import {
+  getMempoolAddressUrl,
   getMempoolAddressUtxoUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
@@ -79,6 +80,14 @@ const getStoredSession = (address) => {
   }
 };
 
+const clearStoredSession = (address) => {
+  try {
+    window.localStorage.removeItem(`${ORDNET_SESSION_PREFIX}${address}`);
+  } catch {
+    // Nothing to clear.
+  }
+};
+
 const setStoredSession = (address, session) => {
   try {
     window.localStorage.setItem(
@@ -124,7 +133,14 @@ const ordNetFetch = async (
   if (!response.ok) {
     const message =
       data?.error || data?.message || text || `HTTP ${response.status}`;
-    throw new Error(`ord.net ${path} failed: ${message}`);
+    const error = new Error(`ord.net ${path} failed: ${message}`);
+    /*
+     * Callers branch on this: 401 means re-authenticate, 403 on the auth
+     * flow means the wallet is under ord.net's funding floor, 429 means back
+     * off. Without the status they would all look like the same string.
+     */
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -157,13 +173,28 @@ export const ensureOrdNetSession = async (wallet, network = 'mainnet') => {
     };
   });
 
-  const verified = await ordNetFetch('/auth/verify', {
-    method: 'POST',
-    body: {
-      authRequestId: challenge.authRequestId,
-      verifications,
-    },
-  });
+  let verified;
+  try {
+    verified = await ordNetFetch('/auth/verify', {
+      method: 'POST',
+      body: {
+        authRequestId: challenge.authRequestId,
+        verifications,
+      },
+    });
+  } catch (error) {
+    if (error?.status === 403) {
+      throw new Error(
+        `ord.net will not sign in ${address}: it needs at least 0.01 BTC confirmed to trade.`
+      );
+    }
+    if (error?.status === 503) {
+      throw new Error(
+        'ord.net cannot check wallet eligibility right now. Try again shortly.'
+      );
+    }
+    throw error;
+  }
 
   const binding =
     (verified.walletBindings || []).find(
@@ -186,6 +217,70 @@ export const ensureOrdNetSession = async (wallet, network = 'mainnet') => {
   };
   setStoredSession(address, session);
   return session;
+};
+
+/**
+ * ord.net will not issue a session token unless the wallet's payment address
+ * holds this much, confirmed. It is a minimum balance rather than a fee — the
+ * coin stays spendable — but a wallet under it cannot trade here at all.
+ */
+export const ORDNET_MIN_FUNDING_SATS = 1000000; // 0.01 BTC
+
+/**
+ * Which wallets ord.net will authenticate, checked before a run rather than
+ * discovered as a 403 midway through one.
+ *
+ * @param {{address: string}[]} wallets
+ * @param {string} network
+ * @returns {Promise<{eligible: object[], skipped: {wallet: object, confirmed: number}[]}>}
+ */
+export const checkOrdNetEligibility = async (wallets, network = 'mainnet') => {
+  const eligible = [];
+  const skipped = [];
+
+  for (const wallet of wallets || []) {
+    let confirmed = 0;
+    try {
+      const response = await fetch(
+        getMempoolAddressUrl(wallet.address, network)
+      );
+      if (response.ok) {
+        const stats = await response.json();
+        const chain = stats?.chain_stats;
+        confirmed = chain
+          ? Number(chain.funded_txo_sum || 0) - Number(chain.spent_txo_sum || 0)
+          : 0;
+      }
+    } catch {
+      // Treat an unreadable balance as ineligible rather than letting the
+      // run fail later against ord.net with a 403.
+      confirmed = 0;
+    }
+
+    if (confirmed >= ORDNET_MIN_FUNDING_SATS) eligible.push(wallet);
+    else skipped.push({ wallet, confirmed });
+  }
+
+  return { eligible, skipped };
+};
+
+/**
+ * Run an authenticated call, re-authenticating once if the token is rejected.
+ *
+ * Tokens last an hour and a run can outlive one. The stored session is
+ * dropped and rebuilt on a 401 so a long run does not die on an expiry it
+ * could simply have renewed.
+ */
+const withOrdNetSession = async (wallet, network, run) => {
+  const session = await ensureOrdNetSession(wallet, network);
+  try {
+    return await run(session);
+  } catch (error) {
+    if (error?.status !== 401) throw error;
+    clearStoredSession(session.address);
+    const renewed = await ensureOrdNetSession(wallet, network);
+    return run(renewed);
+  }
 };
 
 const getReadSession = async (options = {}) => {
@@ -483,19 +578,22 @@ export const listOrdinalWithProxyWallet = async (
       false
     );
 
-    const submit = await ordNetFetch(
-      `/collection/${encodeURIComponent(collectionSymbol)}/listings/submit`,
-      {
-        method: 'POST',
-        token: session.sessionToken,
-        body: {
-          ...preflightRequest,
-          durationDays: DEFAULT_LISTING_DURATION_DAYS,
-          anchors,
-          signed: signedEntries,
-          signedRecoveryPsbt: signedRecovery,
-        },
-      }
+    const submit = await withOrdNetSession(wallet, network, (fresh) =>
+      ordNetFetch(
+        `/collection/${encodeURIComponent(collectionSymbol)}/listings/submit`,
+        {
+          method: 'POST',
+          token: fresh.sessionToken,
+          body: {
+            ...preflightRequest,
+            walletBindingId: fresh.walletBindingId,
+            durationDays: DEFAULT_LISTING_DURATION_DAYS,
+            anchors,
+            signed: signedEntries,
+            signedRecoveryPsbt: signedRecovery,
+          },
+        }
+      )
     );
 
     return {
@@ -512,17 +610,67 @@ export const listOrdinalWithProxyWallet = async (
   }
 };
 
-const getSpendableUtxos = async (address, network = 'mainnet') => {
+/*
+ * Outputs at or below this are inscription postage, not money.
+ *
+ * 546 is the usual postage; a little headroom covers wallets that pad it.
+ * Anything this small is useless for payment anyway, so excluding it costs
+ * nothing and keeps the obvious inscription UTXOs out of the candidate set.
+ */
+const POSTAGE_CEILING_SATS = 1000;
+
+/** ord.net rejects more than this many candidates in one call. */
+const MAX_SPENDABLE_UTXOS = 1000;
+
+/**
+ * Candidate payment UTXOs for an ord.net preflight.
+ *
+ * ord.net picks which of these to spend, so anything handed over is offered
+ * up as payment. These wallets hold inscriptions they have bought, and an
+ * inscription spent as payment is gone — so postage-sized outputs are
+ * filtered out, and callers that know where an inscription sits can exclude
+ * its outpoint directly.
+ *
+ * The filter is a value heuristic rather than a per-UTXO inscription lookup:
+ * that lookup is one API call per UTXO, which is both slow on a wallet with
+ * a long UTXO history and a drain on our own proxy quota. ord.net indexes
+ * inscriptions and very likely filters them server-side too, but a buyer
+ * should not be relying on that.
+ *
+ * @param {string} address
+ * @param {string} network
+ * @param {{ exclude?: {txid: string, vout: number}[] }} [options]
+ */
+const getSpendableUtxos = async (
+  address,
+  network = 'mainnet',
+  options = {}
+) => {
   const response = await fetch(getMempoolAddressUtxoUrl(address, network));
   if (!response.ok) throw new Error(`Could not fetch UTXOs for ${address}`);
   const utxos = await response.json();
-  return (Array.isArray(utxos) ? utxos : [])
-    .filter((u) => u?.txid && Number(u.value) > 0)
-    .map((u) => ({
-      txid: u.txid,
-      vout: Number(u.vout),
-      valueSats: Number(u.value),
-    }));
+
+  const excluded = new Set(
+    (options.exclude || []).map((o) => `${o.txid}:${Number(o.vout)}`)
+  );
+
+  return (
+    (Array.isArray(utxos) ? utxos : [])
+      .filter(
+        (u) =>
+          u?.txid &&
+          Number(u.value) > POSTAGE_CEILING_SATS &&
+          !excluded.has(`${u.txid}:${Number(u.vout)}`)
+      )
+      .map((u) => ({
+        txid: u.txid,
+        vout: Number(u.vout),
+        valueSats: Number(u.value),
+      }))
+      // Largest first, so the cap keeps the UTXOs actually worth spending.
+      .sort((a, b) => b.valueSats - a.valueSats)
+      .slice(0, MAX_SPENDABLE_UTXOS)
+  );
 };
 
 export const prepareSecurePurchase = async (
@@ -628,18 +776,21 @@ export const completeSecurePurchase = async (
       intentData = prepared.intentData;
     }
 
-    const submit = await ordNetFetch(
-      `/collection/${encodeURIComponent(intentData.collectionSymbol)}/purchases/submit`,
-      {
-        method: 'POST',
-        token: intentData.session.sessionToken,
-        body: {
-          ...intentData.preflightRequest,
-          purchaseAnchorUtxoId: intentData.preflight.purchaseAnchorUtxoId,
-          selectedPaymentUtxos: intentData.preflight.selectedPaymentUtxos,
-          signedSteps: intentData.signedSteps,
-        },
-      }
+    const submit = await withOrdNetSession(wallet, network, (session) =>
+      ordNetFetch(
+        `/collection/${encodeURIComponent(intentData.collectionSymbol)}/purchases/submit`,
+        {
+          method: 'POST',
+          token: session.sessionToken,
+          body: {
+            ...intentData.preflightRequest,
+            walletBindingId: session.walletBindingId,
+            purchaseAnchorUtxoId: intentData.preflight.purchaseAnchorUtxoId,
+            selectedPaymentUtxos: intentData.preflight.selectedPaymentUtxos,
+            signedSteps: intentData.signedSteps,
+          },
+        }
+      )
     );
 
     const txid =

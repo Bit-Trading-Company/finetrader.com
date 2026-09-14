@@ -14,6 +14,7 @@ import {
   processWalletItems,
 } from '../../../trading/autoTradeEngine';
 import { TRADING_EXCHANGES, getTradingApi } from '../../../trading/exchanges';
+import { checkOrdNetEligibility } from '../../../trading/ordnet/ordnetTrading';
 import { selectActiveWallets } from '../../../features/wallet/walletSelection';
 import { mergePendingPurchases } from '../../../trading/pendingPurchases';
 
@@ -139,13 +140,47 @@ export const useAutoTradeRunner = ({
       }
 
       // Get active wallets based on settings
-      const activeWallets = getActiveWallets();
+      let activeWallets = getActiveWallets();
 
       // Validate
       if (!selectedCollection || activeWallets.length === 0) {
         addConsoleLog('✗ Cannot start trading: Missing collection or wallets');
         endRun();
         return;
+      }
+
+      /*
+       * ord.net refuses a session token to any wallet holding under 0.01 BTC
+       * confirmed, so check here rather than letting each wallet fail with a
+       * 403 partway through the run. The balance is a floor, not a cost — it
+       * stays spendable — so a skipped wallet just needs topping up.
+       */
+      if (exchangeApi.id === TRADING_EXCHANGES.ORDNET) {
+        const { eligible, skipped } = await checkOrdNetEligibility(
+          activeWallets,
+          network
+        );
+
+        for (const { wallet, confirmed } of skipped) {
+          addConsoleLog(
+            `  ⚠ Skipping ${wallet.address.slice(0, 8)}…: ord.net needs 0.01 BTC confirmed, this wallet has ${(confirmed / 100000000).toFixed(8)}`
+          );
+        }
+
+        if (eligible.length === 0) {
+          addConsoleLog(
+            '✗ No wallets meet ord.net’s 0.01 BTC minimum. Fund them, or switch exchange.'
+          );
+          endRun();
+          return;
+        }
+
+        if (skipped.length > 0) {
+          addConsoleLog(
+            `  Trading with ${eligible.length} of ${activeWallets.length} wallet(s).`
+          );
+        }
+        activeWallets = eligible;
       }
 
       // Buy X per wallet: floor purchases only, then stop (no auto-trader)
