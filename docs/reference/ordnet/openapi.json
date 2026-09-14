@@ -1,0 +1,5489 @@
+{
+  "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "ORD.NET Trading API",
+    "version": "1.0.0",
+    "description": "Wallet-authenticated JSON API for reading listings, creating listings, buying listings, and managing inscription offers."
+  },
+  "servers": [
+    {
+      "url": "https://ord.net/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Profile"
+    },
+    {
+      "name": "Collections"
+    },
+    {
+      "name": "Listings"
+    },
+    {
+      "name": "Sales"
+    },
+    {
+      "name": "Buying"
+    },
+    {
+      "name": "Offers"
+    }
+  ],
+  "paths": {
+    "/auth/challenge": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "createAuthChallenge",
+        "summary": "Create wallet signature challenges",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet challenges created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "verifyAuthChallenge",
+        "summary": "Verify wallet signatures and issue an API session token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet signatures verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": ["Profile"],
+        "operationId": "getMe",
+        "summary": "Get the authenticated profile and wallet bindings",
+        "responses": {
+          "200": {
+            "description": "Authenticated profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/listings": {
+      "get": {
+        "tags": ["Listings"],
+        "operationId": "listListings",
+        "summary": "List active buyable listings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "`recent` sorts by newest listing first. `price` sorts by lowest asking price first.",
+            "schema": {
+              "$ref": "#/components/schemas/ListingSort"
+            }
+          },
+          {
+            "name": "collectionSlug",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CollectionSlug"
+            }
+          },
+          {
+            "name": "inscriptionId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/InscriptionId"
+            }
+          },
+          {
+            "name": "sellerAddress",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Address"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Buyable listings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/sales": {
+      "get": {
+        "tags": ["Sales"],
+        "operationId": "listSales",
+        "summary": "List confirmed sales",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "collectionSlug",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CollectionSlug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmed sales.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/collection-stats/floors": {
+      "get": {
+        "tags": ["Collections"],
+        "operationId": "listCollectionFloorStats",
+        "summary": "Get collection floor stats",
+        "parameters": [
+          {
+            "name": "slugs",
+            "in": "query",
+            "required": true,
+            "description": "Comma-separated collection slugs. Max 100 slugs.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "examples": ["bitcoin-puppets,omb"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection floor stats for matching slugs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionFloorStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/inscriptions": {
+      "get": {
+        "tags": ["Collections"],
+        "operationId": "listCollectionInscriptions",
+        "summary": "List inscriptions in a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 48
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "`oldest` sorts by ascending inscription sequence. `newest` sorts by descending inscription sequence.",
+            "schema": {
+              "$ref": "#/components/schemas/CollectionInscriptionsSort"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection inscriptions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionInscriptionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/listings/preflight": {
+      "post": {
+        "tags": ["Listings"],
+        "operationId": "preflightListing",
+        "summary": "Build listing PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ListingPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Listing PSBTs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/listings/submit": {
+      "post": {
+        "tags": ["Listings"],
+        "operationId": "submitListing",
+        "summary": "Submit signed listing PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ListingSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Listings created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/listings/delist": {
+      "post": {
+        "tags": ["Listings"],
+        "operationId": "delistListing",
+        "summary": "Cancel active listings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ListingDelist"
+        },
+        "responses": {
+          "200": {
+            "description": "Listings cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingDelistResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/purchases/preflight": {
+      "post": {
+        "tags": ["Buying"],
+        "operationId": "preflightPurchase",
+        "summary": "Build a purchase PSBT",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PurchasePreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase PSBT.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchasePreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/purchases/submit": {
+      "post": {
+        "tags": ["Buying"],
+        "operationId": "submitPurchase",
+        "summary": "Submit a signed purchase PSBT",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PurchaseSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase submitted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers": {
+      "get": {
+        "tags": ["Offers"],
+        "operationId": "listInscriptionOffers",
+        "summary": "List active offers for an inscription",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offers for the inscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/history": {
+      "get": {
+        "tags": ["Offers"],
+        "operationId": "listInscriptionOfferHistory",
+        "summary": "List offer history for an inscription",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/offers/preflight": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "preflightCollectionOffer",
+        "summary": "Build collection-scoped buyer-offer PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionOfferPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection offer PSBTs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOfferPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/offers/submit": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "submitCollectionOffer",
+        "summary": "Submit signed collection-scoped buyer-offer PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionOfferSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection offers created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOfferSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers": {
+      "get": {
+        "tags": ["Offers"],
+        "operationId": "listCollectionOfferBook",
+        "summary": "List active collection-wide and trait collection offers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection offer book.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferBookResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/my/sent-collection-offers": {
+      "get": {
+        "tags": ["Offers"],
+        "operationId": "listMySentCollectionOffers",
+        "summary": "List active collection offers sent by the authenticated wallets",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sent collection offers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferBookResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/target-preview": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "previewCollectionOfferTarget",
+        "summary": "Preview collection-offer target eligibility and floor",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferTargetPreview"
+        },
+        "responses": {
+          "200": {
+            "description": "Target preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferTargetPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/replacement-warning": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "previewCollectionOfferReplacementWarning",
+        "summary": "Check whether selected inputs replace active collection offers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferReplacementWarning"
+        },
+        "responses": {
+          "200": {
+            "description": "Replacement warning preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferReplacementWarningResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/preflight": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "preflightCollectionWideOffer",
+        "summary": "Build collection-wide or trait offer funding-parent PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection-wide offer preflight.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/submit": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "submitCollectionWideOffer",
+        "summary": "Submit signed collection-wide or trait offer funding parents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection-wide offers created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/{offerId}/cancel": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "cancelCollectionWideOffer",
+        "summary": "Cancel an active collection-wide or trait offer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferCancel"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection offer cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferCancelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/{offerId}/fill/preflight": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "preflightCollectionOfferFill",
+        "summary": "Build the seller PSBT to accept a collection offer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferFillPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection offer fill preflight.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferFillPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/collection/{slug}/collection-offers/{offerId}/fill/submit": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "submitCollectionOfferFill",
+        "summary": "Submit a signed collection-offer acceptance",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CollectionSlugPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CollectionWideOfferFillSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Collection offer fill submitted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWideOfferFillSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/cancel": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "cancelOffer",
+        "summary": "Cancel a buyer offer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OfferAction"
+        },
+        "responses": {
+          "200": {
+            "description": "Offer cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/reject": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "rejectOffer",
+        "summary": "Reject a buyer offer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OfferAction"
+        },
+        "responses": {
+          "200": {
+            "description": "Offer rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/accept/preflight": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "preflightOfferAcceptance",
+        "summary": "Build seller acceptance PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OfferAcceptPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Acceptance PSBTs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferAcceptPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/accept/submit": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "submitOfferAcceptance",
+        "summary": "Submit signed seller acceptance PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OfferAcceptSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Offer accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferAcceptSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/counter/preflight": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "preflightCounterOffer",
+        "summary": "Build seller counteroffer PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CounterPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Counteroffer PSBTs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/counter/submit": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "submitCounterOffer",
+        "summary": "Submit signed seller counteroffer PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CounterSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Counteroffer created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/counter/reject": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "rejectCounterOffer",
+        "summary": "Reject a seller counteroffer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OfferAction"
+        },
+        "responses": {
+          "200": {
+            "description": "Counteroffer rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/counter/accept/preflight": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "preflightCounterOfferAcceptance",
+        "summary": "Build buyer counteroffer acceptance PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CounterAcceptPreflight"
+        },
+        "responses": {
+          "200": {
+            "description": "Counteroffer acceptance PSBTs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterAcceptPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/inscriptions/{id}/offers/{offerId}/counter/accept/submit": {
+      "post": {
+        "tags": ["Offers"],
+        "operationId": "submitCounterOfferAcceptance",
+        "summary": "Submit signed buyer counteroffer acceptance PSBTs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/InscriptionIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/OfferIdPath"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CounterAcceptSubmit"
+        },
+        "responses": {
+          "200": {
+            "description": "Counteroffer accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferAcceptSubmitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/me/offers": {
+      "get": {
+        "tags": ["Profile", "Offers"],
+        "operationId": "listMyOffers",
+        "summary": "List offers for authenticated wallet bindings",
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ProfileOfferView"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile offer view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOffersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "ORD API session token"
+      }
+    },
+    "parameters": {
+      "CollectionSlugPath": {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CollectionSlug"
+        }
+      },
+      "InscriptionIdPath": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/InscriptionId"
+        }
+      },
+      "OfferIdPath": {
+        "name": "offerId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "requestBodies": {
+      "ListingPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListingPreflightRequest"
+            }
+          }
+        }
+      },
+      "ListingSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListingSubmitRequest"
+            }
+          }
+        }
+      },
+      "ListingDelist": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListingDelistRequest"
+            }
+          }
+        }
+      },
+      "PurchasePreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PurchasePreflightRequest"
+            }
+          }
+        }
+      },
+      "PurchaseSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PurchaseSubmitRequest"
+            }
+          }
+        }
+      },
+      "CollectionOfferPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionOfferPreflightRequest"
+            }
+          }
+        }
+      },
+      "CollectionOfferSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionOfferSubmitRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferTargetPreview": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionWideOfferTargetPreviewRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferReplacementWarning": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionWideOfferReplacementWarningRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionWideOfferPreflightRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionWideOfferSubmitRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferCancel": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/WalletBindingRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferFillPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionWideOfferFillPreflightRequest"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferFillSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CollectionWideOfferFillSubmitRequest"
+            }
+          }
+        }
+      },
+      "OfferAction": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/WalletBindingRequest"
+            }
+          }
+        }
+      },
+      "OfferAcceptPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/OfferAcceptPreflightRequest"
+            }
+          }
+        }
+      },
+      "OfferAcceptSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/OfferAcceptSubmitRequest"
+            }
+          }
+        }
+      },
+      "CounterPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CounterPreflightRequest"
+            }
+          }
+        }
+      },
+      "CounterSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CounterSubmitRequest"
+            }
+          }
+        }
+      },
+      "CounterAcceptPreflight": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CounterAcceptPreflightRequest"
+            }
+          }
+        }
+      },
+      "CounterAcceptSubmit": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CounterAcceptSubmitRequest"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, invalid, expired, or failed authentication.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Wallet is not allowed to perform this action.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Requested resource was not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Trading state changed before the action completed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Gone": {
+        "description": "Challenge or flow expired.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Temporary upstream or eligibility-check failure.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Address": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      },
+      "Base64Psbt": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+      },
+      "CollectionKind": {
+        "type": "string",
+        "enum": ["parent_child", "gallery"]
+      },
+      "CollectionSlug": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]+$"
+      },
+      "CollectionVerificationStatus": {
+        "type": "string",
+        "enum": ["verified", "unverified"]
+      },
+      "DateTime": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "InscriptionId": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}i[0-9]+$"
+      },
+      "ListingId": {
+        "$ref": "#/components/schemas/Uuid"
+      },
+      "ListingSort": {
+        "type": "string",
+        "enum": ["recent", "price"],
+        "default": "recent"
+      },
+      "SaleType": {
+        "type": "string",
+        "enum": ["internal", "external"]
+      },
+      "CollectionInscriptionsSort": {
+        "type": "string",
+        "enum": ["oldest", "newest"],
+        "default": "oldest"
+      },
+      "OfferKind": {
+        "type": "string",
+        "enum": ["buyer_offer", "seller_counter"]
+      },
+      "OfferStatus": {
+        "type": "string",
+        "enum": ["active", "accepted", "rejected", "cancelled", "expired", "invalidated"]
+      },
+      "PositiveSats": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2100000000000000
+      },
+      "OfferPriceSats": {
+        "type": "integer",
+        "minimum": 2000,
+        "maximum": 2100000000000000,
+        "multipleOf": 1000,
+        "description": "Offer or counter price in SATS. Must be at least 2,000 SATS and a multiple of 1,000 SATS."
+      },
+      "CollectionWideOfferPriceSats": {
+        "type": "integer",
+        "minimum": 10000,
+        "maximum": 2100000000000000,
+        "multipleOf": 5000,
+        "description": "Collection-wide or trait offer price in SATS. Must be at least 10,000 SATS and a multiple of 5,000 SATS."
+      },
+      "NonnegativeSats": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2100000000000000
+      },
+      "ProfileOfferView": {
+        "type": "string",
+        "enum": ["owned", "sent", "history"],
+        "default": "owned"
+      },
+      "Txid": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "Uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "WalletPublicKey": {
+        "type": "string",
+        "pattern": "^([a-f0-9]{64}|0[23][a-f0-9]{64})$"
+      },
+      "WalletBindingRequest": {
+        "type": "object",
+        "required": ["walletBindingId"],
+        "properties": {
+          "walletBindingId": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "username": {
+            "type": ["string", "null"]
+          },
+          "displayName": {
+            "type": ["string", "null"]
+          },
+          "bio": {
+            "type": ["string", "null"]
+          },
+          "avatarUrl": {
+            "type": ["string", "null"]
+          },
+          "bannerUrl": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "WalletBinding": {
+        "type": "object",
+        "required": [
+          "walletBindingId",
+          "label",
+          "provider",
+          "ordinalsAddress",
+          "paymentAddress",
+          "isPublic"
+        ],
+        "properties": {
+          "walletBindingId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ordinalsAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "paymentAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "isPublic": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MeResponse": {
+        "type": "object",
+        "required": ["profile", "walletBindings"],
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/Profile"
+          },
+          "walletBindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletBinding"
+            }
+          }
+        }
+      },
+      "AuthChallengeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordinalsAddress", "paymentAddress"],
+        "properties": {
+          "ordinalsAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "paymentAddress": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Address"
+              }
+            ],
+            "description": "Payment address verified by the auth flow and checked for the funding requirement before a bearer token is issued."
+          }
+        }
+      },
+      "AuthChallengeResponse": {
+        "type": "object",
+        "required": ["authRequestId", "challenges"],
+        "properties": {
+          "authRequestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "challenges": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["challengeId", "message", "address", "role"],
+              "properties": {
+                "challengeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "address": {
+                  "$ref": "#/components/schemas/Address"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["ordinals", "payment"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "AuthVerification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["challengeId", "signature", "address"],
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signature": {
+            "type": "string",
+            "maxLength": 8192,
+            "pattern": "^(?:[0-9a-fA-F]{2})+$",
+            "description": "Hex-encoded BIP-322 simple signature for the challenge message."
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          }
+        }
+      },
+      "AuthVerifyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["authRequestId", "verifications"],
+        "properties": {
+          "authRequestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verifications": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/AuthVerification"
+            }
+          }
+        }
+      },
+      "AuthVerifyResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MeResponse"
+          },
+          {
+            "type": "object",
+            "required": ["sessionToken", "expiresAt"],
+            "properties": {
+              "sessionToken": {
+                "type": "string",
+                "minLength": 1,
+                "description": "API bearer token. Currently valid for 1 hour."
+              },
+              "expiresAt": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DateTime"
+                  }
+                ],
+                "description": "When the API bearer token stops being accepted."
+              }
+            }
+          }
+        ]
+      },
+      "ListingCollection": {
+        "type": "object",
+        "required": ["slug", "name", "kind", "verificationStatus"],
+        "properties": {
+          "slug": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "name": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verificationStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionVerificationStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Listing": {
+        "type": "object",
+        "required": [
+          "listingId",
+          "inscriptionId",
+          "inscriptionNumber",
+          "inscriptionName",
+          "collection",
+          "sellerAddress",
+          "priceSats",
+          "listedAt",
+          "listingExpiresAt",
+          "sat",
+          "locationTxid",
+          "locationVout",
+          "locationSatpoint"
+        ],
+        "properties": {
+          "listingId": {
+            "$ref": "#/components/schemas/ListingId"
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "inscriptionNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inscriptionName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "collection": {
+            "$ref": "#/components/schemas/ListingCollection"
+          },
+          "sellerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "listedAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "listingExpiresAt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sat": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "locationTxid": {
+            "type": ["string", "null"]
+          },
+          "locationVout": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "locationSatpoint": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "required": ["pageSize", "hasNext", "nextCursor"],
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": ["string", "null"],
+            "minLength": 1
+          }
+        }
+      },
+      "CollectionFloorStatsEntry": {
+        "type": "object",
+        "required": [
+          "slug",
+          "floor",
+          "listedCount",
+          "ownerCount",
+          "oneDayChange",
+          "sevenDayChange",
+          "timestamp"
+        ],
+        "properties": {
+          "slug": {
+            "$ref": "#/components/schemas/CollectionSlug"
+          },
+          "floor": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 2100000000000000,
+            "description": "Floor price in sats. Null when no floor is available."
+          },
+          "listedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ownerCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "oneDayChange": {
+            "type": ["number", "null"],
+            "description": "24h floor change percentage."
+          },
+          "sevenDayChange": {
+            "type": ["number", "null"],
+            "description": "7d floor change percentage."
+          },
+          "timestamp": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        }
+      },
+      "CollectionFloorStatsResponse": {
+        "type": "object",
+        "required": ["success", "data"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionFloorStatsEntry"
+            }
+          }
+        }
+      },
+      "ListingsResponse": {
+        "type": "object",
+        "required": ["listings", "pagination"],
+        "properties": {
+          "listings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Listing"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "Sale": {
+        "type": "object",
+        "required": [
+          "saleId",
+          "saleType",
+          "txid",
+          "inscriptionId",
+          "inscriptionNumber",
+          "inscriptionName",
+          "collection",
+          "sellerAddress",
+          "buyerAddress",
+          "priceSats",
+          "price",
+          "priceUsd",
+          "soldAt",
+          "blockHeight"
+        ],
+        "properties": {
+          "saleId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "saleType": {
+            "$ref": "#/components/schemas/SaleType"
+          },
+          "txid": {
+            "type": ["string", "null"]
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "inscriptionNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inscriptionName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "collection": {
+            "$ref": "#/components/schemas/ListingCollection"
+          },
+          "sellerAddress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Address"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "buyerAddress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Address"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0
+          },
+          "priceUsd": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "soldAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "blockHeight": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "SalesResponse": {
+        "type": "object",
+        "required": ["sales", "pagination"],
+        "properties": {
+          "sales": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Sale"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "CollectionInscriptionContentType": {
+        "type": "string",
+        "enum": ["image", "html", "video", "text"]
+      },
+      "CollectionInscriptionImageRenderingHint": {
+        "type": "string",
+        "enum": ["auto", "pixelated"]
+      },
+      "CollectionInscriptionListingState": {
+        "type": "string",
+        "enum": ["buyable", "hidden_locked", "pending_public"]
+      },
+      "CollectionInscriptionTrait": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "percentage": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "CollectionInscriptionItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "collection",
+          "collectionHref",
+          "collections",
+          "image",
+          "inscription",
+          "inscriptionId",
+          "listingId",
+          "listingState",
+          "priceSats",
+          "price",
+          "listedAt",
+          "listingExpiresAt",
+          "lastSale",
+          "owner",
+          "contentType",
+          "rawContentType",
+          "imageRenderingHint",
+          "cardBackgroundColor",
+          "traits",
+          "satributes",
+          "sat",
+          "locationTxid",
+          "locationVout",
+          "locationSatpoint"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "collection": {
+            "$ref": "#/components/schemas/CollectionSlug"
+          },
+          "collectionHref": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "collections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionSlug"
+            }
+          },
+          "image": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inscription": {
+            "type": "integer"
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "listingId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListingId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "listingState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionInscriptionListingState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "priceSats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PositiveSats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "listedAt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "listingExpiresAt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lastSale": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Address"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/CollectionInscriptionContentType"
+          },
+          "rawContentType": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "imageRenderingHint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionInscriptionImageRenderingHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cardBackgroundColor": {
+            "type": ["string", "null"],
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
+          "traits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionInscriptionTrait"
+            }
+          },
+          "satributes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "sat": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "locationTxid": {
+            "type": ["string", "null"]
+          },
+          "locationVout": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "locationSatpoint": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "CollectionInscriptionsResponse": {
+        "type": "object",
+        "required": ["items", "pagination"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionInscriptionItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "InputToSign": {
+        "type": "object",
+        "required": ["address", "signingIndexes"],
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "publicKey": {
+            "$ref": "#/components/schemas/WalletPublicKey"
+          },
+          "disableTweakSigner": {
+            "type": "boolean"
+          },
+          "signingIndexes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "sigHash": {
+            "type": "integer"
+          }
+        }
+      },
+      "PsbtStep": {
+        "type": "object",
+        "required": ["stepIndex", "signerAddress", "inputsToSign", "psbtBase64"],
+        "properties": {
+          "stepIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "inputsToSign": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/InputToSign"
+            }
+          },
+          "psbtBase64": {
+            "$ref": "#/components/schemas/Base64Psbt"
+          }
+        }
+      },
+      "ListingPsbtStep": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PsbtStep"
+          },
+          {
+            "type": "object",
+            "required": ["inscriptionId"],
+            "properties": {
+              "inscriptionId": {
+                "$ref": "#/components/schemas/InscriptionId"
+              }
+            }
+          }
+        ]
+      },
+      "RecoveryPsbt": {
+        "type": "object",
+        "required": ["signerAddress", "inputsToSign", "psbtBase64"],
+        "properties": {
+          "signerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "inputsToSign": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/InputToSign"
+            }
+          },
+          "psbtBase64": {
+            "$ref": "#/components/schemas/Base64Psbt"
+          }
+        }
+      },
+      "ListingRequestItem": {
+        "type": "object",
+        "required": ["inscriptionId", "priceSats"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          }
+        }
+      },
+      "ListingPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["ordinalsPublicKey", "items"],
+            "properties": {
+              "ordinalsPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/ListingRequestItem"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ListingPreflightEntry": {
+        "type": "object",
+        "required": ["inscriptionId", "anchorUtxoId", "psbts"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "anchorUtxoId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "psbts": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/ListingPsbtStep"
+            }
+          }
+        }
+      },
+      "ListingPreflightResponse": {
+        "type": "object",
+        "required": ["listings", "recoveryPsbt"],
+        "properties": {
+          "listings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/ListingPreflightEntry"
+            }
+          },
+          "recoveryPsbt": {
+            "$ref": "#/components/schemas/RecoveryPsbt"
+          }
+        }
+      },
+      "ListingSubmitAnchor": {
+        "type": "object",
+        "required": ["inscriptionId", "anchorUtxoId"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "anchorUtxoId": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      },
+      "ListingSignedEntry": {
+        "type": "object",
+        "required": ["inscriptionId", "psbts"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "psbts": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/ListingPsbtStep"
+            }
+          }
+        }
+      },
+      "ListingSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ListingPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": ["durationDays", "anchors", "signed", "signedRecoveryPsbt"],
+            "properties": {
+              "durationDays": {
+                "type": "integer",
+                "enum": [1, 7, 30, 90, 180]
+              },
+              "anchors": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/ListingSubmitAnchor"
+                }
+              },
+              "signed": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/ListingSignedEntry"
+                }
+              },
+              "signedRecoveryPsbt": {
+                "$ref": "#/components/schemas/RecoveryPsbt"
+              }
+            }
+          }
+        ]
+      },
+      "ListingSubmitResult": {
+        "type": "object",
+        "required": ["inscriptionId", "listingId"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "listingId": {
+            "$ref": "#/components/schemas/ListingId"
+          }
+        }
+      },
+      "ListingSubmitResponse": {
+        "type": "object",
+        "required": ["listings"],
+        "properties": {
+          "listings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/ListingSubmitResult"
+            }
+          }
+        }
+      },
+      "ListingDelistItem": {
+        "type": "object",
+        "required": ["inscriptionId", "listingId"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "listingId": {
+            "$ref": "#/components/schemas/ListingId"
+          }
+        }
+      },
+      "ListingDelistRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["listings"],
+            "properties": {
+              "listings": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/ListingDelistItem"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ListingDelistResponse": {
+        "type": "object",
+        "required": ["listings"],
+        "properties": {
+          "listings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/ListingDelistItem"
+            }
+          }
+        }
+      },
+      "PurchaseListing": {
+        "type": "object",
+        "required": ["listingId", "inscriptionId"],
+        "properties": {
+          "listingId": {
+            "$ref": "#/components/schemas/ListingId"
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          }
+        }
+      },
+      "SpendableUtxo": {
+        "type": "object",
+        "required": ["txid", "vout", "valueSats"],
+        "properties": {
+          "txid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "vout": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "valueSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          }
+        }
+      },
+      "PurchasePreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["paymentPublicKey", "listings"],
+            "properties": {
+              "paymentPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "listings": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/PurchaseListing"
+                }
+              },
+              "spendableUtxos": {
+                "type": "array",
+                "maxItems": 1000,
+                "description": "Candidate payment UTXOs. Required for API-created or non-Xverse wallet bindings. Xverse bindings may omit this field and use wallet-provider UTXO fallback.",
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PurchaseSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PurchasePreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": ["purchaseAnchorUtxoId", "selectedPaymentUtxos", "signedSteps"],
+            "properties": {
+              "purchaseAnchorUtxoId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "selectedPaymentUtxos": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1000,
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              },
+              "signedSteps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PurchaseEconomicsItem": {
+        "type": "object",
+        "required": [
+          "listingId",
+          "inscriptionId",
+          "priceSats",
+          "inscriptionUtxoValueSats",
+          "listingFeeSats",
+          "buyerFeeBps",
+          "buyerFeeSats",
+          "sellerCreatorRoyaltySats",
+          "buyerCreatorRoyaltySats",
+          "sellerReceiveSats",
+          "buyerPayTotalSats",
+          "marketplaceRevenueSats",
+          "creatorRevenueSats"
+        ],
+        "properties": {
+          "listingId": {
+            "$ref": "#/components/schemas/ListingId"
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "inscriptionUtxoValueSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "listingFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "buyerFeeBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "buyerFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "sellerCreatorRoyaltySats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "buyerCreatorRoyaltySats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "sellerReceiveSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "buyerPayTotalSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "marketplaceRevenueSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "creatorRevenueSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          }
+        }
+      },
+      "PurchasePreflightTotals": {
+        "type": "object",
+        "required": [
+          "listings",
+          "selectedPaymentUtxos",
+          "targetFeeRateSatVb",
+          "estimatedPackageVsize",
+          "estimatedNetworkFeeSats",
+          "cpfpFeeSats",
+          "listingTransferFeeSats",
+          "totalBuyerCostSats"
+        ],
+        "properties": {
+          "listings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/PurchaseEconomicsItem"
+            }
+          },
+          "selectedPaymentUtxos": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/SpendableUtxo"
+            }
+          },
+          "targetFeeRateSatVb": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "estimatedPackageVsize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "estimatedNetworkFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "cpfpFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "listingTransferFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "totalBuyerCostSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          }
+        }
+      },
+      "PurchasePreflightResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PurchasePreflightTotals"
+          },
+          {
+            "type": "object",
+            "required": [
+              "purchaseAnchorUtxoId",
+              "steps",
+              "expectedSettlementTxid",
+              "expectedListingTransferTxids"
+            ],
+            "properties": {
+              "purchaseAnchorUtxoId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "steps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              },
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "expectedListingTransferTxids": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/Txid"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PurchaseSubmitResponse": {
+        "type": "object",
+        "required": ["settlementTxid", "listingTransferTxids", "pendingSaleIds", "listings"],
+        "properties": {
+          "settlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "listingTransferTxids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Txid"
+            }
+          },
+          "pendingSaleIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Uuid"
+            }
+          },
+          "listings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/PurchaseListing"
+            }
+          }
+        }
+      },
+      "OfferEconomics": {
+        "type": "object",
+        "required": [
+          "priceSats",
+          "inscriptionUtxoValueSats",
+          "sellerMarketplaceFeeBps",
+          "sellerMarketplaceFeeSats",
+          "buyerMarketplaceFeeBps",
+          "buyerMarketplaceFeeSats",
+          "sellerCreatorRoyaltyBps",
+          "sellerCreatorRoyaltySats",
+          "buyerCreatorRoyaltyBps",
+          "buyerCreatorRoyaltySats",
+          "sellerReceiveSats",
+          "buyerPayTotalSats",
+          "marketplaceRevenueSats",
+          "creatorRevenueSats"
+        ],
+        "properties": {
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "inscriptionUtxoValueSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "sellerMarketplaceFeeBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "sellerMarketplaceFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "buyerMarketplaceFeeBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "buyerMarketplaceFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "sellerCreatorRoyaltyBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "sellerCreatorRoyaltySats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "buyerCreatorRoyaltyBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "buyerCreatorRoyaltySats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "sellerReceiveSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "buyerPayTotalSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "marketplaceRevenueSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "creatorRevenueSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          }
+        }
+      },
+      "OfferRecord": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OfferEconomics"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "parentOfferId",
+              "kind",
+              "status",
+              "inscriptionId",
+              "buyerAddress",
+              "sellerAddress",
+              "createdAt",
+              "expiresAt",
+              "acceptedAt",
+              "rejectedAt",
+              "cancelledAt",
+              "floorSats",
+              "topOfferSats",
+              "settlementTxid"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "parentOfferId": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Uuid"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "$ref": "#/components/schemas/OfferKind"
+              },
+              "status": {
+                "$ref": "#/components/schemas/OfferStatus"
+              },
+              "inscriptionId": {
+                "$ref": "#/components/schemas/InscriptionId"
+              },
+              "buyerAddress": {
+                "$ref": "#/components/schemas/Address"
+              },
+              "sellerAddress": {
+                "$ref": "#/components/schemas/Address"
+              },
+              "createdAt": {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              "expiresAt": {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              "acceptedAt": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DateTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rejectedAt": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DateTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cancelledAt": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DateTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "floorSats": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NonnegativeSats"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "topOfferSats": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NonnegativeSats"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "settlementTxid": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Txid"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "OfferListResponse": {
+        "type": "object",
+        "required": [
+          "inscriptionId",
+          "ownerAddress",
+          "topOfferSats",
+          "liveOfferCount",
+          "expiringSoonCount",
+          "offers"
+        ],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "ownerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "topOfferSats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NonnegativeSats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "liveOfferCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expiringSoonCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfferRecord"
+            }
+          }
+        }
+      },
+      "OfferHistoryResponse": {
+        "type": "object",
+        "required": ["inscriptionId", "offers", "hasMore", "page"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfferRecord"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CollectionOfferPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OfferPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": ["inscriptionIds"],
+            "properties": {
+              "inscriptionIds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "description": "Create offers for 1 to 20 inscription ids in this collection. Duplicate ids are rejected.",
+                "items": {
+                  "$ref": "#/components/schemas/InscriptionId"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionOfferPreflightItemResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OfferEconomics"
+          },
+          {
+            "type": "object",
+            "required": [
+              "inscriptionId",
+              "targetFeeRateSatVb",
+              "estimatedNetworkFeeSats",
+              "expectedSettlementTxid",
+              "steps"
+            ],
+            "properties": {
+              "inscriptionId": {
+                "$ref": "#/components/schemas/InscriptionId"
+              },
+              "targetFeeRateSatVb": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "estimatedNetworkFeeSats": {
+                "$ref": "#/components/schemas/NonnegativeSats"
+              },
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "steps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionOfferPreflightResponse": {
+        "type": "object",
+        "required": ["selectedPaymentUtxos", "items"],
+        "properties": {
+          "selectedPaymentUtxos": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/SpendableUtxo"
+            }
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CollectionOfferPreflightItemResponse"
+            }
+          }
+        }
+      },
+      "CollectionOfferSignedItem": {
+        "type": "object",
+        "required": ["inscriptionId", "expectedSettlementTxid", "signedSteps"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "expectedSettlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "signedSteps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/PsbtStep"
+            }
+          }
+        }
+      },
+      "CollectionOfferSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CollectionOfferPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": ["selectedPaymentUtxos", "signedItems"],
+            "properties": {
+              "selectedPaymentUtxos": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1000,
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              },
+              "signedItems": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "description": "One signed item per preflight item, matching the 1 to 20 requested inscription ids.",
+                "items": {
+                  "$ref": "#/components/schemas/CollectionOfferSignedItem"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionOfferSubmitItemResponse": {
+        "type": "object",
+        "required": ["inscriptionId", "offerId", "status"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "type": "string",
+            "const": "active"
+          }
+        }
+      },
+      "CollectionOfferSubmitResponse": {
+        "type": "object",
+        "required": ["items", "status"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CollectionOfferSubmitItemResponse"
+            }
+          },
+          "status": {
+            "type": "string",
+            "const": "active"
+          }
+        }
+      },
+      "HexString": {
+        "type": "string",
+        "pattern": "^[a-f0-9]+$"
+      },
+      "Bytes32Hex": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "CollectionWideOfferTraitTargetGroup": {
+        "type": "object",
+        "required": ["type", "values"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 520
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 520
+            }
+          }
+        }
+      },
+      "CollectionWideOfferTarget": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "all"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["kind", "traits"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "traits"
+              },
+              "traits": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "$ref": "#/components/schemas/CollectionWideOfferTraitTargetGroup"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionWideOfferSampleInscription": {
+        "type": "object",
+        "required": ["inscriptionId", "image", "previewContentType"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previewContentType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "imageRenderingHint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CollectionWideOfferBookRow": {
+        "type": "object",
+        "required": [
+          "id",
+          "target",
+          "scopeLabel",
+          "priceSats",
+          "eligibleCount",
+          "makerAddress",
+          "expiresAt",
+          "createdAt",
+          "totalSats",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "target": {
+            "$ref": "#/components/schemas/CollectionWideOfferTarget"
+          },
+          "scopeLabel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "eligibleCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "makerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "totalSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "status": {
+            "type": "string",
+            "const": "active"
+          },
+          "actionBindingId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sampleInscription": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionWideOfferSampleInscription"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CollectionWideOfferBookResponse": {
+        "type": "object",
+        "required": ["rows", "totalCount", "collectionOfferCount", "traitOfferCount"],
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionWideOfferBookRow"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "collectionOfferCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "traitOfferCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CollectionWideOfferTargetPreviewRequest": {
+        "type": "object",
+        "required": ["target"],
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/CollectionWideOfferTarget"
+          }
+        }
+      },
+      "CollectionWideOfferTargetPreviewResponse": {
+        "type": "object",
+        "required": ["target", "eligibleCount", "floorSats", "collectionFloorSats"],
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/CollectionWideOfferTarget"
+          },
+          "eligibleCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "floorSats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PositiveSats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "collectionFloorSats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PositiveSats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sampleInscription": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionWideOfferSampleInscription"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CollectionWideOfferReplacementWarningRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["target", "priceSats"],
+            "properties": {
+              "target": {
+                "$ref": "#/components/schemas/CollectionWideOfferTarget"
+              },
+              "priceSats": {
+                "$ref": "#/components/schemas/CollectionWideOfferPriceSats"
+              },
+              "offerCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10,
+                "default": 1
+              },
+              "ladderStepSats": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0
+              },
+              "spendableUtxos": {
+                "type": "array",
+                "maxItems": 1000,
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionWideOfferReplacementWarningResponse": {
+        "type": "object",
+        "required": ["replacementWarning"],
+        "properties": {
+          "replacementWarning": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": ["activeOfferCount"],
+                "properties": {
+                  "activeOfferCount": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CollectionWideOfferPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["ordinalsPublicKey", "paymentPublicKey", "target", "priceSats"],
+            "properties": {
+              "ordinalsPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "paymentPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "target": {
+                "$ref": "#/components/schemas/CollectionWideOfferTarget"
+              },
+              "priceSats": {
+                "$ref": "#/components/schemas/CollectionWideOfferPriceSats"
+              },
+              "offerCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10,
+                "default": 1
+              },
+              "ladderStepSats": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0
+              },
+              "validityHours": {
+                "type": "integer",
+                "enum": [12, 24, 168, 720, 2160],
+                "default": 168
+              },
+              "spendableUtxos": {
+                "type": "array",
+                "maxItems": 1000,
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionWideOfferFundingPreflightEntry": {
+        "type": "object",
+        "required": [
+          "priceSats",
+          "offerAddress",
+          "offerScriptHex",
+          "offerAuthSecretHash",
+          "selectedPaymentUtxos",
+          "fundingParentFeeRateSatVb",
+          "fundingBroadcasted",
+          "expectedFundingParentTxid",
+          "fundingParentVout",
+          "preflightToken",
+          "fundingParentStep"
+        ],
+        "properties": {
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "offerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "offerScriptHex": {
+            "$ref": "#/components/schemas/HexString"
+          },
+          "offerAuthSecretHash": {
+            "$ref": "#/components/schemas/Bytes32Hex"
+          },
+          "selectedPaymentUtxos": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/SpendableUtxo"
+            }
+          },
+          "fundingParentFeeRateSatVb": {
+            "type": "integer",
+            "const": 0
+          },
+          "fundingBroadcasted": {
+            "type": "boolean",
+            "const": false
+          },
+          "expectedFundingParentTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "fundingParentVout": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preflightToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fundingParentStep": {
+            "$ref": "#/components/schemas/PsbtStep"
+          }
+        }
+      },
+      "CollectionWideOfferPreflightResponse": {
+        "type": "object",
+        "required": [
+          "criteriaCanonicalJson",
+          "offerCriteriaHash",
+          "eligibleRoot",
+          "eligibleCount",
+          "buyerReceiveScriptHex",
+          "offers"
+        ],
+        "properties": {
+          "criteriaCanonicalJson": {
+            "type": "string",
+            "minLength": 1
+          },
+          "offerCriteriaHash": {
+            "$ref": "#/components/schemas/Bytes32Hex"
+          },
+          "eligibleRoot": {
+            "$ref": "#/components/schemas/Bytes32Hex"
+          },
+          "eligibleCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "buyerReceiveScriptHex": {
+            "$ref": "#/components/schemas/HexString"
+          },
+          "offers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/CollectionWideOfferFundingPreflightEntry"
+            }
+          }
+        }
+      },
+      "CollectionWideOfferSubmitEntry": {
+        "type": "object",
+        "required": [
+          "priceSats",
+          "selectedPaymentUtxos",
+          "expectedFundingParentTxid",
+          "fundingParentVout",
+          "preflightToken",
+          "signedFundingParentStep"
+        ],
+        "properties": {
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "selectedPaymentUtxos": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/SpendableUtxo"
+            }
+          },
+          "expectedFundingParentTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "fundingParentVout": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preflightToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "signedFundingParentStep": {
+            "$ref": "#/components/schemas/PsbtStep"
+          }
+        }
+      },
+      "CollectionWideOfferSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CollectionWideOfferPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": ["offers"],
+            "properties": {
+              "offers": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 10,
+                "items": {
+                  "$ref": "#/components/schemas/CollectionWideOfferSubmitEntry"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CollectionWideOfferSubmitResponse": {
+        "type": "object",
+        "required": ["status", "offers"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "active"
+          },
+          "offers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "offerId",
+                "status",
+                "priceSats",
+                "fundingParentTxid",
+                "fundingParentVout",
+                "fundingParentFeeRateSatVb",
+                "fundingBroadcasted"
+              ],
+              "properties": {
+                "offerId": {
+                  "$ref": "#/components/schemas/Uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "active"
+                },
+                "priceSats": {
+                  "$ref": "#/components/schemas/PositiveSats"
+                },
+                "fundingParentTxid": {
+                  "$ref": "#/components/schemas/Txid"
+                },
+                "fundingParentVout": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "fundingParentFeeRateSatVb": {
+                  "type": "integer",
+                  "const": 0
+                },
+                "fundingBroadcasted": {
+                  "type": "boolean",
+                  "const": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "CollectionWideOfferCancelResponse": {
+        "type": "object",
+        "required": ["offerId", "status"],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "type": "string",
+            "const": "cancelled"
+          }
+        }
+      },
+      "BelowTopOfferSummary": {
+        "type": "object",
+        "required": ["offerId", "priceSats"],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          }
+        }
+      },
+      "BelowTopOfferWarning": {
+        "type": "object",
+        "required": ["selectedOffer", "topOffer"],
+        "properties": {
+          "selectedOffer": {
+            "$ref": "#/components/schemas/BelowTopOfferSummary"
+          },
+          "topOffer": {
+            "$ref": "#/components/schemas/BelowTopOfferSummary"
+          }
+        }
+      },
+      "CollectionWideOfferFillPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["ordinalsPublicKey", "offerId", "inscriptionId"],
+            "properties": {
+              "ordinalsPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "offerId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "inscriptionId": {
+                "$ref": "#/components/schemas/InscriptionId"
+              }
+            }
+          }
+        ]
+      },
+      "CollectionWideOfferFillPreflightResponse": {
+        "type": "object",
+        "required": [
+          "offerId",
+          "inscriptionId",
+          "sellerReceiveSats",
+          "inscriptionUtxoValueSats",
+          "marketplaceFeeSats",
+          "creatorRoyaltySats",
+          "targetFeeRateSatVb",
+          "estimatedNetworkFeeSats",
+          "belowTopOfferWarning",
+          "expectedSettlementTxid",
+          "admissionAnchorUtxoId",
+          "sellerStep"
+        ],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "sellerReceiveSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "inscriptionUtxoValueSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "marketplaceFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "creatorRoyaltySats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "targetFeeRateSatVb": {
+            "type": "number",
+            "minimum": 1
+          },
+          "estimatedNetworkFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "belowTopOfferWarning": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BelowTopOfferWarning"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expectedSettlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "admissionAnchorUtxoId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "sellerStep": {
+            "$ref": "#/components/schemas/PsbtStep"
+          }
+        }
+      },
+      "CollectionWideOfferFillSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CollectionWideOfferFillPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "targetFeeRateSatVb",
+              "expectedSettlementTxid",
+              "admissionAnchorUtxoId",
+              "signedSellerStep"
+            ],
+            "properties": {
+              "belowTopOfferConfirmation": {
+                "$ref": "#/components/schemas/BelowTopOfferWarning"
+              },
+              "targetFeeRateSatVb": {
+                "type": "number",
+                "minimum": 1
+              },
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "admissionAnchorUtxoId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "signedSellerStep": {
+                "$ref": "#/components/schemas/PsbtStep"
+              }
+            }
+          }
+        ]
+      },
+      "CollectionWideOfferFillSubmitResponse": {
+        "type": "object",
+        "required": ["offerId", "fillAttemptId", "status", "settlementTxid"],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "fillAttemptId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["broadcast", "accepted"]
+          },
+          "settlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          }
+        }
+      },
+      "OfferPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["paymentPublicKey", "priceSats"],
+            "properties": {
+              "paymentPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "priceSats": {
+                "$ref": "#/components/schemas/OfferPriceSats"
+              },
+              "validityHours": {
+                "type": "integer",
+                "enum": [12, 24, 168, 720, 2160],
+                "default": 168,
+                "description": "Offer duration in hours. Defaults to 168 when omitted."
+              },
+              "spendableUtxos": {
+                "type": "array",
+                "maxItems": 1000,
+                "description": "Candidate payment UTXOs. Required for API-created or non-Xverse wallet bindings. Xverse bindings may omit this field and use wallet-provider UTXO fallback.",
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "OfferActionResponse": {
+        "type": "object",
+        "required": ["offerId", "status"],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OfferStatus"
+          }
+        }
+      },
+      "OfferAcceptPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["ordinalsPublicKey"],
+            "properties": {
+              "ordinalsPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              }
+            }
+          }
+        ]
+      },
+      "OfferAcceptPreflightResponse": {
+        "type": "object",
+        "required": [
+          "offerId",
+          "targetFeeRateSatVb",
+          "estimatedNetworkFeeSats",
+          "expectedSettlementTxid",
+          "expectedPayoutTxid",
+          "steps"
+        ],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "targetFeeRateSatVb": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "estimatedNetworkFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "expectedSettlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "expectedPayoutTxid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Txid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/PsbtStep"
+            }
+          }
+        }
+      },
+      "OfferAcceptSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OfferAcceptPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": ["expectedSettlementTxid", "expectedPayoutTxid", "signedSteps"],
+            "properties": {
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "expectedPayoutTxid": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Txid"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "signedSteps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "OfferAcceptSubmitResponse": {
+        "type": "object",
+        "required": ["offerId", "settlementTxid", "payoutTxid", "status"],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "settlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "payoutTxid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Txid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "const": "accepted"
+          }
+        }
+      },
+      "CounterPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["ordinalsPublicKey", "priceSats"],
+            "properties": {
+              "ordinalsPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "priceSats": {
+                "$ref": "#/components/schemas/OfferPriceSats",
+                "description": "Counter price in SATS. Must beat the current buyer offer by at least 1,000 SATS and be a multiple of 1,000 SATS."
+              },
+              "validityHours": {
+                "type": "integer",
+                "enum": [12, 24, 168, 720, 2160],
+                "default": 168,
+                "description": "Counteroffer duration in hours. Defaults to 168 when omitted."
+              }
+            }
+          }
+        ]
+      },
+      "CounterPreflightResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OfferEconomics"
+          },
+          {
+            "type": "object",
+            "required": [
+              "anchorUtxoId",
+              "targetFeeRateSatVb",
+              "estimatedNetworkFeeSats",
+              "expectedTransferTxid",
+              "expectedSettlementTxid",
+              "steps"
+            ],
+            "properties": {
+              "anchorUtxoId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "targetFeeRateSatVb": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "estimatedNetworkFeeSats": {
+                "$ref": "#/components/schemas/NonnegativeSats"
+              },
+              "expectedTransferTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "steps": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CounterSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CounterPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "anchorUtxoId",
+              "expectedTransferTxid",
+              "expectedSettlementTxid",
+              "signedSteps"
+            ],
+            "properties": {
+              "anchorUtxoId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "expectedTransferTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "signedSteps": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CounterSubmitResponse": {
+        "type": "object",
+        "required": ["offerId", "parentOfferId", "status"],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "parentOfferId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "type": "string",
+            "const": "active"
+          }
+        }
+      },
+      "CounterAcceptPreflightRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WalletBindingRequest"
+          },
+          {
+            "type": "object",
+            "required": ["paymentPublicKey"],
+            "properties": {
+              "paymentPublicKey": {
+                "$ref": "#/components/schemas/WalletPublicKey"
+              },
+              "spendableUtxos": {
+                "type": "array",
+                "maxItems": 1000,
+                "description": "Candidate payment UTXOs. Required for API-created or non-Xverse wallet bindings. Xverse bindings may omit this field and use wallet-provider UTXO fallback.",
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CounterAcceptPreflightResponse": {
+        "type": "object",
+        "required": [
+          "offerId",
+          "selectedPaymentUtxos",
+          "targetFeeRateSatVb",
+          "estimatedNetworkFeeSats",
+          "expectedFundingTxid",
+          "expectedSettlementTxid",
+          "steps"
+        ],
+        "properties": {
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "selectedPaymentUtxos": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/SpendableUtxo"
+            }
+          },
+          "targetFeeRateSatVb": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "estimatedNetworkFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "expectedFundingTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "expectedSettlementTxid": {
+            "$ref": "#/components/schemas/Txid"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/PsbtStep"
+            }
+          }
+        }
+      },
+      "CounterAcceptSubmitRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CounterAcceptPreflightRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "selectedPaymentUtxos",
+              "expectedFundingTxid",
+              "expectedSettlementTxid",
+              "signedSteps"
+            ],
+            "properties": {
+              "selectedPaymentUtxos": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1000,
+                "items": {
+                  "$ref": "#/components/schemas/SpendableUtxo"
+                }
+              },
+              "expectedFundingTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "expectedSettlementTxid": {
+                "$ref": "#/components/schemas/Txid"
+              },
+              "signedSteps": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "$ref": "#/components/schemas/PsbtStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ProfileOfferRow": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OfferEconomics"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "status",
+              "side",
+              "actionKind",
+              "actionBindingId",
+              "inscriptionId",
+              "inscriptionNumber",
+              "contentType",
+              "inscriptionTitle",
+              "collectionName",
+              "collectionSlug",
+              "collectionVerified",
+              "buyerAddress",
+              "sellerAddress",
+              "floorSats",
+              "topOfferSats",
+              "createdAt",
+              "expiresAt"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/OfferKind"
+              },
+              "status": {
+                "$ref": "#/components/schemas/OfferStatus"
+              },
+              "side": {
+                "type": "string",
+                "enum": ["received", "sent"]
+              },
+              "actionKind": {
+                "type": ["string", "null"],
+                "enum": ["seller_received_buyer_offer", "buyer_received_counter", null]
+              },
+              "actionBindingId": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Uuid"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "inscriptionId": {
+                "$ref": "#/components/schemas/InscriptionId"
+              },
+              "inscriptionNumber": {
+                "type": "string"
+              },
+              "contentType": {
+                "type": ["string", "null"]
+              },
+              "inscriptionTitle": {
+                "type": ["string", "null"]
+              },
+              "collectionName": {
+                "type": ["string", "null"]
+              },
+              "collectionSlug": {
+                "type": ["string", "null"]
+              },
+              "collectionVerified": {
+                "type": "boolean"
+              },
+              "buyerAddress": {
+                "$ref": "#/components/schemas/Address"
+              },
+              "sellerAddress": {
+                "$ref": "#/components/schemas/Address"
+              },
+              "floorSats": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NonnegativeSats"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "topOfferSats": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NonnegativeSats"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              "expiresAt": {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            }
+          }
+        ]
+      },
+      "ProfileOwnedOfferGroup": {
+        "type": "object",
+        "required": [
+          "inscriptionId",
+          "inscriptionNumber",
+          "contentType",
+          "inscriptionTitle",
+          "collectionName",
+          "collectionSlug",
+          "collectionVerified",
+          "ownerAddress",
+          "actionBindingId",
+          "topOfferSats",
+          "activeOfferCount",
+          "activeCounterCount",
+          "earliestExpiresAt",
+          "offers",
+          "sentCounters"
+        ],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "inscriptionNumber": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": ["string", "null"]
+          },
+          "inscriptionTitle": {
+            "type": ["string", "null"]
+          },
+          "collectionName": {
+            "type": ["string", "null"]
+          },
+          "collectionSlug": {
+            "type": ["string", "null"]
+          },
+          "collectionVerified": {
+            "type": "boolean"
+          },
+          "ownerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "actionBindingId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topOfferSats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NonnegativeSats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeOfferCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "activeCounterCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "earliestExpiresAt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOfferRow"
+            }
+          },
+          "sentCounters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOfferRow"
+            }
+          }
+        }
+      },
+      "ProfileOfferHistoryEvent": {
+        "type": "object",
+        "required": [
+          "eventKey",
+          "eventType",
+          "role",
+          "offerId",
+          "parentOfferId",
+          "kind",
+          "status",
+          "side",
+          "inscriptionId",
+          "inscriptionNumber",
+          "buyerAddress",
+          "sellerAddress",
+          "priceSats",
+          "occurredAt",
+          "createdAt",
+          "expiresAt",
+          "settlementTxid",
+          "payoutTxid"
+        ],
+        "properties": {
+          "eventKey": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": ["created", "accepted", "rejected", "cancelled", "expired", "invalidated"]
+          },
+          "role": {
+            "type": "string",
+            "enum": ["buyer", "seller"]
+          },
+          "offerId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "parentOfferId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/OfferKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OfferStatus"
+          },
+          "side": {
+            "type": "string",
+            "enum": ["received", "sent"]
+          },
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "inscriptionNumber": {
+            "type": "string"
+          },
+          "buyerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "sellerAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "priceSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "occurredAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "settlementTxid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Txid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payoutTxid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Txid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ProfileOffersCounts": {
+        "type": "object",
+        "required": ["actionableCount", "ownedCount", "sentCount", "hasMore", "nextCursor"],
+        "properties": {
+          "actionableCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ownedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "ProfileOwnedOffersResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ProfileOffersCounts"
+          },
+          {
+            "type": "object",
+            "required": ["view", "groups"],
+            "properties": {
+              "view": {
+                "type": "string",
+                "const": "owned"
+              },
+              "groups": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProfileOwnedOfferGroup"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ProfileSentOffersResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ProfileOffersCounts"
+          },
+          {
+            "type": "object",
+            "required": ["view", "rows"],
+            "properties": {
+              "view": {
+                "type": "string",
+                "const": "sent"
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProfileOfferRow"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ProfileOfferHistoryResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ProfileOffersCounts"
+          },
+          {
+            "type": "object",
+            "required": ["view", "events"],
+            "properties": {
+              "view": {
+                "type": "string",
+                "const": "history"
+              },
+              "events": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProfileOfferHistoryEvent"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ProfileOffersResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ProfileOwnedOffersResponse"
+          },
+          {
+            "$ref": "#/components/schemas/ProfileSentOffersResponse"
+          },
+          {
+            "$ref": "#/components/schemas/ProfileOfferHistoryResponse"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "view"
+        }
+      }
+    }
+  }
+}
