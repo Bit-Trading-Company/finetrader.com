@@ -12,13 +12,18 @@ export const WALLET_DISCONNECTED_KEY = 'wallet-disconnected';
 const logConnectionError = (message) =>
   console.error('Connection error:', message);
 
+// Also module-level: an inline `() => {}` would be a new identity on every
+// render, and useConnect memoises its connect action on it.
+const noop = () => {};
+
 /**
  * Connect / disconnect actions for the page headers (Dashboard, Analytics,
  * AutoTrade, WalletConsolidator, OrdinalExtractor).
  *
  * Wallet state lives in the root OrdConnectProvider (src/index.js). A
  * successful connect or disconnect reloads the page so components that keep
- * their own copies of wallet-derived state start fresh.
+ * their own copies of wallet-derived state start fresh. Restoring a remembered
+ * wallet on load is not done here — see `useWalletAutoReconnect`.
  *
  * @param {{ onError?: (message: string) => void }} [options] onError must be
  *   stable across renders (e.g. a state setter); defaults to console.error.
@@ -26,7 +31,7 @@ const logConnectionError = (message) =>
 export const useWalletConnection = ({ onError = logConnectionError } = {}) => {
   const ordConnect = useOrdConnect();
   const { globalState: bitprint } = useBitprint();
-  const { connectWallet } = useConnect({ onClose: () => {}, onError });
+  const { connectWallet } = useConnect({ onClose: noop, onError });
 
   const isWalletConnected = Boolean(
     ordConnect.address?.ordinals && !(bitprint && bitprint.isDisconnected)

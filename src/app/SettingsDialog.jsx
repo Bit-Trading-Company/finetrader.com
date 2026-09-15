@@ -12,11 +12,12 @@
  */
 import React from 'react';
 import { Button, Modal, SettingsLayout } from '../ui';
-import { BoltIcon, EyeIcon, GlobeIcon } from '../ui/icons';
+import { BoltIcon, EyeIcon, GlobeIcon, ToolsIcon } from '../ui/icons';
 import { useRunSettings } from '../features/trading/RunSettingsContext';
 import RunSettingsFields from '../features/trading/RunSettingsFields';
 import NetworkSettingsFields from '../features/trading/NetworkSettingsFields';
 import DisplaySettingsFields from './DisplaySettingsFields';
+import TroubleshootingFields from './TroubleshootingFields';
 import { DIALOG, useDialogs } from './DialogContext';
 
 const SettingsDialog = () => {
@@ -49,6 +50,14 @@ const SettingsDialog = () => {
       icon: <EyeIcon size={16} />,
       description: 'How the app looks. None of this changes what a run does.',
       render: () => <DisplaySettingsFields />,
+    },
+    {
+      id: 'troubleshooting',
+      label: 'Troubleshooting',
+      icon: <ToolsIcon size={16} />,
+      description:
+        'For when a browser is carrying state from an older build of the app.',
+      render: () => <TroubleshootingFields />,
     },
   ];
 

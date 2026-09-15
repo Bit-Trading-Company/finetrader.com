@@ -66,7 +66,7 @@ module.exports = {
       // The Bitcoin libraries (@noble/*, @scure/*, bitcoinjs-lib and its deps)
       // ship ESM-only builds, which CRA's Jest setup refuses to transform.
       jestConfig.transformIgnorePatterns = [
-        '[/\\\\]node_modules[/\\\\](?!(@noble|@scure|micro-packed|bitcoinjs-lib|bip174|bs58|bs58check|base-x|uint8array-tools|varuint-bitcoin|valibot)[/\\\\]).+\\.(js|jsx|mjs|cjs|ts|tsx)$',
+        '[/\\\\]node_modules[/\\\\](?!(@ordzaar|@noble|@scure|micro-packed|bitcoinjs-lib|bip174|bs58|bs58check|base-x|uint8array-tools|varuint-bitcoin|valibot)[/\\\\]).+\\.(js|jsx|mjs|cjs|ts|tsx)$',
         '^.+\\.module\\.(css|sass|scss)$',
       ];
       // API handler tests live next to the handlers in server/.

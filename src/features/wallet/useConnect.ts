@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   BrowserWalletNotInstalledError,
   BrowserWalletRequestCancelledByUserError,
@@ -10,27 +10,6 @@ import { getAddresses as getUnisatAddresses } from '@ordzaar/ordit-sdk/unisat';
 import { getAddresses as getXverseAddresses } from '@ordzaar/ordit-sdk/xverse';
 import { Chain, Network, useOrdConnect, Wallet } from '@ordzaar/ord-connect';
 import { AddressFormat } from '@ordzaar/ordit-sdk';
-// Utility function to wait for Unisat extension to be ready
-const waitForUnisatExtensionReady = async (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if (typeof window !== 'undefined' && window.unisat) {
-      resolve(true);
-      return;
-    }
-
-    // Wait for the extension to load
-    const checkUnisat = () => {
-      if (typeof window !== 'undefined' && window.unisat) {
-        resolve(true);
-      } else {
-        setTimeout(checkUnisat, 100);
-      }
-    };
-
-    checkUnisat();
-  });
-};
-
 // Extend Window interface to include wallet properties
 declare global {
   interface Window {
@@ -243,6 +222,13 @@ const connectWallet = async (
       throw new Error('Invalid wallet');
   }
 };
+/**
+ * The "connect this wallet" action, for anything with a connect button.
+ *
+ * Restoring a remembered session on load is NOT done here — see
+ * `useWalletAutoReconnect`, which is mounted once at the app root. Keeping it
+ * out of this hook is what stops several copies of it racing each other.
+ */
 export function useConnect({
   onClose = () => {
     // Default no-op function
@@ -262,10 +248,6 @@ export function useConnect({
     updatePublicKey,
     updateFormat,
     disconnectWallet,
-    address: connectedAddress,
-    publicKey: connectedPublicKey,
-    format: connectedFormat,
-    wallet: connectedWallet,
     chain,
   } = useOrdConnect();
 
@@ -330,67 +312,6 @@ export function useConnect({
       onClose,
     ]
   );
-
-  // Reconnect address change listener if a connected wallet exists
-  useEffect(() => {
-    if (connectedWallet !== Wallet.UNISAT) {
-      return undefined;
-    }
-
-    let isMounted = true;
-    let isConnectSuccessful = false;
-    const listener = () => onConnect(Wallet.UNISAT);
-
-    if (connectedAddress && connectedPublicKey && connectedFormat) {
-      const connectToUnisatWalletOnReady = async () => {
-        // Check if we're in a disconnected state - if so, don't auto-reconnect
-        if (
-          typeof window !== 'undefined' &&
-          window.bitprint &&
-          window.bitprint.isDisconnected
-        ) {
-          console.log(
-            'Skipping auto-reconnect - wallet was explicitly disconnected'
-          );
-          return;
-        }
-
-        const isUnisatExtensionReady = await waitForUnisatExtensionReady();
-        if (!isMounted) {
-          return;
-        }
-        if (!isUnisatExtensionReady) {
-          disconnectWallet();
-          return;
-        }
-
-        isConnectSuccessful = await onConnect(Wallet.UNISAT, {
-          readOnly: true,
-        });
-        if (!isMounted) {
-          return;
-        }
-
-        if (isConnectSuccessful) {
-          window.unisat?.addListener('accountsChanged', listener);
-        }
-      };
-      connectToUnisatWalletOnReady();
-    }
-    return () => {
-      isMounted = false;
-      if (isConnectSuccessful) {
-        window.unisat?.removeListener('accountsChanged', listener);
-      }
-    };
-  }, [
-    connectedWallet,
-    connectedAddress,
-    connectedPublicKey,
-    connectedFormat,
-    disconnectWallet,
-    onConnect,
-  ]);
 
   return { connectWallet: onConnect };
 }

@@ -1,0 +1,10 @@
+.stack {
+  display: grid;
+  gap: var(--ds-space-4);
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}

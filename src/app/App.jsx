@@ -20,11 +20,18 @@ import { WalletSessionProvider } from '../features/wallet/WalletSession';
 import { DialogProvider } from './DialogContext';
 import { DisplayPreferencesProvider } from './DisplayPreferences';
 import { RunSettingsProvider } from '../features/trading/RunSettingsContext';
+import { useWalletAutoReconnect } from '../features/wallet/useWalletAutoReconnect';
 
 function App() {
   const location = useLocation();
   /* The remaining pre-redesign routes still want the legacy page background. */
   const isLegacyRoute = ['/home', '/satflow-stats'].includes(location.pathname);
+
+  /*
+   * Exactly one of these in the whole app. It restores a remembered wallet on
+   * load; mounting it per-component is what used to make the page strobe.
+   */
+  useWalletAutoReconnect();
 
   useEffect(() => {
     AOS.init({
