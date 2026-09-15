@@ -334,4 +334,27 @@ export const useWalletSessionBridge = (hub) => {
   useEffect(() => {
     if (hub && selectedWallet) hub.emit('wallet-selected', selectedWallet);
   }, [hub, selectedWallet]);
+
+  /*
+   * Those two effects only fire on a change, so a panel that mounts later —
+   * anything behind a back button, say — would sit empty waiting for a change
+   * that never comes. `request-wallet-state` is the hub's existing way to ask
+   * for the current state; this answers it. Read through a ref so answering
+   * does not re-subscribe on every change.
+   */
+  const stateRef = useRef({ wallets, selectedWallet });
+  stateRef.current = { wallets, selectedWallet };
+
+  useEffect(() => {
+    if (!hub) return undefined;
+    const replay = () => {
+      const current = stateRef.current;
+      if (current.wallets.length > 0) {
+        hub.emit('wallets-generated', current.wallets);
+      }
+      hub.emit('wallet-selected', current.selectedWallet || null);
+    };
+    hub.on('request-wallet-state', replay);
+    return () => hub.off('request-wallet-state', replay);
+  }, [hub]);
 };

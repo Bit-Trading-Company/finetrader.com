@@ -305,7 +305,7 @@ const WalletAnalytics = ({
       {!selectedWallet ? (
         <div className="wallet-analytics-empty">
           <p className="wallet-analytics-empty-text">
-            Select a proxy wallet from the sidebar to view analytics
+            Pick a Fine Trader wallet to view its analytics
           </p>
         </div>
       ) : loading ? (

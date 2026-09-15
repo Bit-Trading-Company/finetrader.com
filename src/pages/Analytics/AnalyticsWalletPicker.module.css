@@ -1,0 +1,143 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-xl);
+  font-weight: 400;
+  color: var(--ds-text);
+}
+
+.subtitle {
+  margin: var(--ds-space-1) 0 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.explainer {
+  display: grid;
+  gap: var(--ds-space-2);
+  max-width: 62ch;
+  margin: 0 auto;
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-muted);
+}
+
+.explainer p {
+  margin: 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(206px, 1fr));
+  gap: var(--ds-space-3);
+}
+
+/*
+ * A card, not a row: this is the page's only decision, so each option gets
+ * room for the figures that make it one. The leading edge lights up on hover
+ * the same way a selected row does elsewhere, so the vocabulary matches.
+ */
+.card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius-md);
+  box-shadow: inset 2px 0 0 transparent;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease);
+}
+
+.card:hover {
+  background: var(--ds-surface-hover);
+  border-color: var(--ds-border-strong);
+  box-shadow: inset 2px 0 0 var(--ds-accent);
+}
+
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+}
+
+.number {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.address {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card:hover .address {
+  color: var(--ds-text-muted);
+}
+
+.figures {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+}
+
+.balance {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-md);
+  color: var(--ds-text);
+}
+
+.pending {
+  margin-top: calc(-1 * var(--ds-space-1));
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-warning);
+}
+
+.meta {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+}

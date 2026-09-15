@@ -12,8 +12,14 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import WalletAnalytics from './WalletAnalytics';
+import AnalyticsWalletPicker from './AnalyticsWalletPicker';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
-import { useWalletSessionBridge } from '../../features/wallet/WalletSession';
+import {
+  useWalletSession,
+  useWalletSessionBridge,
+} from '../../features/wallet/WalletSession';
+import { useProxyWalletBalances } from '../../features/wallet/useProxyWalletBalances';
+import { DIALOG, useDialogs } from '../../app/DialogContext';
 import { fetchWalletOrdinals } from '../../trading/satflow/satflowApi';
 import {
   getMempoolAddressTxsUrl,
@@ -21,7 +27,9 @@ import {
   getMempoolApiBaseUrl,
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
-import { Page, PageHeader } from '../../ui';
+import { Button, Page, PageHeader } from '../../ui';
+import { ChevronLeftIcon } from '../../ui/icons';
+import { shortenAddress } from '../../lib/format';
 import './Analytics.css';
 import { useEventHub } from '../../lib/eventHub';
 import styles from './Analytics.module.css';
@@ -140,6 +148,9 @@ const ProxyWalletOrdinalsSection = ({ glEventHub }) => {
     if (glEventHub) {
       glEventHub.on('wallets-generated', onGenerated);
       glEventHub.on('wallet-selected', onSelect);
+      // This section mounts once a wallet is chosen, which is after the
+      // session has already announced it. Ask for the state we missed.
+      glEventHub.emit('request-wallet-state');
     }
     return () => {
       if (glEventHub) {
@@ -222,8 +233,8 @@ const ProxyWalletOrdinalsSection = ({ glEventHub }) => {
         <h2 className="component-header">Wallet ordinals</h2>
         <div className="analytics-ordinals-empty">
           <p className="analytics-ordinals-empty-text">
-            Generate Fine Trader wallets from the sidebar, then select one to
-            view its ordinals from Satflow.
+            No Fine Trader wallets yet. Generate them, then pick one to see its
+            ordinals from Satflow.
           </p>
         </div>
       </section>
@@ -236,7 +247,7 @@ const ProxyWalletOrdinalsSection = ({ glEventHub }) => {
         <h2 className="component-header">Wallet ordinals</h2>
         <div className="analytics-ordinals-empty">
           <p className="analytics-ordinals-empty-text">
-            Select a Fine Trader wallet to load its ordinals.
+            Pick a Fine Trader wallet to load its ordinals.
           </p>
         </div>
       </section>
@@ -252,8 +263,7 @@ const ProxyWalletOrdinalsSection = ({ glEventHub }) => {
         <h2 className="component-header">Wallet ordinals</h2>
         <div className="analytics-ordinals-empty">
           <p className="analytics-ordinals-empty-text">
-            That proxy wallet is not in the current list. Select a wallet from
-            the sidebar.
+            That wallet is no longer in the current set. Choose another one.
           </p>
         </div>
       </section>
@@ -440,6 +450,9 @@ const ProxyWalletPurchasesSection = ({ glEventHub, network = 'mainnet' }) => {
     if (glEventHub) {
       glEventHub.on('wallets-generated', onGenerated);
       glEventHub.on('wallet-selected', onSelect);
+      // This section mounts once a wallet is chosen, which is after the
+      // session has already announced it. Ask for the state we missed.
+      glEventHub.emit('request-wallet-state');
     }
     return () => {
       if (glEventHub) {
@@ -895,30 +908,73 @@ const ProxyWalletPurchasesSection = ({ glEventHub, network = 'mainnet' }) => {
 
 const Analytics = () => {
   const { network } = useWalletConnection();
+  const session = useWalletSession();
+  const { openDialog } = useDialogs();
   const glEventHub = useEventHub();
   useWalletSessionBridge(glEventHub);
+
+  const wallet = session.selectedWallet;
+
+  /*
+   * Only read balances while the picker is up. They are what makes the choice
+   * a real one, but once a wallet is chosen the panels below report on it in
+   * far more detail, and this would be one Esplora request per wallet for
+   * numbers nobody is looking at.
+   */
+  const balances = useProxyWalletBalances(session.wallets, {
+    network,
+    enabled: !wallet && session.wallets.length > 0,
+  });
 
   return (
     <Page variant="analytics">
       <PageHeader
         title="Analytics"
-        description="What the Fine Trader wallets hold, and what they paid for it."
+        description={
+          wallet
+            ? `Wallet ${wallet.index + 1} — ${shortenAddress(wallet.address)}`
+            : 'What the Fine Trader wallets hold, and what they paid for it.'
+        }
+        actions={
+          wallet && (
+            <Button
+              variant="secondary"
+              iconLeft={<ChevronLeftIcon size={16} />}
+              onClick={() => session.selectWallet(null)}
+            >
+              Choose another wallet
+            </Button>
+          )
+        }
       />
 
-      <div className={`ds-panel ${styles.panel}`}>
-        <WalletAnalytics glEventHub={glEventHub} network={network} />
-      </div>
+      {!wallet ? (
+        <div className={`ds-panel ${styles.panel}`}>
+          <AnalyticsWalletPicker
+            session={session}
+            balances={balances}
+            onSelect={session.selectWallet}
+            onManage={() => openDialog(DIALOG.wallets)}
+          />
+        </div>
+      ) : (
+        <>
+          <div className={`ds-panel ${styles.panel}`}>
+            <WalletAnalytics glEventHub={glEventHub} network={network} />
+          </div>
 
-      <div className={`ds-panel ${styles.panel}`}>
-        <ProxyWalletOrdinalsSection glEventHub={glEventHub} />
-      </div>
+          <div className={`ds-panel ${styles.panel}`}>
+            <ProxyWalletOrdinalsSection glEventHub={glEventHub} />
+          </div>
 
-      <div className={`ds-panel ${styles.panel}`}>
-        <ProxyWalletPurchasesSection
-          glEventHub={glEventHub}
-          network={network}
-        />
-      </div>
+          <div className={`ds-panel ${styles.panel}`}>
+            <ProxyWalletPurchasesSection
+              glEventHub={glEventHub}
+              network={network}
+            />
+          </div>
+        </>
+      )}
     </Page>
   );
 };
