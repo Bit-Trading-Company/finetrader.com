@@ -134,6 +134,21 @@ export const fetchFeeRates = async (network = 'mainnet', options = {}) => {
 };
 
 /**
+ * Floor for a transaction nobody is watching.
+ *
+ * {@link FALLBACK_FEE_RATE} is right where a person can see the number, read
+ * the "explorer unavailable" warning and raise it. An unattended broadcast
+ * has none of that: it is not shown, not adjustable, and once it is out it
+ * either confirms or sits. "The explorer is unreachable" and "the network
+ * genuinely costs 1 sat/vB" are not the same fact, and only the second should
+ * produce a 1 sat/vB transaction.
+ *
+ * 5 is what the trading fee transaction used before fee rates were
+ * centralised, so this restores that floor rather than inventing one.
+ */
+export const UNATTENDED_MIN_FEE_RATE = 5;
+
+/**
  * The rate for a tier, or the fallback when rates are unavailable.
  * @param {{high: number, medium: number, low: number}|null} rates
  * @param {'high'|'medium'|'low'} [tier]
@@ -156,3 +171,15 @@ export const tierForRate = (rates, rate) => {
   const match = FEE_TIERS.find((tier) => rates[tier.id] === rate);
   return match ? match.id : null;
 };
+
+/**
+ * The rate for a transaction sent without anyone watching — the app's own
+ * trading fee, say. Same middle tier as everything else while the network is
+ * reachable; {@link UNATTENDED_MIN_FEE_RATE} rather than the user-facing
+ * fallback when it is not.
+ *
+ * @param {{high: number, medium: number, low: number}|null} rates
+ * @returns {number}
+ */
+export const unattendedRate = (rates) =>
+  rates ? rateForTier(rates, DEFAULT_FEE_TIER) : UNATTENDED_MIN_FEE_RATE;

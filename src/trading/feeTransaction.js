@@ -10,7 +10,7 @@ import {
   getTaprootInternalPubkeyBytes,
   signPsbtWithProxyWallet,
 } from '../lib/bitcoinUtils';
-import { DEFAULT_FEE_TIER, fetchFeeRates, rateForTier } from '../lib/feeRates';
+import { fetchFeeRates, unattendedRate } from '../lib/feeRates';
 import {
   getMempoolTxApiUrl,
   getMempoolAddressUtxoUrl,
@@ -350,13 +350,15 @@ export const sendTradingFee = async (
      * This used to ask for `fastestFee` first, which on a busy day is 40+
      * sat/vB — the fee transaction then cost several times what the user had
      * been quoted anywhere else in the app. It takes the same middle tier
-     * every other flow defaults to, and the same fallback when the network
-     * cannot be reached.
+     * every other flow defaults to.
+     *
+     * Not the same fallback, though. Nobody sees this transaction or can
+     * raise its rate after the fact, so an unreachable explorer keeps the
+     * floor this function has always had rather than dropping to the 1 sat/vB
+     * the on-screen controls fall back to.
      */
-    const getFeeRateSatVb = async () => {
-      const rates = await fetchFeeRates(network);
-      return rateForTier(rates, DEFAULT_FEE_TIER);
-    };
+    const getFeeRateSatVb = async () =>
+      unattendedRate(await fetchFeeRates(network));
 
     const estimateFee = (inputsCount, outputsCount, feeRateSatVb) => {
       // Rough vsize estimates (Taproot key-path):

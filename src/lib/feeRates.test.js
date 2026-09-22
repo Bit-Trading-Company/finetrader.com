@@ -1,9 +1,11 @@
 import {
   DEFAULT_FEE_TIER,
   FALLBACK_FEE_RATE,
+  UNATTENDED_MIN_FEE_RATE,
   fetchFeeRates,
   rateForTier,
   tierForRate,
+  unattendedRate,
 } from './feeRates';
 
 const okJson = (body) => ({ ok: true, json: async () => body });
@@ -104,5 +106,28 @@ describe('tierForRate', () => {
   it('reports no tier for a rate the user typed themselves', () => {
     expect(tierForRate(rates, 17)).toBeNull();
     expect(tierForRate(null, 12)).toBeNull();
+  });
+});
+
+/*
+ * The app's own trading fee is broadcast without anyone seeing the rate or
+ * being able to raise it afterwards. Falling back to 1 sat/vB there — as the
+ * on-screen controls correctly do — would put out a transaction that can sit
+ * unconfirmed indefinitely, at exactly the moment the app knows least.
+ */
+describe('unattendedRate', () => {
+  it('uses the same middle tier as everything else when rates are known', () => {
+    const rates = { high: 42, medium: 18, low: 9 };
+    expect(unattendedRate(rates)).toBe(18);
+    expect(unattendedRate(rates)).toBe(rateForTier(rates, DEFAULT_FEE_TIER));
+  });
+
+  it('follows the network down when it genuinely costs 1 sat/vB', () => {
+    expect(unattendedRate({ high: 1, medium: 1, low: 1 })).toBe(1);
+  });
+
+  it('keeps a floor when no explorer could be reached', () => {
+    expect(unattendedRate(null)).toBe(UNATTENDED_MIN_FEE_RATE);
+    expect(UNATTENDED_MIN_FEE_RATE).toBeGreaterThan(FALLBACK_FEE_RATE);
   });
 });
