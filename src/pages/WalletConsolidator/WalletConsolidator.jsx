@@ -15,7 +15,6 @@ import {
   Badge,
   Button,
   Field,
-  NumberInput,
   Page,
   PageHeader,
   Steps,
@@ -26,6 +25,8 @@ import { formatSatsAsBtc, shortenAddress } from '../../lib/format';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import { useWalletSession } from '../../features/wallet/WalletSession';
 import ConnectWalletPanel from '../../features/wallet/ConnectWalletPanel';
+import FeeRateField from '../../features/fees/FeeRateField';
+import { useFeeRates } from '../../features/fees/useFeeRates';
 import WalletSubsetPanel from '../../features/wallet/WalletSubsetPanel';
 import { DIALOG, useDialogs } from '../../app/DialogContext';
 import {
@@ -48,11 +49,14 @@ const WalletConsolidator = () => {
 
   const { wallets, activeWallets } = session;
 
+  // Network fee, read from the chain rather than guessed.
+  const fees = useFeeRates({ network });
+  const { feeRate } = fees;
+
   // Where the coin lands.
   const [useConnectedWallet, setUseConnectedWallet] = useState(true);
   const [customAddress, setCustomAddress] = useState('');
 
-  const [feeRate, setFeeRate] = useState(1);
   const [isConsolidating, setIsConsolidating] = useState(false);
   const [preview, setPreview] = useState(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -121,7 +125,6 @@ const WalletConsolidator = () => {
       wallets: activeWallets,
       destinationAddress: destination,
       network,
-      feeRate,
       addLog: log,
       onWalletComplete: () => {},
       isStopRequested: () => stopRequested.current,
@@ -216,16 +219,11 @@ const WalletConsolidator = () => {
         render: () => (
           <div className={styles.stack}>
             <div className={styles.controls}>
-              <Field label="Fee rate" hint="sat/vbyte" className={styles.fee}>
-                <NumberInput
-                  min="1"
-                  value={feeRate}
-                  disabled={isConsolidating}
-                  onChange={(event) =>
-                    setFeeRate(Math.max(1, Number(event.target.value) || 1))
-                  }
-                />
-              </Field>
+              <FeeRateField
+                fees={fees}
+                disabled={isConsolidating}
+                hint="What the sweep pays to confirm."
+              />
               <Button
                 variant="secondary"
                 onClick={handlePreview}
@@ -298,10 +296,10 @@ const WalletConsolidator = () => {
       openDialog,
       destinationValid,
       destination,
+      fees,
       useConnectedWallet,
       customAddress,
       addressError,
-      feeRate,
       isConsolidating,
       isPreviewing,
       preview,

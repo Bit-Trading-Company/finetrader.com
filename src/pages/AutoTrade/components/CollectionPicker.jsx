@@ -11,7 +11,10 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCollectionSlug } from '../../../features/marketplace/collectionsApi';
-import { getTradingApi } from '../../../trading/exchanges';
+import {
+  TRADING_EXCHANGE_OPTIONS,
+  getTradingApi,
+} from '../../../trading/exchanges';
 import { formatCompactNumber, formatSatsAsBtc } from '../../../lib/format';
 import { Alert, Button, Loading, Select, Table, TextInput } from '../../../ui';
 import styles from './CollectionPicker.module.css';
@@ -61,6 +64,11 @@ const Change = ({ value }) => {
  * @param {object[]} [props.wallets] ord.net authenticates even its reads
  * @param {boolean} [props.connected] a browser wallet is connected, which
  *   ord.net can sign a read session with when no proxy wallet qualifies
+ * @param {(exchange: string) => void} [props.onExchangeChange] when given,
+ *   the picker shows which marketplace it is browsing and lets the user
+ *   switch. The two have separate collection namespaces, so knowing which
+ *   list you are looking at is part of choosing from it.
+ * @param {boolean} [props.exchangeLocked] a run is in progress
  */
 const CollectionPicker = ({
   selected,
@@ -69,6 +77,8 @@ const CollectionPicker = ({
   exchange,
   wallets,
   connected = false,
+  onExchangeChange,
+  exchangeLocked = false,
 }) => {
   const api = getTradingApi(exchange);
   /*
@@ -244,6 +254,41 @@ const CollectionPicker = ({
 
   return (
     <div className={styles.picker}>
+      {onExchangeChange && (
+        <div className={styles.market}>
+          <span className={styles.marketLabel} id="collection-market-label">
+            Marketplace
+          </span>
+          <div
+            className={styles.marketOptions}
+            role="group"
+            aria-labelledby="collection-market-label"
+          >
+            {TRADING_EXCHANGE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={[
+                  styles.marketOption,
+                  option.id === api.id ? styles.marketOptionActive : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => onExchangeChange(option.id)}
+                disabled={exchangeLocked}
+                aria-pressed={option.id === api.id}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <span className={styles.marketHint}>
+            Collections are listed per marketplace — you trade on the one you
+            pick from.
+          </span>
+        </div>
+      )}
+
       <form className={styles.search} onSubmit={runSearch}>
         <TextInput
           value={term}

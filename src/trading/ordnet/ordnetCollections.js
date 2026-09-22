@@ -16,6 +16,7 @@
  * 30-per-minute per-profile budget.
  */
 import { ordNetFetch, getReadSession } from './ordnetTrading';
+import { EXCHANGE_IDS } from '../exchangeIds';
 
 /** Listing pages to walk. Each is one read; 4 x 100 covers the active book. */
 const MAX_PAGES = 4;
@@ -105,6 +106,9 @@ export const fetchOrdNetCollections = async (options = {}) => {
     .map((entry) => {
       const stat = stats.get(entry.slug);
       return {
+        // Stamped so nothing downstream can send an ord.net slug to Satflow
+        // or the other way round — the two use separate namespaces.
+        exchange: EXCHANGE_IDS.ORDNET,
         collectionSymbol: entry.slug,
         collectionId: entry.slug,
         name: entry.name,

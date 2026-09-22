@@ -224,6 +224,8 @@ const AdvancedView = ({
                 onSelect={selectCollection}
                 variant="table"
                 exchange={settings.tradingExchange}
+                onExchangeChange={settings.setTradingExchange}
+                exchangeLocked={isTrading}
                 wallets={wallets}
                 connected={readiness.connected}
               />

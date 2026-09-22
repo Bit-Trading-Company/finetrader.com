@@ -21,7 +21,6 @@ import {
   Button,
   Checkbox,
   Field,
-  NumberInput,
   Page,
   PageHeader,
   Steps,
@@ -32,6 +31,8 @@ import { shortenAddress } from '../../lib/format';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import { useWalletSession } from '../../features/wallet/WalletSession';
 import ConnectWalletPanel from '../../features/wallet/ConnectWalletPanel';
+import FeeRateField from '../../features/fees/FeeRateField';
+import { useFeeRates } from '../../features/fees/useFeeRates';
 import WalletSubsetPanel from '../../features/wallet/WalletSubsetPanel';
 import { DIALOG, useDialogs } from '../../app/DialogContext';
 import {
@@ -96,7 +97,9 @@ const OrdinalExtractor = () => {
   const [useConnectedDestination, setUseConnectedDestination] = useState(true);
   const [customDestination, setCustomDestination] = useState('');
   const [includeConnectedWallet, setIncludeConnectedWallet] = useState(true);
-  const [feeRate, setFeeRate] = useState(1);
+  // Network fee, read from the chain rather than guessed.
+  const fees = useFeeRates({ network });
+  const { feeRate } = fees;
 
   const [isScanning, setIsScanning] = useState(false);
   const [scanned, setScanned] = useState({});
@@ -455,16 +458,11 @@ const OrdinalExtractor = () => {
       render: () => (
         <div className={styles.stack}>
           <div className={styles.controls}>
-            <Field label="Fee rate" hint="sat/vbyte" className={styles.fee}>
-              <NumberInput
-                min="1"
-                value={feeRate}
-                disabled={isExtracting}
-                onChange={(event) =>
-                  setFeeRate(Math.max(1, Number(event.target.value) || 1))
-                }
-              />
-            </Field>
+            <FeeRateField
+              fees={fees}
+              disabled={isExtracting}
+              hint="What each extraction pays to confirm."
+            />
             <Button
               size="lg"
               variant={isExtracting ? 'danger' : 'primary'}

@@ -15,6 +15,10 @@ import {
 } from '../../../trading/autoTradeEngine';
 import { TRADING_EXCHANGES, getTradingApi } from '../../../trading/exchanges';
 import {
+  collectionMatchesExchange,
+  getCollectionSlug,
+} from '../../../features/marketplace/collectionsApi';
+import {
   checkOrdNetEligibility,
   formatMinFunding,
 } from '../../../trading/ordnet/ordnetTrading';
@@ -148,6 +152,22 @@ export const useAutoTradeRunner = ({
       // Validate
       if (!selectedCollection || activeWallets.length === 0) {
         addConsoleLog('✗ Cannot start trading: Missing collection or wallets');
+        endRun();
+        return;
+      }
+
+      /*
+       * Last line of defence against trading a collection on the wrong
+       * marketplace. The workspace already clears the selection when the
+       * exchange changes, but the engine resolves the collection symbol in
+       * four separate places and hands it to whichever adapter is active, so
+       * a mismatch that slipped through would be sent to an API that has
+       * never heard of it — silently looping on range trading.
+       */
+      if (!collectionMatchesExchange(selectedCollection, tradingExchange)) {
+        addConsoleLog(
+          `✗ ${selectedCollection.name || getCollectionSlug(selectedCollection)} is not a ${exchangeApi.label} collection. Pick one from ${exchangeApi.label}.`
+        );
         endRun();
         return;
       }

@@ -7,20 +7,18 @@
  * - buyXFromEachWallet: buy up to X floor listings per proxy wallet, then stop.
  * - sellXFromEachWallet: list X items from each proxy wallet, then stop.
  *
- * Marketplace calls go through the adapter returned by getTradingApi(exchange)
- * (see ./exchanges); token ids, chain lookups, balances and the trading fee
- * transaction are exchange-independent and imported directly.
+ * Marketplace calls go through the adapter returned by
+ * requireTradingApi(exchange) (see ./exchanges), which throws rather than
+ * falling back: every function here spends real coin, and a missing exchange
+ * silently defaulting to Satflow would trade on the wrong marketplace. Token
+ * ids, chain lookups, balances and the trading fee transaction are
+ * exchange-independent and imported directly.
  */
 
 import { getMempoolTxUrl } from '../lib/mempoolProvider';
 import { getBuyerCandidates } from './buyerSelection';
 import { checkTransactionConfirmed, fetchWalletBalance } from './chain';
-import {
-  TRADING_EXCHANGES,
-  getTradingApi,
-  getItemLink,
-  getExchangeLabel,
-} from './exchanges';
+import { requireTradingApi, getItemLink, getExchangeLabel } from './exchanges';
 import { estimateAutoTradePurchaseCost } from './fees';
 import { sendTradingFee } from './feeTransaction';
 import {
@@ -73,9 +71,9 @@ export const processWalletItems = async ({
   tradePrice = null,
   isStopRequested = null,
   prepDelay = 3000,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
 }) => {
-  const api = getTradingApi(exchange);
+  const api = requireTradingApi(exchange);
   if (typeof isStopRequested === 'function' && isStopRequested()) {
     return {
       itemsListed: 0,
@@ -649,7 +647,7 @@ const waitForListingAvailable = async (
   collectionSymbol,
   tokenId,
   timeout = 10000,
-  api = getTradingApi(TRADING_EXCHANGES.SATFLOW),
+  api,
   walletContext = {}
 ) => {
   const startTime = Date.now();
@@ -719,11 +717,11 @@ const tryPreparePurchaseForItem = async (
   addConsoleLog,
   isStopRequested,
   useFees = true,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
   collectionSymbol = null,
   selectedCollection = null
 ) => {
-  const api = getTradingApi(exchange);
+  const api = requireTradingApi(exchange);
   const itemPrice = item.listedPrice || 0;
   const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   const tokenId = getTokenId(item);
@@ -818,11 +816,11 @@ const tryPreparePurchaseFromFloorForBuyer = async (
   addConsoleLog,
   isStopRequested,
   useFees = true,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
   collectionSymbol = null,
   selectedCollection = null
 ) => {
-  const api = getTradingApi(exchange);
+  const api = requireTradingApi(exchange);
   const itemPrice = item.listedPrice || 0;
   const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   const tokenId = getTokenId(item);
@@ -915,7 +913,7 @@ const tryPreparePurchaseFromFloor = async (
   addConsoleLog,
   isStopRequested,
   useFees = true,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
   collectionSymbol = null,
   selectedCollection = null
 ) => {
@@ -992,9 +990,9 @@ export const buyItemsFromFloor = async ({
   useFees = true,
   isStopRequested = null,
   prepDelay = 3000,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
 }) => {
-  const api = getTradingApi(exchange);
+  const api = requireTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
     selectedCollection.symbol ||
@@ -1289,9 +1287,9 @@ export const buyXFromEachWallet = async ({
   useFees = true,
   isStopRequested = null,
   prepDelay = 3000,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
 }) => {
-  const api = getTradingApi(exchange);
+  const api = requireTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
     selectedCollection.symbol ||
@@ -1569,9 +1567,9 @@ export const sellXFromEachWallet = async ({
   addConsoleLog,
   useCustomPrice = false,
   customPrice = 0,
-  exchange = TRADING_EXCHANGES.SATFLOW,
+  exchange,
 }) => {
-  const api = getTradingApi(exchange);
+  const api = requireTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
     selectedCollection.symbol ||
