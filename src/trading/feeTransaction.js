@@ -357,8 +357,10 @@ export const sendTradingFee = async (
      * floor this function has always had rather than dropping to the 1 sat/vB
      * the on-screen controls fall back to.
      */
-    const getFeeRateSatVb = async () =>
-      unattendedRate(await fetchFeeRates(network));
+    const getFeeRateSatVb = async () => {
+      const rates = await fetchFeeRates(network);
+      return unattendedRate(rates);
+    };
 
     const estimateFee = (inputsCount, outputsCount, feeRateSatVb) => {
       // Rough vsize estimates (Taproot key-path):
