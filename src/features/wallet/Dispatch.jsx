@@ -10,6 +10,8 @@ import {
 } from '../../lib/mempoolProvider';
 import { fetchAddressUtxos } from '../../lib/addressUtxos';
 import { shortenAddress } from '../../lib/format';
+import FeeRateField from '../fees/FeeRateField';
+import { useFeeRates } from '../fees/useFeeRates';
 
 /**
  * Detect Bitcoin address format from address string
@@ -82,7 +84,9 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
 
   // State for distribution
   const [walletAmounts, setWalletAmounts] = useState({});
-  const [feeRate, setFeeRate] = useState(4); // Default fee rate in sats/vbyte
+  // Network fee, read from the chain rather than defaulted to a guess.
+  const fees = useFeeRates({ network: connectedNetwork || 'mainnet' });
+  const { feeRate } = fees;
   const [estimatedFee, setEstimatedFee] = useState(0); // Calculated total fee in satoshis
 
   // State for PSBT workflow
@@ -959,24 +963,10 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
             {proxyWallets.length > 0 && selectedUtxos.length > 0 && (
               <div className="dispatch-section">
                 <h3>Transaction Fee</h3>
-                <div className="dispatch-fee-controls">
-                  <label htmlFor="dispatch-fee-rate">
-                    Fee Rate (sats/vbyte):
-                  </label>
-                  <input
-                    id="dispatch-fee-rate"
-                    type="number"
-                    value={feeRate}
-                    onChange={(e) =>
-                      setFeeRate(Math.max(1, parseInt(e.target.value) || 1))
-                    }
-                    min="1"
-                    placeholder="4"
-                  />
-                  <span className="dispatch-fee-total">
-                    Total: {estimatedFee} sats ({formatBTC(estimatedFee)} BTC)
-                  </span>
-                </div>
+                <FeeRateField
+                  fees={fees}
+                  hint={`Total: ${estimatedFee} sats (${formatBTC(estimatedFee)} BTC)`}
+                />
               </div>
             )}
 

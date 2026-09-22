@@ -10,9 +10,8 @@ import {
   getTaprootInternalPubkeyBytes,
   signPsbtWithProxyWallet,
 } from '../lib/bitcoinUtils';
+import { DEFAULT_FEE_TIER, fetchFeeRates, rateForTier } from '../lib/feeRates';
 import {
-  getMempoolRecommendedFeesUrl,
-  getMempoolFeeEstimatesUrl,
   getMempoolTxApiUrl,
   getMempoolAddressUtxoUrl,
   getMempoolAddressTxsMempoolUrl,
@@ -347,44 +346,16 @@ export const sendTradingFee = async (
       return null;
     };
 
+    /*
+     * This used to ask for `fastestFee` first, which on a busy day is 40+
+     * sat/vB — the fee transaction then cost several times what the user had
+     * been quoted anywhere else in the app. It takes the same middle tier
+     * every other flow defaults to, and the same fallback when the network
+     * cannot be reached.
+     */
     const getFeeRateSatVb = async () => {
-      const MIN_FEE_TX_RATE_SAT_VB = 5;
-      try {
-        const recoUrl = getMempoolRecommendedFeesUrl(network);
-        if (recoUrl) {
-          const data = await safeFetchJson(recoUrl);
-          const v =
-            data?.fastestFee ??
-            data?.halfHourFee ??
-            data?.hourFee ??
-            data?.economyFee;
-          const n = Number(v);
-          if (Number.isFinite(n) && n > 0) {
-            return Math.max(MIN_FEE_TX_RATE_SAT_VB, Math.ceil(n));
-          }
-        }
-      } catch {
-        // ignore and fall back
-      }
-      try {
-        const est = await safeFetchJson(getMempoolFeeEstimatesUrl(network));
-        const keys = ['1', '2', '3', '6', '10', '25'];
-        for (const k of keys) {
-          const n = Number(est?.[k]);
-          if (Number.isFinite(n) && n > 0) {
-            return Math.max(MIN_FEE_TX_RATE_SAT_VB, Math.ceil(n));
-          }
-        }
-        const any = Object.values(est || {}).find(
-          (v) => Number.isFinite(Number(v)) && Number(v) > 0
-        );
-        if (any != null) {
-          return Math.max(MIN_FEE_TX_RATE_SAT_VB, Math.ceil(Number(any)));
-        }
-      } catch {
-        // ignore
-      }
-      return MIN_FEE_TX_RATE_SAT_VB;
+      const rates = await fetchFeeRates(network);
+      return rateForTier(rates, DEFAULT_FEE_TIER);
     };
 
     const estimateFee = (inputsCount, outputsCount, feeRateSatVb) => {

@@ -10,7 +10,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import { useWalletSession } from '../../features/wallet/WalletSession';
 import { useProxyWalletBalances } from '../../features/wallet/useProxyWalletBalances';
-import { getCollectionSlug } from '../../features/marketplace/collectionsApi';
+import {
+  collectionMatchesExchange,
+  getCollectionSlug,
+} from '../../features/marketplace/collectionsApi';
+import { getExchangeLabel } from '../../trading/exchanges';
 import { getTradingApi } from '../../trading/exchanges';
 import { useActivityLog } from '../../lib/useActivityLog';
 import { useRunSettings } from '../../features/trading/RunSettingsContext';
@@ -142,6 +146,26 @@ export const useAutoTradeWorkspace = () => {
     };
   }, [collectionSlug, tradingExchange, wallets, network]);
 
+  /*
+   * Satflow and ord.net keep separate collection namespaces, so a collection
+   * picked on one is meaningless on the other: ord.net would be asked for
+   * `/collection/<satflow-slug>/…` and 404 on every call. Delta-neutral fails
+   * fast on the missing floor price, but range trading supplies its own price
+   * and so never looks the floor up — it would run forever, erroring once per
+   * wallet per cycle and never trading. Rather than validate at the point of
+   * failure, drop the selection the moment the marketplace changes under it.
+   */
+  useEffect(() => {
+    if (!selectedCollection) return;
+    if (collectionMatchesExchange(selectedCollection, tradingExchange)) return;
+
+    setSelectedCollection(null);
+    setFloorPriceSats(null);
+    addConsoleLog(
+      `Cleared ${selectedCollection.name || getCollectionSlug(selectedCollection)}: it is not listed on ${getExchangeLabel(tradingExchange)}. Choose a collection from ${getExchangeLabel(tradingExchange)}.`
+    );
+  }, [tradingExchange, selectedCollection, addConsoleLog]);
+
   /** Fill the range-trading prices from the floor the user can see. */
   const applyFloorPrice = useCallback(() => {
     if (!floorPriceSats) return;
@@ -178,11 +202,14 @@ export const useAutoTradeWorkspace = () => {
    */
   const readiness = useMemo(() => {
     const funded = balances.totals.funded > 0;
+    const hasCollection =
+      Boolean(selectedCollection) &&
+      collectionMatchesExchange(selectedCollection, tradingExchange);
     return {
       connected: session.isWalletConnected,
       hasWallets: wallets.length > 0,
       funded,
-      hasCollection: Boolean(selectedCollection),
+      hasCollection,
       /** The first unmet requirement, or null when ready to trade. */
       blocker: !session.isWalletConnected
         ? 'Connect a wallet'
@@ -190,8 +217,8 @@ export const useAutoTradeWorkspace = () => {
           ? 'Create proxy wallets'
           : !funded
             ? 'Fund at least one wallet'
-            : !selectedCollection
-              ? 'Choose a collection'
+            : !hasCollection
+              ? `Choose a collection on ${getExchangeLabel(tradingExchange)}`
               : null,
     };
   }, [
@@ -199,6 +226,7 @@ export const useAutoTradeWorkspace = () => {
     wallets.length,
     balances.totals.funded,
     selectedCollection,
+    tradingExchange,
   ]);
 
   return {

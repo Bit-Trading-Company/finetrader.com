@@ -180,6 +180,8 @@ const SimpleFlow = ({
           selected={selectedCollection}
           onSelect={selectCollection}
           exchange={settings.tradingExchange}
+          onExchangeChange={settings.setTradingExchange}
+          exchangeLocked={isTrading}
           wallets={wallets}
           connected={readiness.connected}
         />

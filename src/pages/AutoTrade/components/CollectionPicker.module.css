@@ -123,6 +123,83 @@
   color: var(--ds-text-faint);
 }
 
+/* Marketplace ------------------------------------------------------------- */
+
+/*
+ * Which order book you are looking at, above the list rather than beside it.
+ * Satflow and ord.net keep separate collection namespaces, so "which list is
+ * this?" is part of reading the list, not a setting filed elsewhere.
+ */
+.market {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2) var(--ds-space-3);
+  padding-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.marketLabel {
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ds-text-faint);
+}
+
+/* A segmented control: one surface, split, with the live one filled. */
+.marketOptions {
+  display: flex;
+  padding: 2px;
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius-md);
+}
+
+.marketOption {
+  padding: var(--ds-space-1) var(--ds-space-3);
+  font: inherit;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.marketOption:hover:not(:disabled) {
+  color: var(--ds-text);
+}
+
+.marketOption:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+.marketOption:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.marketOptionActive,
+.marketOptionActive:hover:not(:disabled) {
+  color: var(--ds-text-inverse);
+  background: var(--ds-accent);
+}
+
+/*
+ * Pushed to its own line on narrow panels rather than squeezing the control:
+ * the sentence is the explanation, the buttons are the thing being used.
+ */
+.marketHint {
+  flex: 1 1 14rem;
+  min-width: 0;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-faint);
+}
+
 /* Table variant ------------------------------------------------------------ */
 
 .tableWrap {

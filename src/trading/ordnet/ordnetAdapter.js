@@ -16,10 +16,11 @@ import {
   fetchOrdNetCollections,
   searchOrdNetCollections,
 } from './ordnetCollections';
+import { EXCHANGE_IDS } from '../exchangeIds';
 
 /** @type {import('../exchanges').MarketplaceAdapter} */
 export const ordnetAdapter = {
-  id: 'ordnet',
+  id: EXCHANGE_IDS.ORDNET,
   label: 'ord.net',
   getItemUrl: (inscriptionId) => `https://ord.net/inscription/${inscriptionId}`,
   // Reads go through a BIP-322 session signed by a proxy wallet.

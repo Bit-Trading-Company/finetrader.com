@@ -20,10 +20,11 @@ import {
   fetchTopCollections,
   searchCollections as searchSatflowCollections,
 } from '../../features/marketplace/collectionsApi';
+import { EXCHANGE_IDS } from '../exchangeIds';
 
 /** @type {import('../exchanges').MarketplaceAdapter} */
 export const satflowAdapter = {
-  id: 'satflow',
+  id: EXCHANGE_IDS.SATFLOW,
   label: 'Satflow',
   getItemUrl: (inscriptionId) =>
     `https://ordinals.com/inscription/${inscriptionId}`,

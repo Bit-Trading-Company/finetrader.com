@@ -158,15 +158,23 @@
 }
 
 .cast {
-  width: 100%;
+  /*
+   * The three characters occupy the bottom 798px of the 2048px-tall artwork,
+   * so the image is 2732/798 = 3.42 times wider than the part that matters.
+   * `cover` scales from whichever axis needs more, which means that once the
+   * element grows wider than 3.42 times its height the scale is driven by the
+   * width and the tops of their heads get sliced off.
+   *
+   * Capping the width against the band height keeps all three whole at every
+   * viewport. 3.3 rather than 3.42 leaves a little air above the ears.
+   */
+  --cast-h: clamp(210px, 46vh, 560px);
+  --cast-w: 100%;
+
+  height: var(--cast-h);
+  width: min(var(--cast-w), calc(var(--cast-h) * 3.3));
   /* Never shrink to fit: on small screens the image is wider than the stage. */
   flex-shrink: 0;
-  /*
-   * The characters live in the bottom ~45% of a 4:3 image. `cover` with a
-   * bottom anchor crops the empty top on wide screens and crops the outer
-   * shoulders on narrow ones, keeping the faces a usable size throughout.
-   */
-  height: clamp(210px, 46vh, 560px);
   object-fit: cover;
   object-position: center bottom;
   user-select: none;
@@ -232,8 +240,13 @@
    * shoulder off each side.
    */
   .cast {
-    width: 175%;
-    height: clamp(210px, 32vh, 320px);
+    /*
+     * Wider than the viewport on purpose: it lets the image's width drive the
+     * `cover` scale so the faces stay legible, at the cost of a shoulder off
+     * each of the outer two. The height cap above still keeps the heads in.
+     */
+    --cast-w: 175%;
+    --cast-h: clamp(210px, 32vh, 320px);
   }
 
   /* Too narrow for one line: let it wrap, and balance the two. */
@@ -275,22 +288,10 @@
   }
 
   .cast {
-    height: clamp(150px, 34vh, 260px);
+    --cast-h: clamp(150px, 34vh, 260px);
   }
 
   .copy {
     padding-top: var(--ds-space-2);
-  }
-}
-
-/*
- * Short *and* wide — a half-height desktop window. Here `cover` would scale
- * the artwork from the viewport width and crop the tops of the heads off. The
- * characters occupy roughly a 2732:921 slice, so holding the image to about
- * three times the band's height keeps all three of them whole.
- */
-@media (max-height: 620px) and (min-width: 561px) {
-  .cast {
-    width: min(100%, 96vh);
   }
 }

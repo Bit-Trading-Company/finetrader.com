@@ -77,6 +77,29 @@ export const TRADING_EXCHANGE_OPTIONS = ADAPTERS.map(({ id, label }) => ({
 export const getTradingApi = (exchange) =>
   ADAPTERS_BY_ID[exchange] || satflowAdapter;
 
+/**
+ * Adapter for an exchange id, refusing anything it does not recognise.
+ *
+ * `getTradingApi` falls back to Satflow, which is right for read-only UI that
+ * may render before a marketplace is chosen. It is wrong for anything that
+ * spends coin: a missing or misspelled id there would quietly buy and list on
+ * Satflow while the user believed they were trading on ord.net. Every
+ * money-moving path in ./autoTradeEngine resolves its adapter through this.
+ *
+ * @param {string} exchange
+ * @returns {MarketplaceAdapter}
+ * @throws {Error} when `exchange` names no registered marketplace
+ */
+export const requireTradingApi = (exchange) => {
+  const api = ADAPTERS_BY_ID[exchange];
+  if (!api) {
+    throw new Error(
+      `Unknown trading exchange "${exchange}". Expected one of: ${ADAPTERS.map((a) => a.id).join(', ')}.`
+    );
+  }
+  return api;
+};
+
 /** Display name for an exchange id. */
 export const getExchangeLabel = (exchange) => getTradingApi(exchange).label;
 
