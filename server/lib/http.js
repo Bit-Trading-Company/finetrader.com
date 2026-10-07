@@ -194,10 +194,20 @@ function safeSubpath(raw) {
  * non-JSON error bodies are wrapped as `{ error, status, message }` so clients
  * can always call `response.json()` on failures.
  */
+/**
+ * Pass an upstream Retry-After through, so a rate-limited client can see how
+ * long the API itself asked it to wait.
+ */
+function relayRetryAfter(upstream, res) {
+  const retryAfter = upstream.headers?.get?.('retry-after');
+  if (retryAfter) res.setHeader('Retry-After', retryAfter);
+}
+
 async function relayJson(upstream, res) {
   const text = await upstream.text();
   const json = text ? tryParseJson(text) : undefined;
   res.status(upstream.status);
+  relayRetryAfter(upstream, res);
   if (json !== undefined) {
     res.json(json);
     return;
@@ -222,6 +232,7 @@ async function relayRaw(upstream, res, text) {
   const body = text === undefined ? await upstream.text() : text;
   const contentType = upstream.headers.get('content-type') || '';
   res.status(upstream.status);
+  relayRetryAfter(upstream, res);
   res.setHeader(
     'Content-Type',
     contentType.includes('json') || !contentType

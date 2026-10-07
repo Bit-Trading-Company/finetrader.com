@@ -11,6 +11,7 @@ import App from './app/App';
 import { BrowserRouter } from 'react-router-dom';
 import { OrdConnectProvider } from '@ordzaar/ord-connect';
 import ErrorBoundary from './app/ErrorBoundary';
+import { installRateLimitMonitor } from './lib/rateLimitMonitor';
 // Global design tokens and fonts (used by every stylesheet).
 import './styles/tokens.css';
 import './styles/fonts.css';
@@ -99,6 +100,9 @@ window.addEventListener('unhandledrejection', function (event) {
     return false;
   }
 });
+
+// Report API rate limits to the trading console (see lib/rateLimitMonitor).
+installRateLimitMonitor(window);
 
 const rootElement = document.getElementById('root');
 
