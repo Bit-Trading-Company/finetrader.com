@@ -33,12 +33,17 @@ const createResponse = () => {
 
 const upstreamResponse = (
   body,
-  { status = 200, contentType = 'application/json' } = {}
+  { status = 200, contentType = 'application/json', retryAfter = null } = {}
 ) => ({
   ok: status >= 200 && status < 300,
   status,
   headers: {
-    get: (name) => (name.toLowerCase() === 'content-type' ? contentType : null),
+    get: (name) => {
+      const key = name.toLowerCase();
+      if (key === 'content-type') return contentType;
+      if (key === 'retry-after') return retryAfter;
+      return null;
+    },
   },
   text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
 });
@@ -128,6 +133,21 @@ describe('handleSatflow', () => {
     expect(res.body).toEqual({ error: 'rate limited' });
   });
 
+  it("passes the upstream's Retry-After through to the browser", async () => {
+    global.fetch.mockResolvedValueOnce(
+      upstreamResponse(
+        { error: 'rate limited' },
+        { status: 429, retryAfter: '30' }
+      )
+    );
+    const res = createResponse();
+    await handleSatflow(
+      request({ query: { op: 'wallet-contents', address: 'bc1p' } }),
+      res
+    );
+    expect(res.headers['retry-after']).toBe('30');
+  });
+
   it('wraps non-JSON upstream errors so clients can parse them', async () => {
     global.fetch.mockResolvedValueOnce(
       upstreamResponse('<html>Bad gateway</html>', {
@@ -210,6 +230,57 @@ describe('handleOrdnet', () => {
     );
     expect(init.headers.authorization).toBe('Bearer session');
     expect(init.body).toBe('{"items":[1]}');
+  });
+
+  it('keeps its cache-buster to itself and still refreshes on it', async () => {
+    const read = (query) =>
+      handleOrdnet(
+        request({
+          query: {
+            path: '/listings',
+            collectionSlug: 'cache-buster',
+            ...query,
+          },
+          headers: { authorization: 'Bearer reader' },
+        }),
+        createResponse()
+      );
+
+    global.fetch = jest.fn(async () => ({
+      ...upstreamResponse({ listings: [] }),
+      json: async () => ({ listings: [] }),
+    }));
+
+    await read({});
+    await read({ _t: '1' });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    // ord.net documents no `_t`, so it never sees one.
+    expect(lastFetch().url).toBe(
+      'https://ord.net/api/v1/listings?collectionSlug=cache-buster'
+    );
+
+    await read({});
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("passes ord.net's Retry-After through, so the client waits as long as asked", async () => {
+    global.fetch.mockResolvedValueOnce(
+      upstreamResponse(
+        { error: 'Rate limited' },
+        { status: 429, retryAfter: '17' }
+      )
+    );
+    const res = createResponse();
+    await handleOrdnet(
+      request({
+        method: 'POST',
+        query: { path: '/collection/x/purchases/preflight' },
+        body: {},
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(429);
+    expect(res.headers['retry-after']).toBe('17');
   });
 
   it('rejects double-encoded path traversal', async () => {

@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Authentication
 Source: https://developers.ord.net/reference/authentication/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
@@ -117,7 +117,6 @@ Verifies one or more signed challenges and issues a session token on success.
 | `profile` | object | Your profile metadata. |
 | `profile.id` | string | Stable profile id. |
 | `profile.username` | string | null | Profile username. |
-| `profile.displayName` | string | null | Profile display name. |
 | `profile.bio` | string | null | Profile bio. |
 | `profile.avatarUrl` | string | null | Profile avatar image URL. |
 | `profile.bannerUrl` | string | null | Profile banner image URL. |
@@ -136,7 +135,6 @@ Verifies one or more signed challenges and issues a session token on success.
   "profile": {
     "id": "44444444-4444-4444-4444-444444444444",
     "username": "alice",
-    "displayName": "Alice",
     "bio": null,
     "avatarUrl": null,
     "bannerUrl": null
@@ -201,7 +199,6 @@ Returns the profile and wallet bindings without starting a new auth flow.
   "profile": {
     "id": "44444444-4444-4444-4444-444444444444",
     "username": "alice",
-    "displayName": "Alice",
     "bio": null,
     "avatarUrl": null,
     "bannerUrl": null
@@ -221,7 +218,7 @@ Returns the profile and wallet bindings without starting a new auth flow.
 
 ## Funding requirement
 
-To issue a `sessionToken`, `/auth/verify` checks the verified `paymentAddress` from the auth flow for at least **0.01 BTC confirmed**. Pick the wallet address that should satisfy this requirement when you call `/auth/challenge`.
+To issue a `sessionToken`, `/auth/verify` checks the verified `paymentAddress` from the auth flow for at least **0.001 BTC (100,000 sats) confirmed**. Pick the wallet address that should satisfy this requirement when you call `/auth/challenge`.
 
 | Status | When |
 | --- | --- |
@@ -255,5 +252,5 @@ Invalid or expired token:
 ```
 
 [Previous  
-Overview](/) [Next  
+Overview](/)[Next  
 Collections](/reference/collections/)

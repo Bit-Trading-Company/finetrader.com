@@ -4,7 +4,7 @@
   "info": {
     "title": "ORD.NET Trading API",
     "version": "1.0.0",
-    "description": "Wallet-authenticated JSON API for reading listings, creating listings, buying listings, and managing inscription offers."
+    "description": "Wallet-authenticated JSON API for reading listings and public P2P trade proposals, creating listings, buying listings, and managing inscription offers."
   },
   "servers": [
     {
@@ -31,6 +31,9 @@
     },
     {
       "name": "Sales"
+    },
+    {
+      "name": "Trading"
     },
     {
       "name": "Buying"
@@ -296,6 +299,57 @@
         }
       }
     },
+    "/trading": {
+      "get": {
+        "tags": ["Trading"],
+        "operationId": "listTradeProposals",
+        "summary": "List active public P2P trade proposals",
+        "description": "Returns proposals that are public, active, and unexpired when selected, ordered by creation time and ID descending. Collection filtering matches either offered inscriptions or wanted legs, without duplicates. Private proposals, private offers, and internal wallet-binding fields are excluded. This live feed supports reads only; restart without a cursor whenever collectionSlug changes.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "collectionSlug",
+            "in": "query",
+            "description": "Match the collection on either side of the proposal. Unknown collections return an empty page with filterCollection null.",
+            "schema": {
+              "$ref": "#/components/schemas/CollectionSlug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public P2P proposals. Cache-Control: private, no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/collection-stats/floors": {
       "get": {
         "tags": ["Collections"],
@@ -411,6 +465,7 @@
         "tags": ["Listings"],
         "operationId": "preflightListing",
         "summary": "Build listing PSBTs",
+        "description": "Rejects the whole regular listing batch with 409 when any selected inscription or same-sat bundle member has an active eligible non-self individual or collection offer whose raw price_sats is strictly greater than the requested listing price. Equal prices are allowed. Lot listings are unchanged.",
         "parameters": [
           {
             "$ref": "#/components/parameters/CollectionSlugPath"
@@ -439,6 +494,9 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
           "429": {
             "$ref": "#/components/responses/RateLimited"
           },
@@ -453,6 +511,7 @@
         "tags": ["Listings"],
         "operationId": "submitListing",
         "summary": "Submit signed listing PSBTs",
+        "description": "Rechecks current offer state and rejects the whole regular listing batch with 409 when any selected inscription or same-sat bundle member has an active eligible non-self individual or collection offer whose raw price_sats is strictly greater than the requested listing price. Equal prices are allowed. Lot listings are unchanged.",
         "parameters": [
           {
             "$ref": "#/components/parameters/CollectionSlugPath"
@@ -718,6 +777,7 @@
         "tags": ["Offers"],
         "operationId": "preflightCollectionOffer",
         "summary": "Build collection-scoped buyer-offer PSBTs",
+        "description": "For each target inscription, evaluates the current admission minimum, including any runtime-configured uncapped live-floor percentage across trading-enabled memberships and 90% of the highest active, unexpired matching collection-wide or trait offer across verified, trading-enabled memberships. A configured membership without a live floor adds no configured minimum. The matching set excludes offers from the inscription owner or wallets linked to the owner's account and offers with a seller-signed, pending, broadcast, or accepted fill attempt. Each resulting minimum is rounded up to the next 1,000 SATS.",
         "parameters": [
           {
             "$ref": "#/components/parameters/CollectionSlugPath"
@@ -763,6 +823,7 @@
         "tags": ["Offers"],
         "operationId": "submitCollectionOffer",
         "summary": "Submit signed collection-scoped buyer-offer PSBTs",
+        "description": "Reevaluates the current admission minimum for every target inscription before creating the offers, including the rounded 90% collection-offer minimum applied during preflight.",
         "parameters": [
           {
             "$ref": "#/components/parameters/CollectionSlugPath"
@@ -1366,6 +1427,7 @@
         "tags": ["Offers"],
         "operationId": "preflightOfferAcceptance",
         "summary": "Build seller acceptance PSBTs",
+        "description": "Build seller acceptance PSBTs with a fee rate bounded to 1–20 sat/vB. The first-party client supplies the returned targetFeeRateSatVb on submit so the signed transaction package is reconstructed without refreshing the estimator.",
         "parameters": [
           {
             "$ref": "#/components/parameters/InscriptionIdPath"
@@ -1414,6 +1476,7 @@
         "tags": ["Offers"],
         "operationId": "submitOfferAcceptance",
         "summary": "Submit signed seller acceptance PSBTs",
+        "description": "Submit acceptance PSBTs with a targetFeeRateSatVb from 1 through 20 sat/vB. The first-party client reuses the preflight value; the server rebuilds the exact transaction package and retains ownership, live UTXO, expected-transaction, package-policy, and mempool checks.",
         "parameters": [
           {
             "$ref": "#/components/parameters/InscriptionIdPath"
@@ -2050,7 +2113,7 @@
         }
       },
       "Conflict": {
-        "description": "Trading state changed before the action completed.",
+        "description": "The request conflicts with current trading or configuration state.",
         "content": {
           "application/json": {
             "schema": {
@@ -2175,7 +2238,7 @@
         "minimum": 2000,
         "maximum": 2100000000000000,
         "multipleOf": 1000,
-        "description": "Offer or counter price in SATS. Must be at least 2,000 SATS and a multiple of 1,000 SATS."
+        "description": "Offer or counter price in SATS. Must be at least 2,000 SATS and a multiple of 1,000 SATS. Selected-inscription buyer-offer creation also enforces a selected-collection floor minimum of 20%, capped at 1,000,000 SATS and rounded to the same increment; any runtime-configured, uncapped live-floor percentage for each trading-enabled membership, using the highest resulting configured minimum; and 90% of the highest active, unexpired matching collection-wide or trait offer across verified, trading-enabled memberships, excluding offers from the inscription owner or wallets linked to the owner's account and offers with a seller-signed, pending, broadcast, or accepted fill attempt. A configured membership without a live floor adds no configured minimum. The additional minima are rounded up to the same increment, and preflight and submit both evaluate current matching offers."
       },
       "CollectionWideOfferPriceSats": {
         "type": "integer",
@@ -2224,9 +2287,6 @@
             "minLength": 1
           },
           "username": {
-            "type": ["string", "null"]
-          },
-          "displayName": {
             "type": ["string", "null"]
           },
           "bio": {
@@ -2492,7 +2552,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When the listing expires. Null means the listing does not expire."
           },
           "sat": {
             "type": ["integer", "null"],
@@ -2524,6 +2585,296 @@
           "nextCursor": {
             "type": ["string", "null"],
             "minLength": 1
+          }
+        }
+      },
+      "TradeCollectionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "slug", "name", "cardBackgroundColor"],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "previewInscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "previewContentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "imageRenderingHint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionInscriptionImageRenderingHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cardBackgroundColor": {
+            "type": ["string", "null"],
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
+        }
+      },
+      "TradeItemRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "inscriptionId",
+          "inscriptionSequenceNumber",
+          "inscriptionUtxoValueSats",
+          "collection"
+        ],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "inscriptionSequenceNumber": {
+            "type": "string"
+          },
+          "inscriptionTitle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rawContentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "imageRenderingHint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionInscriptionImageRenderingHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inscriptionUtxoValueSats": {
+            "$ref": "#/components/schemas/PositiveSats"
+          },
+          "collection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TradeCollectionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TradeSpecificInscriptionRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["inscriptionId", "inscriptionNumber"],
+        "properties": {
+          "inscriptionId": {
+            "$ref": "#/components/schemas/InscriptionId"
+          },
+          "inscriptionNumber": {
+            "type": "integer"
+          },
+          "inscriptionTitle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rawContentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "imageRenderingHint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionInscriptionImageRenderingHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TradeWantedTarget": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CollectionWideOfferTarget"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "inscriptionIds"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "inscriptions"
+              },
+              "inscriptionIds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/components/schemas/InscriptionId"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "TradeWantedLegRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "collection",
+          "quantity",
+          "target",
+          "specificItems",
+          "estimatedUnitValueSats"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "collection": {
+            "$ref": "#/components/schemas/TradeCollectionSummary"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "target": {
+            "$ref": "#/components/schemas/TradeWantedTarget"
+          },
+          "specificItems": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/TradeSpecificInscriptionRecord"
+            }
+          },
+          "estimatedUnitValueSats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NonnegativeSats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TradePostRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "creatorAddress",
+          "visibility",
+          "status",
+          "offeredBtcSats",
+          "requestedBtcSats",
+          "estimatedOfferedValueSats",
+          "estimatedRequestedValueSats",
+          "marketplaceFeeSats",
+          "offeredItems",
+          "wantedLegs",
+          "expiresAt",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "creatorAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "visibility": {
+            "type": "string",
+            "const": "public"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "expired"],
+            "description": "Active when selected. May be expired if the proposal expires during the request, before serialization."
+          },
+          "offeredBtcSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "requestedBtcSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "estimatedOfferedValueSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "estimatedRequestedValueSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "marketplaceFeeSats": {
+            "$ref": "#/components/schemas/NonnegativeSats"
+          },
+          "offeredItems": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/TradeItemRecord"
+            }
+          },
+          "wantedLegs": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/TradeWantedLegRecord"
+            }
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        }
+      },
+      "TradeListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["proposals", "filterCollection", "pagination"],
+        "properties": {
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TradePostRecord"
+            }
+          },
+          "filterCollection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TradeCollectionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recognized filter collection, even if no proposals match. Null when unfiltered or the collection is unknown."
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination",
+            "description": "pageSize is the requested limit. Follow nextCursor while hasNext is true."
           }
         }
       },
@@ -2845,7 +3196,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Listing expiration time. For a listed item, null means the listing does not expire."
           },
           "lastSale": {
             "type": ["number", "null"],
@@ -2881,6 +3233,10 @@
           "cardBackgroundColor": {
             "type": ["string", "null"],
             "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
+          "isDmtMint": {
+            "type": "boolean",
+            "description": "True for dmt-mint inscriptions in a Digital Matter Theory collection; their snapshot is the on-chain renderer's artwork."
           },
           "traits": {
             "type": "array",
@@ -3119,11 +3475,13 @@
           },
           {
             "type": "object",
-            "required": ["durationDays", "anchors", "signed", "signedRecoveryPsbt"],
+            "required": ["anchors", "signed", "signedRecoveryPsbt"],
             "properties": {
               "durationDays": {
                 "type": "integer",
-                "enum": [1, 7, 30, 90, 180]
+                "enum": [1, 7, 30, 90, 180],
+                "description": "Optional listing duration in days. Omit for a non-expiring listing. Explicit null is invalid.",
+                "examples": [90]
               },
               "anchors": {
                 "type": "array",
@@ -3276,6 +3634,11 @@
                 "items": {
                   "$ref": "#/components/schemas/SpendableUtxo"
                 }
+              },
+              "roundUpDonation": {
+                "type": "boolean",
+                "default": false,
+                "description": "Opt in to round the buyer total up to the next 1000-sat multiple (donating at least 1000 sats) and pay the difference to the configured donation initiative in a dedicated settlement output. Rejected with 409 when no initiative is configured. Submit must repeat the flag used at preflight so the rebuilt settlement matches the signed PSBT."
               }
             }
           }
@@ -3384,7 +3747,9 @@
           "estimatedNetworkFeeSats",
           "cpfpFeeSats",
           "listingTransferFeeSats",
-          "totalBuyerCostSats"
+          "totalBuyerCostSats",
+          "donationInitiative",
+          "donationSats"
         ],
         "properties": {
           "listings": {
@@ -3422,6 +3787,25 @@
           },
           "totalBuyerCostSats": {
             "$ref": "#/components/schemas/PositiveSats"
+          },
+          "donationInitiative": {
+            "type": ["object", "null"],
+            "description": "Donation initiative available for this purchase, or null when round-up donations are unavailable.",
+            "required": ["name", "url"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "donationSats": {
+            "$ref": "#/components/schemas/NonnegativeSats",
+            "description": "Round-up donation included in totalBuyerCostSats; 0 unless roundUpDonation was requested."
           }
         }
       },
@@ -4267,7 +4651,7 @@
               },
               "validityHours": {
                 "type": "integer",
-                "enum": [12, 24, 168, 720, 2160],
+                "enum": [6, 12, 24, 168, 720, 2160],
                 "default": 168
               },
               "spendableUtxos": {
@@ -4684,7 +5068,7 @@
               },
               "validityHours": {
                 "type": "integer",
-                "enum": [12, 24, 168, 720, 2160],
+                "enum": [6, 12, 24, 168, 720, 2160],
                 "default": 168,
                 "description": "Offer duration in hours. Defaults to 168 when omitted."
               },
@@ -4744,7 +5128,8 @@
           },
           "targetFeeRateSatVb": {
             "type": "number",
-            "exclusiveMinimum": 0
+            "minimum": 1,
+            "maximum": 20
           },
           "estimatedNetworkFeeSats": {
             "$ref": "#/components/schemas/NonnegativeSats"
@@ -4779,8 +5164,18 @@
           },
           {
             "type": "object",
-            "required": ["expectedSettlementTxid", "expectedPayoutTxid", "signedSteps"],
+            "required": [
+              "targetFeeRateSatVb",
+              "expectedSettlementTxid",
+              "expectedPayoutTxid",
+              "signedSteps"
+            ],
             "properties": {
+              "targetFeeRateSatVb": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 20
+              },
               "expectedSettlementTxid": {
                 "$ref": "#/components/schemas/Txid"
               },
@@ -4850,7 +5245,7 @@
               },
               "validityHours": {
                 "type": "integer",
-                "enum": [12, 24, 168, 720, 2160],
+                "enum": [6, 12, 24, 168, 720, 2160],
                 "default": 168,
                 "description": "Counteroffer duration in hours. Defaults to 168 when omitted."
               }

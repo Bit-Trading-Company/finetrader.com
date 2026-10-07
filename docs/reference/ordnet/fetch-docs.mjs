@@ -19,6 +19,7 @@ const PAGES = [
   ['buying', 'https://developers.ord.net/reference/buying/', 'Buying'],
   ['offers', 'https://developers.ord.net/reference/offers/', 'Offers'],
   ['sales', 'https://developers.ord.net/reference/sales/', 'Sales'],
+  ['trading', 'https://developers.ord.net/reference/trading/', 'P2P proposals'],
   ['errors-rate-limits', 'https://developers.ord.net/reference/errors-rate-limits/', 'Errors and rate limits'],
 ];
 
@@ -48,7 +49,16 @@ td.addRule('starlightCode', {
           .join('\n')
       : code.textContent;
     const lang = (node.getAttribute('data-language') || '').trim();
-    return `\n\n\`\`\`${lang}\n${text.replace(/\n+$/, '')}\n\`\`\`\n\n`;
+    // Some samples now arrive as one line whatever the markup; re-indent JSON.
+    let body = text.replace(/\n+$/, '');
+    if (lang === 'json') {
+      try {
+        body = JSON.stringify(JSON.parse(body), null, 2);
+      } catch {
+        // Placeholders such as "<hex-signature>" keep some samples invalid.
+      }
+    }
+    return `\n\n\`\`\`${lang}\n${body}\n\`\`\`\n\n`;
   },
 });
 

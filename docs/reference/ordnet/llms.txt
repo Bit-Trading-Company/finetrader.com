@@ -1,6 +1,6 @@
 # ORD.NET API
 
-> ORD.NET is a Bitcoin ordinals marketplace. The trading API lets wallet clients read the order book, list inscriptions, buy them, and run the offer lifecycle. Auth is wallet-signature based (no API keys). Trading writes use a two-step PSBT flow: preflight to build PSBTs, submit to broadcast.
+> ORD.NET is a Bitcoin ordinals marketplace. The trading API lets wallet clients read the order book and public P2P trade proposals, list inscriptions, buy them, and run the offer lifecycle. Auth is wallet-signature based (no API keys). Trading writes use a two-step PSBT flow: preflight to build PSBTs, submit to broadcast.
 
 Base URL: https://ord.net/api/v1
 Marketing site: https://ord.net
@@ -9,13 +9,14 @@ OpenAPI 3.1: https://developers.ord.net/openapi.json
 
 ## Reference
 
-- [Overview (homepage)](https://developers.ord.net/): Base URL, JSON request shape, the PSBT flow that powers every write, and pagination conventions (cursor for /listings, /sales, /collection/:slug/inscriptions, and /me/offers; page for offers/history).
-- [Authentication](https://developers.ord.net/reference/authentication/): Wallet-signature auth (no API keys). POST /auth/challenge and POST /auth/verify with full request/response field tables. /auth/verify signatures are hex-encoded BIP-322 simple signatures. GET /me returns the profile and walletBindings. To receive a bearer token, the verified payment address from the auth flow must hold 0.01 BTC confirmed; auth verify returns 403 when it does not and 503 when the funding check is temporarily unavailable. Bearer tokens are currently valid for 1 hour.
-- [Collections](https://developers.ord.net/reference/collections/): GET /collection-stats/floors for floor stats by comma-separated slugs. GET /collection/:slug/inscriptions is cursor-paginated; sort values: oldest (default) and newest; limit defaults to 48 and maxes at 100. Inscription responses use the collection item-card payload, including media/display fields, traits, satributes, owner, listing state, sat, and location fields.
-- [Listings](https://developers.ord.net/reference/listings/): GET /listings (filterable, cursor-paginated). POST /collection/:slug/listings/preflight, /submit, /delist with the two-step listing PSBT (transfer + settlement) plus a recovery PSBT signed at create time. durationDays values: 1, 7, 30, 90, 180.
+- [Overview (homepage)](https://developers.ord.net/): Base URL, JSON request shape, the PSBT flow that powers every write, and pagination conventions (cursor for /listings, /sales, /trading, /collection/:slug/inscriptions, and /me/offers; page for offers/history).
+- [Authentication](https://developers.ord.net/reference/authentication/): Wallet-signature auth (no API keys). POST /auth/challenge and POST /auth/verify with full request/response field tables. /auth/verify signatures are hex-encoded BIP-322 simple signatures. GET /me returns the profile and walletBindings. To receive a bearer token, the verified payment address from the auth flow must hold 0.001 BTC (100,000 sats) confirmed; auth verify returns 403 when it does not and 503 when the funding check is temporarily unavailable. Bearer tokens are currently valid for 1 hour.
+- [Collections](https://developers.ord.net/reference/collections/): GET /collection-stats/floors for floor stats by comma-separated slugs. GET /collection/:slug/inscriptions is cursor-paginated; sort values: oldest (default) and newest; limit defaults to 48 and maxes at 100. Inscription responses use the collection item-card payload, including media/display fields, traits, satributes, owner, listing state, sat, and location fields. For a listed item, listingExpiresAt null means the listing does not expire.
+- [Listings](https://developers.ord.net/reference/listings/): GET /listings (filterable, cursor-paginated). POST /collection/:slug/listings/preflight, /submit, /delist with the two-step listing PSBT (transfer + settlement) plus a recovery PSBT signed at create time. durationDays is optional; omission creates a non-expiring listing, while supplied values may be 1, 7, 30, 90, or 180. Explicit null is invalid. listingExpiresAt null means the listing does not expire.
 - [Sales](https://developers.ord.net/reference/sales/): GET /sales (cursor-paginated, newest first). Optional collectionSlug filter; unknown collectionSlug returns an empty page. saleType values: internal and external. limit defaults to 50 and maxes at 100.
+- [P2P proposals](https://developers.ord.net/reference/trading/): GET /trading requires bearer auth and returns active public unexpired proposals, newest first. Optional collectionSlug matches offered inscriptions or wanted collection legs; unknown collections return an empty page. limit defaults to 50, range 1–100. Response: proposals, filterCollection, pagination. Pass pagination.nextCursor unchanged; malformed nonempty cursors return 400. Restart without a cursor when changing collectionSlug. Includes inscription/BTC terms and valuations; excludes private offers and wallet-binding fields. Read only; no P2P creation or acceptance API.
 - [Buying](https://developers.ord.net/reference/buying/): POST /collection/:slug/purchases/preflight and /submit. Single-step purchase PSBT. spendableUtxos cap is 1000 per call and is required for API-created or non-Xverse bindings.
-- [Offers](https://developers.ord.net/reference/offers/): Per-inscription offer lifecycle. Buyer creates collection-scoped offers with /collection/:slug/offers/preflight + /submit. Seller accepts (1-2 step PSBT), rejects (no PSBT), or counters (3-step PSBT). Buyer accepts a counter (2-step PSBT) or rejects it. validityHours values: 12, 24, 168, 720, 2160. status values: active, accepted, rejected, cancelled, expired, invalidated. kind values: buyer_offer, seller_counter. GET /me/offers with view in {owned, sent, history}.
+- [Offers](https://developers.ord.net/reference/offers/): Per-inscription offer lifecycle. Buyer creates collection-scoped offers with /collection/:slug/offers/preflight + /submit. Seller accepts (1-2 step PSBT), rejects (no PSBT), or counters (3-step PSBT). Buyer accepts a counter (2-step PSBT) or rejects it. validityHours values: 6, 12, 24, 168, 720, 2160. status values: active, accepted, rejected, cancelled, expired, invalidated. kind values: buyer_offer, seller_counter. GET /me/offers with view in {owned, sent, history}.
 - [Errors and rate limits](https://developers.ord.net/reference/errors-rate-limits/): Standard JSON {"error": string} body. Status codes: 200, 400, 401, 403, 404, 409, 410, 429, 500, 503. Rate limits use 60s fixed windows: auth challenge 20/IP and 5/address, auth verify 20/IP and 5/address, trading reads 60/IP and 30/profile, trading writes 20/IP and 8/profile. CORS allows GET/POST/OPTIONS with authorization and content-type headers.
 
 ## Conventions
@@ -26,8 +27,8 @@ OpenAPI 3.1: https://developers.ord.net/openapi.json
 - The `walletBindingId` field on every write is chosen from `walletBindings` returned by /auth/verify or GET /me
 - Trading writes follow preflight (server builds PSBTs) → wallet signs → submit (server broadcasts)
 - Collection routes use one form: /collection/:slug/...
-- Funded payment address requirement: the auth-flow payment address must hold 0.01 BTC confirmed before a bearer token is issued
-- Cursor pagination: opaque cursor; changing sort or filters invalidates it. Page pagination (offers history): zero-indexed, page size 25.
+- Funded payment address requirement: the auth-flow payment address must hold 0.001 BTC (100,000 sats) confirmed before a bearer token is issued
+- Cursor pagination: opaque cursor; restart without a cursor when changing sort or filters. Page pagination (offers history): zero-indexed, page size 25.
 
 ## Enums
 
@@ -35,8 +36,9 @@ OpenAPI 3.1: https://developers.ord.net/openapi.json
 - listings sort: recent (default, newest listing first), price (lowest asking price first)
 - saleType: internal, external
 - collection inscriptions sort: oldest (default), newest
-- listings durationDays: 1, 7, 30, 90, 180
-- offers validityHours: 12, 24, 168, 720, 2160
+- listings durationDays: optional; omit for non-expiring, or supply 1, 7, 30, 90, 180
+- inscription offer/counter validityHours: 6, 12, 24, 168, 720, 2160
+- collection-wide offer validityHours: 6, 12, 24, 168, 720, 2160
 - offer status: active, accepted, rejected, cancelled, expired, invalidated
 - offer kind: buyer_offer, seller_counter
 - collection kind: parent_child, gallery

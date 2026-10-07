@@ -205,20 +205,29 @@ describe('signPsbtWithProxyWallet', () => {
     ).toBe(true);
   });
 
-  it('cannot sign an untweaked output key with the tweaked signer', async () => {
-    // The guard that makes the flag matter: without it, this input is unsignable.
+  it('signs with the key the input commits to, whatever the flag says', async () => {
+    /*
+     * The flag is a preference, not a gate. Signing with a key the input does
+     * not commit to produces nothing, so the signer follows the PSBT: this
+     * untweaked output gets the untweaked key even with no flag set.
+     */
     const privateKey = keyFrom('untweaked');
-    await expect(
-      signPsbtWithProxyWallet(
-        buildUntweakedP2trPsbt(privateKey),
-        privateKey,
-        'mainnet',
-        {
-          finalize: false,
-          inputSigningInstructions: [{ signingIndexes: [0] }],
-        }
+    const result = await signPsbtWithProxyWallet(
+      buildUntweakedP2trPsbt(privateKey),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [{ signingIndexes: [0] }],
+      }
+    );
+
+    const signed = bitcoin.Psbt.fromBase64(result.base64);
+    expect(
+      signed.validateSignaturesOfInput(0, (pubkey, msghash, signature) =>
+        ecc.verifySchnorr(msghash, pubkey, signature)
       )
-    ).rejects.toThrow(/No inputs could be signed/);
+    ).toBe(true);
   });
 
   it('refuses to sign inputs owned by a different key', async () => {
@@ -232,5 +241,174 @@ describe('signPsbtWithProxyWallet', () => {
     ).rejects.toThrow(
       /tapInternalKey does not match|No inputs could be signed/
     );
+  });
+});
+
+/*
+ * ord.net's listing escrow, as it appears on mainnet (settlement
+ * c2067d51…e51b, input 2; the escrow is output 0 of b6d8eee1…15c5):
+ *
+ *   P2TR(internal key = seller's output key,
+ *        leaf = <seller> CHECKSIG <ord.net> CHECKSIGADD 2 NUMEQUAL)
+ *
+ * The seller signs that leaf — SIGHASH_SINGLE|ANYONECANPAY on the settlement
+ * leg, DEFAULT or ALL on the recovery PSBT — with the key the address pays
+ * to, which is the tweaked one. These are script-path spends. The signer used
+ * to skip any input whose tapInternalKey was not the raw wallet key and to
+ * count only key-path signatures, so every one of these failed with "No
+ * inputs could be signed".
+ */
+describe('ord.net listing escrow (script path)', () => {
+  const ORDNET_KEY = Buffer.from(
+    getTaprootInternalPubkeyBytes(keyFrom('ord.net cosigner'))
+  );
+
+  const outputKeyOf = (privateKeyHex) =>
+    Buffer.from(
+      bitcoin.payments.p2tr({
+        internalPubkey: Buffer.from(
+          getTaprootInternalPubkeyBytes(privateKeyHex)
+        ),
+      }).pubkey
+    );
+
+  const buildEscrowPsbt = (sellerKey) => {
+    const leaf = bitcoin.script.compile([
+      sellerKey,
+      bitcoin.opcodes.OP_CHECKSIG,
+      ORDNET_KEY,
+      bitcoin.opcodes.OP_CHECKSIGADD,
+      bitcoin.opcodes.OP_2,
+      bitcoin.opcodes.OP_NUMEQUAL,
+    ]);
+    const escrow = bitcoin.payments.p2tr({
+      internalPubkey: sellerKey,
+      scriptTree: { output: leaf },
+      redeem: { output: leaf },
+    });
+    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+    psbt.addInput({
+      hash: '33'.repeat(32),
+      index: 0,
+      witnessUtxo: { script: escrow.output, value: 10000n },
+      tapInternalKey: sellerKey,
+      tapLeafScript: [
+        {
+          leafVersion: 0xc0,
+          script: leaf,
+          controlBlock: escrow.witness[escrow.witness.length - 1],
+        },
+      ],
+    });
+    psbt.addOutput({ script: escrow.output, value: 9000n });
+    return psbt.toBase64();
+  };
+
+  const verifies = (psbt) =>
+    psbt.validateSignaturesOfInput(0, (pubkey, msghash, signature) =>
+      ecc.verifySchnorr(msghash, pubkey, signature)
+    );
+
+  it('signs the settlement leg with SINGLE|ANYONECANPAY', async () => {
+    const privateKey = keyFrom('escrow-seller');
+    const result = await signPsbtWithProxyWallet(
+      buildEscrowPsbt(outputKeyOf(privateKey)),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [
+          {
+            address: deriveAddressFromPrivateKey(privateKey),
+            signingIndexes: [0],
+            sigHash: 131,
+          },
+        ],
+      }
+    );
+
+    const input = bitcoin.Psbt.fromBase64(result.base64).data.inputs[0];
+    expect(input.tapKeySig).toBeUndefined();
+    expect(input.tapScriptSig).toHaveLength(1);
+    expect(Buffer.from(input.tapScriptSig[0].pubkey)).toEqual(
+      outputKeyOf(privateKey)
+    );
+    expect(input.tapScriptSig[0].signature).toHaveLength(65);
+    expect(input.tapScriptSig[0].signature[64]).toBe(131);
+    expect(verifies(bitcoin.Psbt.fromBase64(result.base64))).toBe(true);
+  });
+
+  it('signs the recovery PSBT with SIGHASH_ALL', async () => {
+    const privateKey = keyFrom('escrow-seller');
+    const result = await signPsbtWithProxyWallet(
+      buildEscrowPsbt(outputKeyOf(privateKey)),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [{ signingIndexes: [0], sigHash: 1 }],
+      }
+    );
+
+    const signed = bitcoin.Psbt.fromBase64(result.base64);
+    expect(signed.data.inputs[0].tapScriptSig[0].signature[64]).toBe(1);
+    expect(verifies(signed)).toBe(true);
+  });
+
+  it('signs a leaf built on the untweaked key when told to skip the tweak', async () => {
+    // The other way ord.net could build it: from the ordinalsPublicKey we
+    // send, which is the untweaked key — the case disableTweakSigner names.
+    const privateKey = keyFrom('escrow-seller-untweaked');
+    const result = await signPsbtWithProxyWallet(
+      buildEscrowPsbt(Buffer.from(getTaprootInternalPubkeyBytes(privateKey))),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [
+          { signingIndexes: [0], sigHash: 131, disableTweakSigner: true },
+        ],
+      }
+    );
+
+    expect(verifies(bitcoin.Psbt.fromBase64(result.base64))).toBe(true);
+  });
+
+  it("refuses an escrow that holds someone else's key, and says whose", async () => {
+    const privateKey = keyFrom('escrow-seller');
+    await expect(
+      signPsbtWithProxyWallet(
+        buildEscrowPsbt(outputKeyOf(keyFrom('another-wallet'))),
+        privateKey,
+        'mainnet',
+        {
+          finalize: false,
+          inputSigningInstructions: [{ signingIndexes: [0], sigHash: 131 }],
+        }
+      )
+    ).rejects.toThrow(/No inputs could be signed.*input 0 belongs to bc1p/);
+  });
+
+  it('fails rather than return a partly signed PSBT', async () => {
+    // Input 0 is ours, input 1 is not: ord.net would reject this at submit.
+    const privateKey = keyFrom('escrow-seller');
+    const psbt = bitcoin.Psbt.fromBase64(
+      buildEscrowPsbt(outputKeyOf(privateKey))
+    );
+    const theirs = bitcoin.Psbt.fromBase64(
+      buildEscrowPsbt(outputKeyOf(keyFrom('another-wallet')))
+    );
+    psbt.addInput({
+      hash: '44'.repeat(32),
+      index: 0,
+      ...theirs.data.inputs[0],
+    });
+
+    await expect(
+      signPsbtWithProxyWallet(psbt.toBase64(), privateKey, 'mainnet', {
+        finalize: false,
+        inputSigningInstructions: [{ signingIndexes: [0, 1], sigHash: 131 }],
+      })
+    ).rejects.toThrow(/Could not sign input\(s\) 1 of this PSBT/);
   });
 });

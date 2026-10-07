@@ -1,13 +1,13 @@
 <!--
 ord.net API docs — Overview
 Source: https://developers.ord.net/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
 # ORD.NET API
 
-[ORD.NET](https://ord.net) is a Bitcoin ordinals marketplace. The API lets wallet clients read the order book, list inscriptions for sale, buy listings, and negotiate offers.
+[ORD.NET](https://ord.net) is a Bitcoin ordinals marketplace. The API lets wallet clients read the order book and public P2P trade proposals, list inscriptions for sale, buy listings, and negotiate offers.
 
 ## Base URL
 
@@ -21,7 +21,7 @@ Machine-readable OpenAPI 3.1 is available at [`/openapi.json`](/openapi.json).
 
 ## Authentication
 
-The API is wallet-authenticated. There are no API keys. A wallet signs a challenge, the server verifies it, and you get a bearer token. The payment address that signs the challenge must hold **0.01 BTC confirmed** for the token to issue. See [Authentication](/reference/authentication/) for the full flow.
+The API is wallet-authenticated. There are no API keys. A wallet signs a challenge, the server verifies it, and you get a bearer token. The payment address that signs the challenge must hold **0.001 BTC (100,000 sats) confirmed** for the token to issue. See [Authentication](/reference/authentication/) for the full flow.
 
 ## Request format
 
@@ -52,7 +52,7 @@ A few rules apply across all flows:
 
 Two patterns are in play:
 
--   **Cursor pagination** is used by `GET /listings`, `GET /sales`, `GET /collection/:slug/inscriptions`, and `GET /me/offers`. Pass an opaque `cursor` from the previous response. The cursor encodes the sort key and the last seen item, so changing `sort` or any filter between calls invalidates the cursor.
+-   **Cursor pagination** is used by `GET /listings`, `GET /sales`, `GET /trading`, `GET /collection/:slug/inscriptions`, and `GET /me/offers`. Pass an opaque `cursor` from the previous response. The cursor encodes the sort key and the last seen item. Start again without a cursor whenever you change `sort` or a filter.
 -   **Page pagination** is used by `GET /inscriptions/:id/offers/history`. Pass `page` (zero-indexed). Page size is fixed at 25.
 
 ## Reference
@@ -61,6 +61,7 @@ Two patterns are in play:
 -   [Collections](/reference/collections/): fetch all inscriptions in a collection.
 -   [Listings](/reference/listings/): read the order book, create listings, cancel listings.
 -   [Sales](/reference/sales/): read confirmed internal and external sales.
+-   [P2P proposals](/reference/trading/): read active public trade proposals, optionally filtered by collection on either side.
 -   [Buying](/reference/buying/): preflight and submit purchases.
 -   [Offers](/reference/offers/): buyer, seller, and counter offer flows; your offers.
 -   [Errors and rate limits](/reference/errors-rate-limits/): status codes, CORS, retry guidance.

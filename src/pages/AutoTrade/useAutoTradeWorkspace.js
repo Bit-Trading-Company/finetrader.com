@@ -17,6 +17,7 @@ import {
 import { getExchangeLabel } from '../../trading/exchanges';
 import { getTradingApi } from '../../trading/exchanges';
 import { useActivityLog } from '../../lib/useActivityLog';
+import { useRateLimitLog } from '../../lib/rateLimitMonitor';
 import { useRunSettings } from '../../features/trading/RunSettingsContext';
 import { useAutoTradeRunner } from './hooks/useAutoTradeRunner';
 import { findTradingMode } from './constants';
@@ -59,6 +60,10 @@ export const useAutoTradeWorkspace = () => {
 
   const { consoleLogs, addConsoleLog, clearConsole, consoleRef } =
     useActivityLog();
+
+  // An API refusing calls for a minute explains a lot of failures that
+  // follow it, so it is reported here as it happens.
+  useRateLimitLog(addConsoleLog);
   const baseSettings = useRunSettings();
 
   /*

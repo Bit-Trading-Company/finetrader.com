@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Collections
 Source: https://developers.ord.net/reference/collections/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
@@ -107,13 +107,14 @@ The response intentionally uses the same item-card payload as the collection pag
 | `items[].priceSats` | integer | null | Current listing price in sats. |
 | `items[].price` | number | null | Current listing price in BTC. |
 | `items[].listedAt` | ISO 8601 | null | Listing activation time. |
-| `items[].listingExpiresAt` | ISO 8601 | null | Listing expiration time. |
+| `items[].listingExpiresAt` | ISO 8601 | null | Listing expiration time. For a listed item, `null` means the listing does not expire. |
 | `items[].lastSale` | number | null | Last sale price in BTC, when available. |
 | `items[].owner` | string | null | Current owner address. |
 | `items[].contentType` | string | One of `image`, `html`, `video`, `text`. |
 | `items[].rawContentType` | string | null | Raw content type, if known. |
 | `items[].imageRenderingHint` | string | null | `auto` or `pixelated`, when supplied. |
 | `items[].cardBackgroundColor` | string | null | Hex color used by item-card renderers. |
+| `items[].isDmtMint` | boolean | undefined | `true` for `dmt-mint` inscriptions in a Digital Matter Theory collection; their snapshot is the on-chain renderer’s artwork. |
 | `items[].traits` | array | Collection traits for this inscription. |
 | `items[].traits[].type` | string | Trait type. |
 | `items[].traits[].value` | string | Trait value. |
@@ -190,5 +191,5 @@ The response intentionally uses the same item-card payload as the collection pag
 The cursor encodes sort and last-seen item. Changing `sort` between calls invalidates the cursor. Start a new pagination from the beginning.
 
 [Previous  
-Authentication](/reference/authentication/) [Next  
+Authentication](/reference/authentication/)[Next  
 Listings](/reference/listings/)

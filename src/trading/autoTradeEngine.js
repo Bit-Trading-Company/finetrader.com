@@ -189,6 +189,8 @@ export const processWalletItems = async ({
         const needsPriceUpdate =
           item.listed && item.listedPrice !== tradePriceToUse;
         let shouldBuy = false;
+        /** The listing a purchase must target; a re-price replaces it. */
+        let listingId = item.listingId;
 
         if (needsListing || needsPriceUpdate) {
           try {
@@ -212,16 +214,26 @@ export const processWalletItems = async ({
               );
               itemsListed++;
 
-              // Immediately wait for listing to be available (check every 500ms, max 15 seconds)
-              addConsoleLog(`  ⏳ Checking if listing is available...`);
-              const isAvailable = await waitForListingAvailable(
-                wallet.address,
-                collectionSymbol,
-                tokenId,
-                15000, // 15 second timeout (after initial 5 second delay)
-                api,
-                { wallet, wallets, network }
-              );
+              /*
+               * A marketplace that answers with the new listing's id (ord.net
+               * does) has already made it live; polling for it would only
+               * burn its read budget. Otherwise wait for it to appear (check
+               * every 500ms, max 15 seconds).
+               */
+              let isAvailable = true;
+              if (listResult.listingId) {
+                listingId = listResult.listingId;
+              } else {
+                addConsoleLog(`  ⏳ Checking if listing is available...`);
+                isAvailable = await waitForListingAvailable(
+                  wallet.address,
+                  collectionSymbol,
+                  tokenId,
+                  15000, // 15 second timeout (after initial 5 second delay)
+                  api,
+                  { wallet, wallets, network }
+                );
+              }
 
               if (isAvailable) {
                 shouldBuy = true;
@@ -256,6 +268,7 @@ export const processWalletItems = async ({
               ...item,
               listed: true,
               listedPrice: tradePriceToUse,
+              listingId,
             },
             sellerWallet: wallet,
           });
