@@ -212,6 +212,37 @@ describe('handleOrdnet', () => {
     expect(init.body).toBe('{"items":[1]}');
   });
 
+  it('keeps its cache-buster to itself and still refreshes on it', async () => {
+    const read = (query) =>
+      handleOrdnet(
+        request({
+          query: {
+            path: '/listings',
+            collectionSlug: 'cache-buster',
+            ...query,
+          },
+          headers: { authorization: 'Bearer reader' },
+        }),
+        createResponse()
+      );
+
+    global.fetch = jest.fn(async () => ({
+      ...upstreamResponse({ listings: [] }),
+      json: async () => ({ listings: [] }),
+    }));
+
+    await read({});
+    await read({ _t: '1' });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    // ord.net documents no `_t`, so it never sees one.
+    expect(lastFetch().url).toBe(
+      'https://ord.net/api/v1/listings?collectionSlug=cache-buster'
+    );
+
+    await read({});
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects double-encoded path traversal', async () => {
     const res = createResponse();
     await handleOrdnet(request({ query: { path: '%252e%252e/admin' } }), res);

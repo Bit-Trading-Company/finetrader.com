@@ -281,10 +281,9 @@ export const ensureOrdNetSession = async (wallet, network = 'mainnet') => {
  * holds this much, confirmed. It is a minimum balance rather than a fee — the
  * coin stays spendable — but a wallet under it cannot trade here at all.
  *
- * ord.net lowered this from 0.01 to 0.001 BTC. Their published docs still say
- * 0.01 (see docs/reference/ordnet/authentication.md), so this number comes
- * from them directly rather than from the mirror. If a funded wallet is
- * refused with a 403, check whether it moved again.
+ * ord.net lowered this from 0.01 to 0.001 BTC (100,000 sats), and their
+ * docs now say so too (docs/reference/ordnet/authentication.md). If a funded
+ * wallet is refused with a 403, check whether it moved again.
  */
 export const ORDNET_MIN_FUNDING_SATS = 100000; // 0.001 BTC
 
@@ -640,7 +639,16 @@ const fetchHeldInscriptions = async (address) => {
       ),
       { headers: { accept: 'application/json' } }
     );
-    if (!response.ok) break;
+    /*
+     * A partial answer is not a smaller answer here: a purchase uses this
+     * to keep inscriptions out of its payment inputs, so an inscription
+     * missing from the list could be spent as money.
+     */
+    if (!response.ok) {
+      throw new Error(
+        `Could not read the inscriptions held by ${address} (HTTP ${response.status})`
+      );
+    }
 
     const body = await response.json();
     const data = body?.data;
@@ -667,6 +675,25 @@ const fetchHeldInscriptions = async (address) => {
 };
 
 /**
+ * A wallet's unspent outputs, from mempool.space, keyed `txid:vout`.
+ *
+ * Esplora merges the mempool into this, so an output already spent by an
+ * unconfirmed transaction is absent and an unconfirmed output is present with
+ * `status.confirmed` false. Returns null when it cannot be read.
+ */
+const fetchAddressUtxos = async (address, network = 'mainnet') => {
+  try {
+    const response = await fetch(getMempoolAddressUtxoUrl(address, network));
+    if (!response.ok) return null;
+    const utxos = await response.json();
+    if (!Array.isArray(utxos)) return null;
+    return new Map(utxos.map((u) => [`${u.txid}:${Number(u.vout)}`, u]));
+  } catch {
+    return null;
+  }
+};
+
+/**
  * What a wallet holds in a collection, and what of it is listed on ord.net.
  *
  * Assembled from three sources rather than one scan, because each answers a
@@ -679,6 +706,14 @@ const fetchHeldInscriptions = async (address) => {
  * That is one ord.net read per wallet per cycle instead of ten, and the
  * listed half is no longer capped at the first 1000 inscriptions of a
  * collection, which used to hide a listing in anything larger.
+ *
+ * Both of those lag the mempool. After a wallet-to-wallet sale, UniSat and
+ * ord.net can go on reporting the inscription at the seller until the
+ * settlement confirms — and listing it from there gets a PSBT built for the
+ * buyer's address, which the seller cannot sign ("No inputs could be
+ * signed"). So each item is checked against the wallet's own UTXO set:
+ * gone means it is leaving this wallet and is dropped; unconfirmed means it
+ * just arrived and is reported as pending until it confirms.
  */
 export const fetchWalletOrdinals = async (
   ownerAddress,
@@ -706,20 +741,45 @@ export const fetchWalletOrdinals = async (
     if (normalized) listed.set(normalized.inscriptionId, normalized);
   }
 
-  const [membership, held] = await Promise.all([
+  const [membership, held, utxos] = await Promise.all([
     getCollectionMembership(collectionSymbol, session),
     fetchHeldInscriptions(ownerAddress),
+    fetchAddressUtxos(ownerAddress, options.network),
   ]);
+
+  /*
+   * Where an inscription stands against this wallet's UTXO set: null when
+   * it is still here and settled, otherwise why it is not tradeable now.
+   * With no UTXO set to check against, nothing is filtered.
+   */
+  const locationState = (txid, vout) => {
+    if (!utxos || !txid || vout === undefined || vout === null) return null;
+    const utxo = utxos.get(`${txid}:${Number(vout)}`);
+    if (!utxo) return { gone: true };
+    if (utxo.status && utxo.status.confirmed === false) {
+      return { pendingTxid: txid };
+    }
+    return null;
+  };
 
   const results = [];
 
   // Listed items first: ord.net already told us these are this wallet's.
-  for (const item of listed.values()) results.push(item);
+  for (const item of listed.values()) {
+    const raw = item._ordNetRaw || {};
+    const state = locationState(raw.locationTxid, raw.locationVout);
+    if (state?.gone) continue;
+    results.push(
+      state?.pendingTxid ? { ...item, mempoolTxId: state.pendingTxid } : item
+    );
+  }
 
   // Then anything held in the collection that is not currently listed.
   for (const [inscriptionId, utxo] of held) {
     if (listed.has(inscriptionId)) continue;
     if (!membership.has(inscriptionId)) continue;
+    const state = locationState(utxo.txid, utxo.vout);
+    if (state?.gone) continue;
     results.push({
       inscriptionId,
       id: inscriptionId,
@@ -733,7 +793,7 @@ export const fetchWalletOrdinals = async (
       listedPrice: null,
       collectionSymbol,
       owner: ownerAddress,
-      mempoolTxId: '',
+      mempoolTxId: state?.pendingTxid || '',
       _ordNetRaw: { source: 'unisat', ...utxo },
     });
   }
@@ -815,6 +875,28 @@ const signOrdNetStep = async (step, wallet, network, finalize = false) => {
   };
 };
 
+/**
+ * ord.net builds every listing PSBT for wherever it believes the inscription
+ * sits. When that is not this wallet — it was just sold, or the holdings read
+ * was stale — signing can only fail, so say what actually happened instead.
+ */
+const assertListingIsForWallet = (preflight, address) => {
+  const steps = [
+    ...(preflight?.listings || []).flatMap((entry) => entry.psbts || []),
+    preflight?.recoveryPsbt,
+  ].filter(Boolean);
+  const foreign = steps.find(
+    (step) =>
+      step.signerAddress &&
+      String(step.signerAddress).toLowerCase() !== address.toLowerCase()
+  );
+  if (foreign) {
+    throw new Error(
+      `ord.net built this listing for ${foreign.signerAddress}, not this wallet (${address}). The inscription has most likely moved; it will be picked up from its new wallet once that settles.`
+    );
+  }
+};
+
 export const listOrdinalWithProxyWallet = async (
   ordinal,
   priceInSats,
@@ -833,28 +915,69 @@ export const listOrdinalWithProxyWallet = async (
     if (!collectionSymbol)
       throw new Error('ord.net listing requires a collection slug');
 
-    const { publicKey } = getWalletAddressAndPublicKey(wallet, network);
+    const priceSats = Math.round(Number(priceInSats) || 0);
+
+    /*
+     * Re-pricing. ord.net has no "edit price" call: a listing is a set of
+     * PSBTs signed at one price, so a new price is a new listing. The old
+     * one comes down first — delisting needs no signature, because the
+     * recovery PSBT was signed when it was created — so the inscription is
+     * never on offer at two prices at once.
+     */
+    if (ordinal.listed && ordinal.listingId) {
+      if (Number(ordinal.listedPrice) === priceSats) {
+        return { success: true, listingId: ordinal.listingId, data: null };
+      }
+      const delisted = await delistOrdinalWithProxyWallet(
+        ordinal,
+        wallet,
+        network,
+        { ...options, collectionSymbol }
+      );
+      if (!delisted.success) {
+        throw new Error(
+          `could not take down the old listing to re-price it: ${delisted.error}`
+        );
+      }
+    }
+
+    const { address, publicKey } = getWalletAddressAndPublicKey(
+      wallet,
+      network
+    );
     const session = await ensureOrdNetSession(wallet, network);
-    const items = [
-      {
-        inscriptionId,
-        priceSats: Math.round(Number(priceInSats) || 0),
-      },
-    ];
+    const items = [{ inscriptionId, priceSats }];
     const preflightRequest = {
       walletBindingId: session.walletBindingId,
       ordinalsPublicKey: publicKey,
       items,
     };
 
-    const preflight = await ordNetFetch(
-      `/collection/${encodeURIComponent(collectionSymbol)}/listings/preflight`,
-      {
-        method: 'POST',
-        token: session.sessionToken,
-        body: preflightRequest,
+    let preflight;
+    try {
+      preflight = await ordNetFetch(
+        `/collection/${encodeURIComponent(collectionSymbol)}/listings/preflight`,
+        {
+          method: 'POST',
+          token: session.sessionToken,
+          body: preflightRequest,
+        }
+      );
+    } catch (error) {
+      /*
+       * ord.net refuses a listing priced below an active offer on the same
+       * inscription or collection (raw offer price strictly greater than the
+       * ask). Accepting that offer would pay more than this listing would.
+       */
+      if (error?.status === 409) {
+        throw new Error(
+          `ord.net refused to list at ${(priceSats / 100000000).toFixed(8)} BTC: ${error.message}. This usually means an active offer is above that price.`
+        );
       }
-    );
+      throw error;
+    }
+
+    assertListingIsForWallet(preflight, address);
 
     const signedEntries = [];
     const anchors = [];
@@ -921,6 +1044,15 @@ export const listOrdinalWithProxyWallet = async (
  */
 const POSTAGE_CEILING_SATS = 1000;
 
+/*
+ * An unconfirmed output at or below this is treated as an inscription too.
+ *
+ * A wallet that has just bought holds the new inscription on an unconfirmed
+ * output, often 10,000 sats, which the owner index may not have caught up
+ * with. Change that small is not worth the risk of guessing wrong.
+ */
+const UNCONFIRMED_POSTAGE_CEILING_SATS = 10000;
+
 /** ord.net rejects more than this many candidates in one call. */
 const MAX_SPENDABLE_UTXOS = 1000;
 
@@ -929,15 +1061,16 @@ const MAX_SPENDABLE_UTXOS = 1000;
  *
  * ord.net picks which of these to spend, so anything handed over is offered
  * up as payment. These wallets hold inscriptions they have bought, and an
- * inscription spent as payment is gone — so postage-sized outputs are
- * filtered out, and callers that know where an inscription sits can exclude
- * its outpoint directly.
+ * inscription spent as payment is gone. Three filters keep them out:
  *
- * The filter is a value heuristic rather than a per-UTXO inscription lookup:
- * that lookup is one API call per UTXO, which is both slow on a wallet with
- * a long UTXO history and a drain on our own proxy quota. ord.net indexes
- * inscriptions and very likely filters them server-side too, but a buyer
- * should not be relying on that.
+ *   - `exclude`: outpoints the caller knows hold an inscription (purchases
+ *     pass every one UniSat reports for the address, in one call);
+ *   - postage-sized outputs, confirmed or not;
+ *   - small unconfirmed outputs, which a just-bought inscription sits on
+ *     before any index has seen it.
+ *
+ * ord.net indexes inscriptions and very likely filters them server-side too,
+ * but a buyer should not be relying on that.
  *
  * @param {string} address
  * @param {string} network
@@ -962,6 +1095,10 @@ const getSpendableUtxos = async (
         (u) =>
           u?.txid &&
           Number(u.value) > POSTAGE_CEILING_SATS &&
+          !(
+            u.status?.confirmed === false &&
+            Number(u.value) <= UNCONFIRMED_POSTAGE_CEILING_SATS
+          ) &&
           !excluded.has(`${u.txid}:${Number(u.vout)}`)
       )
       .map((u) => ({
@@ -1006,7 +1143,21 @@ export const prepareSecurePurchase = async (
       network
     );
     const session = await ensureOrdNetSession(wallet, network);
-    const spendableUtxos = await getSpendableUtxos(address, network);
+    /*
+     * These wallets hold the inscriptions they trade, often on outputs far
+     * above postage size (ord.net's own listings carry 10,000 sats). Every
+     * outpoint UniSat knows holds an inscription is kept out of the payment
+     * candidates; an inscription spent as payment is gone.
+     */
+    const held = await fetchHeldInscriptions(address);
+    const spendableUtxos = await getSpendableUtxos(address, network, {
+      exclude: Array.from(held.values()),
+    });
+    if (spendableUtxos.length === 0) {
+      throw new Error(
+        `Wallet ${address} has no spendable payment UTXOs for ord.net (inscription-bearing outputs are never offered as payment)`
+      );
+    }
     const preflightRequest = {
       walletBindingId: session.walletBindingId,
       paymentPublicKey: publicKey,

@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Sales
 Source: https://developers.ord.net/reference/sales/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
@@ -104,5 +104,5 @@ The cursor encodes the last seen sale. Changing `collectionSlug` between calls i
 Unknown `collectionSlug` filters return an empty page, not `404`.
 
 [Previous  
-Listings](/reference/listings/) [Next  
-Buying](/reference/buying/)
+Listings](/reference/listings/)[Next  
+P2P Proposals](/reference/trading/)

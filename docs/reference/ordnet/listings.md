@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Listings
 Source: https://developers.ord.net/reference/listings/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
@@ -52,7 +52,7 @@ curl "https://ord.net/api/v1/listings?collectionSlug=wizards&sort=price&limit=25
 | `listings[].sellerAddress` | string | Seller’s ordinals address. |
 | `listings[].priceSats` | integer | Asking price in sats. |
 | `listings[].listedAt` | ISO 8601 datetime | When the listing became active. |
-| `listings[].listingExpiresAt` | ISO 8601 | null | When the listing expires. |
+| `listings[].listingExpiresAt` | ISO 8601 | null | When the listing expires. `null` means the listing does not expire. |
 | `listings[].sat` | integer | null | Sat number, if known. |
 | `listings[].locationTxid` | string | null | Current outpoint txid. |
 | `listings[].locationVout` | integer | null | Current outpoint vout. |
@@ -78,7 +78,7 @@ curl "https://ord.net/api/v1/listings?collectionSlug=wizards&sort=price&limit=25
       "sellerAddress": "bc1p...",
       "priceSats": 50000,
       "listedAt": "2026-05-08T18:00:00.000Z",
-      "listingExpiresAt": "2026-06-07T18:00:00.000Z",
+      "listingExpiresAt": null,
       "sat": 123456789,
       "locationTxid": "abc123...",
       "locationVout": 0,
@@ -251,7 +251,7 @@ Publishes the listing once the wallet has signed every PSBT.
 | `items` | array | yes | Same items sent at preflight. |
 | `items[].inscriptionId` | string | yes |  |
 | `items[].priceSats` | integer | yes |  |
-| `durationDays` | integer | yes | One of `1`, `7`, `30`, `90`, `180`. |
+| `durationDays` | integer | no | Omit for a non-expiring listing. For a timed listing, use `1`, `7`, `30`, `90`, or `180`. Explicit `null` is invalid. |
 | `anchors` | array | yes | One entry per item, in the same order. |
 | `anchors[].inscriptionId` | string | yes | Same as the item. |
 | `anchors[].anchorUtxoId` | string (UUID) | yes | The `anchorUtxoId` from preflight. No duplicates. |
@@ -277,7 +277,6 @@ Publishes the listing once the wallet has signed every PSBT.
       "priceSats": 50000
     }
   ],
-  "durationDays": 90,
   "anchors": [
     {
       "inscriptionId": "abc123...i0",
@@ -334,6 +333,8 @@ Publishes the listing once the wallet has signed every PSBT.
   }
 }
 ```
+
+The example omits `durationDays`, so the listing never expires. To create a timed listing instead, include a supported value such as `"durationDays": 90`.
 
 #### Response (200)
 
@@ -409,5 +410,5 @@ Single call. No PSBT signing required because the recovery PSBT was signed at cr
 Same as preflight.
 
 [Previous  
-Collections](/reference/collections/) [Next  
+Collections](/reference/collections/)[Next  
 Sales](/reference/sales/)

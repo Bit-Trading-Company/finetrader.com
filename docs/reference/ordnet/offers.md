@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Offers
 Source: https://developers.ord.net/reference/offers/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
@@ -159,7 +159,7 @@ Checks whether the selected payment inputs would replace active same-scope colle
 
 ### POST /collection/:slug/collection-offers/preflight
 
-Builds one zero-fee funding-parent PSBT per requested collection offer. `priceSats` must be at least `10000` and a multiple of `5000`; `offerCount` defaults to `1` and is capped at `10`; `validityHours` defaults to `168` when omitted. Each returned offer can include up to `50` selected payment UTXOs.
+Builds one zero-fee funding-parent PSBT per requested collection offer. `priceSats` must be at least `10000` and a multiple of `5000`; `offerCount` defaults to `1` and is capped at `10`; `validityHours` accepts `6`, `12`, `24`, `168`, `720`, or `2160` and defaults to `168` when omitted. Each returned offer can include up to `50` selected payment UTXOs.
 
 ```json
 {
@@ -544,6 +544,10 @@ Page-paginated history of offers on the inscription.
 
 Two calls: preflight to build offer PSBTs, submit to lock them in. The buyer’s PSBT carries payment inputs that release if the seller accepts. Creation is collection-scoped so floor checks use the selected collection. Each create-offer request can include 1 to 20 inscription ids.
 
+For every requested inscription, the price must also meet any runtime-configured, uncapped live-floor percentage for each trading-enabled collection membership. The highest resulting configured minimum applies and is rounded up to the next 1,000-SAT increment; a configured membership without a live floor adds no minimum.
+
+Separately, the price must be at least 90% of the highest active, unexpired collection-wide or matching trait offer across the inscription’s verified, trading-enabled collection memberships. Offers from the inscription owner’s wallet or another wallet linked to the owner’s account are excluded, as are offers with a `seller_signed`, `pending`, `broadcast`, or `accepted` fill attempt. This collection-offer minimum is rounded up to the next 1,000-SAT increment. Preflight and submit each evaluate the current offer book, so submit can reject a price that passed preflight if the minimum rises in the meantime.
+
 ### POST /collection/:slug/offers/preflight
 
 #### Request body
@@ -553,8 +557,8 @@ Two calls: preflight to build offer PSBTs, submit to lock them in. The buyer’s
 | `walletBindingId` | string (UUID) | yes |  |
 | `paymentPublicKey` | string | yes | Hex public key for the payment address. |
 | `inscriptionIds` | array | yes | 1 to 20 inscription ids in this collection. Duplicate ids are rejected. |
-| `priceSats` | integer | yes | Offer price in SATS. Must meet the configured minimum and be a multiple of 1,000 SATS. |
-| `validityHours` | integer | no | One of `12`, `24`, `168` (7 days), `720` (30 days), `2160` (90 days). Defaults to `168`. |
+| `priceSats` | integer | yes | Offer price in SATS. Must be at least 2,000 SATS, at least 20% of the selected collection floor, capped at 1,000,000 SATS, and a multiple of 1,000 SATS. It must also meet any runtime-configured, uncapped membership live-floor minimum and the collection-offer minimum described above. |
+| `validityHours` | integer | no | One of `6`, `12`, `24`, `168` (7 days), `720` (30 days), `2160` (90 days). Defaults to `168`. |
 | `spendableUtxos` | array | conditional | Up to 1000 candidate payment UTXOs. Required for API-created or non-Xverse bindings. Xverse bindings may omit it and use wallet-provider UTXO fallback. |
 
 ```json
@@ -634,7 +638,7 @@ The preflight body, plus signed items:
 | `walletBindingId` | string (UUID) | yes |  |
 | `paymentPublicKey` | string | yes |  |
 | `inscriptionIds` | array | yes | Same 1 to 20 ids as preflight. |
-| `priceSats` | integer | yes | Same as preflight. |
+| `priceSats` | integer | yes | Same as preflight; submit reevaluates the current collection-offer minimum. |
 | `validityHours` | integer | no | Same as preflight. Defaults to `168` when omitted. |
 | `selectedPaymentUtxos` | array | yes (min 1) | The exact UTXOs from preflight. |
 | `signedItems` | array | yes | One signed item per preflight item. |
@@ -744,7 +748,7 @@ These calls do not take a PSBT.
 
 ## Accept an offer (seller)
 
-Two calls. The seller signs the seller side and the result broadcasts.
+Two calls. The seller signs the seller side and the result broadcasts. Preflight returns a fee rate bounded to `1–20 sat/vB`. Submit supplies a rate within the same bounds, and the first-party client reuses the rate from preflight so the server reconstructs the signed transaction package without refreshing the fee estimator. Ownership, live UTXO, expected transaction, package-fee-policy, and mempool-acceptance checks still apply.
 
 ### POST /inscriptions/:id/offers/:offerId/accept/preflight
 
@@ -767,7 +771,7 @@ Two calls. The seller signs the seller side and the result broadcasts.
 | Field | Type | Description |
 | --- | --- | --- |
 | `offerId` | string (UUID) |  |
-| `targetFeeRateSatVb` | integer |  |
+| `targetFeeRateSatVb` | number | Fee rate selected by the server, from `1` through `20`. |
 | `estimatedNetworkFeeSats` | integer |  |
 | `expectedSettlementTxid` | string |  |
 | `expectedPayoutTxid` | string | null | A separate payout tx, when one is needed. |
@@ -811,6 +815,7 @@ Two calls. The seller signs the seller side and the result broadcasts.
 | --- | --- | --- | --- |
 | `walletBindingId` | string (UUID) | yes |  |
 | `ordinalsPublicKey` | string | yes | Same as preflight. |
+| `targetFeeRateSatVb` | number | yes | Rate used to rebuild the package, from `1` through `20`; first-party clients reuse the preflight value. |
 | `expectedSettlementTxid` | string | yes | From preflight. |
 | `expectedPayoutTxid` | string | null | yes | From preflight. May be null. |
 | `signedSteps` | array | yes | Wallet-signed steps. |
@@ -823,6 +828,7 @@ Two calls. The seller signs the seller side and the result broadcasts.
 {
   "walletBindingId": "55555555-5555-5555-5555-555555555555",
   "ordinalsPublicKey": "abcdef...",
+  "targetFeeRateSatVb": 1,
   "expectedSettlementTxid": "settle1...",
   "expectedPayoutTxid": null,
   "signedSteps": [
@@ -883,7 +889,7 @@ The counter PSBT has three steps:
 | `walletBindingId` | string (UUID) | yes |  |
 | `ordinalsPublicKey` | string | yes |  |
 | `priceSats` | integer | yes | Counter price in SATS. Must beat the current buyer offer by at least 1,000 SATS and be a multiple of 1,000 SATS. |
-| `validityHours` | integer | no | One of `12`, `24`, `168`, `720`, `2160`. Defaults to `168`. |
+| `validityHours` | integer | no | One of `6`, `12`, `24`, `168`, `720`, `2160`. Defaults to `168`. |
 
 ```json
 {
@@ -1508,5 +1514,5 @@ Cursor-paginated. The shape of `200` depends on `view`.
 ```
 
 [Previous  
-Buying](/reference/buying/) [Next  
+Buying](/reference/buying/)[Next  
 Errors and Rate Limits](/reference/errors-rate-limits/)

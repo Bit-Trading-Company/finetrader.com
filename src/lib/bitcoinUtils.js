@@ -609,6 +609,11 @@ export const signPsbtWithProxyWallet = async (
 
     // Sign all inputs with private key
     let signedCount = 0;
+    /** Why an input went unsigned, for the error if signing comes up short. */
+    const skippedInputs = [];
+    /** Inputs a signing instruction named; each must end up signed. */
+    let requiredIndexes = [];
+    const unsignedRequired = [];
     let signedPsbtBase64Override = null;
 
     try {
@@ -680,17 +685,68 @@ export const signPsbtWithProxyWallet = async (
           /*
            * Which key signs a Taproot input.
            *
-           * Key-path spends sign with the tweaked key, which is the default.
-           * A marketplace can ask for the untweaked key instead by setting
-           * `disableTweakSigner` on its signing instruction — ord.net does
-           * this on parts of the listing flow. Tweaking anyway produces a
-           * signature that verifies against the wrong key: the PSBT still
-           * looks signed, and the broadcast fails later.
+           * This wallet has two Taproot keys: the untweaked internal key and
+           * the tweaked output key its address pays to. An input can commit
+           * to either, and in two ways:
+           *
+           *   key path    — the prevout's output key is one of ours. A plain
+           *                 payment to this wallet's address is the tweaked key.
+           *   script path — one of our keys appears in a leaf script. ord.net's
+           *                 listing escrow is this: P2TR(seller key, leaf
+           *                 `<seller> CHECKSIG <ord.net> CHECKSIGADD 2
+           *                 NUMEQUAL`), spent by the settlement leg and the
+           *                 recovery PSBT. On mainnet the seller key there is
+           *                 the address's output key, i.e. the tweaked one.
+           *
+           * The signer is the key the input actually commits to. The
+           * instruction's `publicKey` and `disableTweakSigner` only decide
+           * which to try first: signing with a key the input does not commit
+           * to yields no signature (bitcoinjs refuses), and this check is
+           * also what stops the wallet signing an input that is not its own.
            */
-          const signerForInput = (index) =>
-            instructionByIndex.get(index)?.disableTweakSigner
-              ? keyPair
-              : tweakedSigner;
+          const tweakedXOnly = Buffer.from(tweakedSigner.publicKey).subarray(
+            1,
+            33
+          );
+          const untweakedXOnly = Buffer.from(internalPubkey);
+          const ourKeys = [
+            { signer: tweakedSigner, xOnly: tweakedXOnly },
+            { signer: keyPair, xOnly: untweakedXOnly },
+          ];
+
+          const inputCommitsTo = (psbtInput, xOnly) => {
+            const scr = psbtInput.witnessUtxo?.script;
+            if (
+              scr &&
+              scr.length === 34 &&
+              scr[0] === 0x51 &&
+              scr[1] === 0x20 &&
+              Buffer.from(scr).subarray(2, 34).equals(xOnly)
+            ) {
+              return true;
+            }
+            const push = Buffer.concat([Buffer.from([0x20]), xOnly]);
+            return (psbtInput.tapLeafScript || []).some((leaf) =>
+              Buffer.from(leaf.script).includes(push)
+            );
+          };
+
+          const signerForInput = (index) => {
+            const instruction = instructionByIndex.get(index);
+            const psbtInput = psbtForSigning.data.inputs[index];
+            const wanted = String(instruction?.publicKey || '')
+              .toLowerCase()
+              .replace(/^0[23](?=[0-9a-f]{64}$)/, '');
+            const wantsUntweaked = !!instruction?.disableTweakSigner;
+            const rank = (k) =>
+              (wanted && k.xOnly.toString('hex') === wanted ? 0 : 2) +
+              (wantsUntweaked === (k.signer === keyPair) ? 0 : 1);
+            const preferred = [...ourKeys].sort((a, b) => rank(a) - rank(b));
+            const match = preferred.find((k) =>
+              inputCommitsTo(psbtInput, k.xOnly)
+            );
+            return match ? match.signer : null;
+          };
 
           /*
            * Apply an instructed sighash to the input itself.
@@ -755,7 +811,7 @@ export const signPsbtWithProxyWallet = async (
 
               psbtForSigning.signTaprootInput(
                 j,
-                signerForInput(j),
+                signerForInput(j) || tweakedSigner,
                 undefined,
                 sighashTypes
               );
@@ -784,23 +840,30 @@ export const signPsbtWithProxyWallet = async (
                 const psbtInput = psbtForSigning.data.inputs[j];
                 const wu = psbtInput.witnessUtxo;
                 const scr = wu && wu.script;
-                const isP2trKeyPath =
+                const isP2tr =
                   scr &&
                   scr.length === 34 &&
                   scr[0] === 0x51 &&
-                  scr[1] === 0x20 &&
-                  psbtInput.tapInternalKey;
+                  scr[1] === 0x20;
 
-                if (!isP2trKeyPath) {
+                if (!isP2tr) {
                   continue;
                 }
 
-                const inputTapKey = Buffer.from(psbtInput.tapInternalKey);
-                const ourTapKey = Buffer.from(internalPubkey);
-                if (
-                  inputTapKey.length !== 32 ||
-                  !inputTapKey.equals(ourTapKey)
-                ) {
+                // Key path or script path, but only ever with a key this
+                // input commits to — see signerForInput.
+                const signer = signerForInput(j);
+                if (!signer) {
+                  let owner = 'an unknown script';
+                  try {
+                    owner = bitcoin.address.fromOutputScript(
+                      scr,
+                      bitcoinNetwork
+                    );
+                  } catch {
+                    // Keep the generic description.
+                  }
+                  skippedInputs.push(`input ${j} belongs to ${owner}`);
                   continue;
                 }
 
@@ -817,15 +880,32 @@ export const signPsbtWithProxyWallet = async (
 
                 psbtForSigning.signTaprootInput(
                   j,
-                  signerForInput(j),
+                  signer,
                   undefined,
                   sighashTypes
                 );
                 signMethodWorked = true;
               } catch (inputErr) {
                 console.error(`Error signing input ${j}:`, inputErr.message);
+                skippedInputs.push(`input ${j}: ${inputErr.message}`);
               }
             }
+
+            /*
+             * When a marketplace names the inputs this wallet must sign, it
+             * needs every one of them. A partly signed PSBT is not a smaller
+             * success: the server rejects it at submit, or worse, it looks
+             * fine until broadcast. So the instructed inputs are all checked
+             * below, not just counted. An instruction addressed to some
+             * other address is someone else's to sign.
+             */
+            requiredIndexes = targetIndexes.filter((j) => {
+              const address = instructionByIndex.get(j)?.address;
+              return (
+                instructionByIndex.size > 0 &&
+                (!address || address === derivedAddress)
+              );
+            });
 
             if (signMethodWorked) {
               signedPsbtBase64Override = psbtForSigning.toBase64();
@@ -844,13 +924,22 @@ export const signPsbtWithProxyWallet = async (
           network: bitcoinNetwork,
         });
 
+        const isSigned = (psbtInput) => {
+          const tapSigLen = psbtInput.tapKeySig && psbtInput.tapKeySig.length;
+          return (
+            tapSigLen === 64 ||
+            tapSigLen === 65 ||
+            // Script-path spends, e.g. ord.net's listing escrow.
+            (psbtInput.tapScriptSig && psbtInput.tapScriptSig.length > 0) ||
+            !!psbtInput.partialSig
+          );
+        };
         for (let i = 0; i < signedPsbt.inputCount; i++) {
+          if (isSigned(signedPsbt.data.inputs[i])) signedCount++;
+        }
+        for (const i of requiredIndexes) {
           const psbtInput = signedPsbt.data.inputs[i];
-          const tks = psbtInput.tapKeySig;
-          const tapSigLen = tks && tks.length;
-          if (tapSigLen === 64 || tapSigLen === 65 || psbtInput.partialSig) {
-            signedCount++;
-          }
+          if (!psbtInput || !isSigned(psbtInput)) unsignedRequired.push(i);
         }
       } else {
         // Verify @scure/btc-signer signing
@@ -863,11 +952,22 @@ export const signPsbtWithProxyWallet = async (
       }
     } catch (signErr) {
       console.error('Failed to sign transaction:', signErr.message);
+      skippedInputs.push(signErr.message);
     }
+
+    const detail = skippedInputs.length
+      ? ` (wallet ${derivedAddress}; ${skippedInputs.join('; ')})`
+      : '';
 
     if (signedCount === 0) {
       throw new Error(
-        'No inputs could be signed. The PSBT may have been created for a different address.'
+        `No inputs could be signed. The PSBT may have been created for a different address.${detail}`
+      );
+    }
+
+    if (unsignedRequired.length > 0) {
+      throw new Error(
+        `Could not sign input(s) ${unsignedRequired.join(', ')} of this PSBT.${detail}`
       );
     }
 

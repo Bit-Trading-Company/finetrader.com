@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Errors and rate limits
 Source: https://developers.ord.net/reference/errors-rate-limits/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 

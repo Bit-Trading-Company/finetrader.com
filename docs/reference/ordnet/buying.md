@@ -1,7 +1,7 @@
 <!--
 ord.net API docs — Buying
 Source: https://developers.ord.net/reference/buying/
-Retrieved: 2026-09-14
+Retrieved: 2026-10-07
 Mirrored for offline reference; ord.net is the source of truth.
 -->
 
@@ -12,6 +12,16 @@ A buy turns one or more active listings into a single signed transaction. You ca
 The full sequence is **preflight → submit**. Preflight returns totals, selected payment inputs, and the PSBT the wallet must sign.
 
 All endpoints require a bearer token. Tokens are issued only after verifying a funded payment address.
+
+API requests do not accept referral codes or partner data and have no buyer-cookie referral. An API buy can still honor attribution already stored on its listings:
+
+| Listings in the buy | Referral result |
+| --- | --- |
+| Every listing stores the same partner | Credit that partner |
+| Stored partners differ | No referral |
+| Any listing has no stored partner | No referral |
+
+Selection uses listing rows, not the number of transferred inscriptions, so a lot or same-sat bundle counts as one listing. Partner status, payout address, and fee shares are resolved when the listing sells. An inactive or otherwise unpayable stored partner makes the transaction unreferred. A buy transaction contains at most one referral payout, and referral identity is not added to the API request or response.
 
 ## POST /collection/:slug/purchases/preflight
 
@@ -30,6 +40,7 @@ Builds the purchase PSBT.
 | `spendableUtxos[].txid` | string | yes | Lowercase hex (64 chars). |
 | `spendableUtxos[].vout` | integer | yes | Non-negative. |
 | `spendableUtxos[].valueSats` | integer | yes | Positive. |
+| `roundUpDonation` | boolean | no | When `true`, include the configured initiative’s round-up contribution in the settlement. Defaults to `false`. |
 
 ```json
 {
@@ -79,6 +90,8 @@ Builds the purchase PSBT.
 | `cpfpFeeSats` | integer | Extra fee for CPFP if any. |
 | `listingTransferFeeSats` | integer | Listing transfer fee component. |
 | `totalBuyerCostSats` | integer | All-in buyer cost across the package. |
+| `donationInitiative` | object or null | Available initiative name and URL, or `null` when donations are unavailable. |
+| `donationSats` | integer | Donation included in `totalBuyerCostSats`; `0` unless requested. |
 | `purchaseAnchorUtxoId` | string (UUID) | Send back at submit. |
 | `steps` | array | One PSBT step. |
 | `steps[].stepIndex` | integer | `0`. |
@@ -120,6 +133,11 @@ Builds the purchase PSBT.
   "cpfpFeeSats": 0,
   "listingTransferFeeSats": 0,
   "totalBuyerCostSats": 51220,
+  "donationInitiative": {
+    "name": "Open Ordinals",
+    "url": "https://ordinals.org"
+  },
+  "donationSats": 0,
   "purchaseAnchorUtxoId": "88888888-8888-8888-8888-888888888888",
   "steps": [
     {
@@ -149,7 +167,7 @@ Builds the purchase PSBT.
 -   `400`: invalid request body.
 -   `401`: missing or invalid bearer token.
 -   `403`: wallet not allowed.
--   `409`: listing state changed under you.
+-   `409`: listing state changed or the requested donation initiative is unavailable.
 -   `429`: rate limited.
 -   `503`: upstream trading service temporarily unavailable.
 
@@ -170,6 +188,7 @@ Broadcasts the purchase package after the wallet has signed.
 | `spendableUtxos[].txid` | string | yes |  |
 | `spendableUtxos[].vout` | integer | yes |  |
 | `spendableUtxos[].valueSats` | integer | yes |  |
+| `roundUpDonation` | boolean | no | Must repeat the value used at preflight. Defaults to `false`. |
 | `purchaseAnchorUtxoId` | string (UUID) | yes | From preflight. |
 | `selectedPaymentUtxos` | array | yes (min 1) | The exact UTXOs from `preflight.selectedPaymentUtxos`. |
 | `selectedPaymentUtxos[].txid` | string | yes |  |
@@ -268,5 +287,5 @@ Rules:
 -   The cap on candidates is 1000 per call.
 
 [Previous  
-Sales](/reference/sales/) [Next  
+P2P Proposals](/reference/trading/)[Next  
 Offers](/reference/offers/)

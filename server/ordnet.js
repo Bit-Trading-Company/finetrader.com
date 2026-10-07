@@ -42,20 +42,29 @@ async function handleOrdnet(req, res) {
     return;
   }
 
-  const url = http.withQuery(`${ORDNET_API}/${subpath}`, req.query, ['path']);
+  /*
+   * `_t` is the client's cache-buster. It is ours, not ord.net's: their API
+   * documents no such parameter, so it stops here rather than travelling
+   * upstream. A request carrying it skips the cache and refreshes it.
+   */
+  const url = http.withQuery(`${ORDNET_API}/${subpath}`, req.query, [
+    'path',
+    '_t',
+  ]);
   const isGet = req.method === 'GET';
+  const bypassCache = req.query._t !== undefined;
 
   /*
    * The bearer token is part of the key rather than the payload: responses
    * are per-profile, and a shared key would serve one wallet's data to
-   * another. A cache-buster in the query naturally misses.
+   * another.
    */
   const cacheKey =
     isGet && isCacheable(subpath)
       ? `${url}|${req.headers.authorization || 'anon'}`
       : null;
 
-  if (cacheKey) {
+  if (cacheKey && !bypassCache) {
     const hit = readCache.get(cacheKey);
     if (hit) {
       res.status(200).json(hit);
