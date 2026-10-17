@@ -97,10 +97,17 @@ export const useProxyWalletBalances = (wallets, options = {}) => {
   walletsRef.current = wallets;
 
   useEffect(() => {
-    if (!enabled || !addresses) {
+    if (!addresses) {
       setBalances({});
       return undefined;
     }
+    /*
+     * Paused (the auto-trader pauses this during a run): keep the last
+     * balances rather than blanking them. Blank reads as "nothing funded",
+     * which threw the wizard back to its funding step the moment a run
+     * started.
+     */
+    if (!enabled) return undefined;
 
     let cancelled = false;
     const list = walletsRef.current;

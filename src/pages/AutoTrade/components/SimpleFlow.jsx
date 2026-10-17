@@ -3,8 +3,9 @@
  * trade.
  *
  * Steps open one at a time, and the open one follows the first thing still
- * outstanding — but any step can be reopened, because coming back to add
- * funds or change collection is normal rather than exceptional.
+ * outstanding (funding aside, see firstOpen) — but any step can be reopened,
+ * because coming back to add funds or change collection is normal rather
+ * than exceptional.
  */
 import React, { useState } from 'react';
 import { ActivityLog, Badge, Button, Card } from '../../../ui';
@@ -69,16 +70,20 @@ const SimpleFlow = ({
     readiness,
   } = workspace;
 
-  // The first unfinished step, which is where attention should start.
+  /*
+   * The first unfinished step, which is where attention should start.
+   * Funding is left out: wallets are often only partly funded, and a run
+   * spends them down, so following it snapped the open step back to "Fund
+   * them" mid-session. Step 3 still shows whether it is done, and Start
+   * still says when nothing is funded.
+   */
   const firstOpen = !readiness.connected
     ? 1
     : !readiness.hasWallets
       ? 2
-      : !readiness.funded
-        ? 3
-        : !readiness.hasCollection
-          ? 4
-          : 5;
+      : !readiness.hasCollection
+        ? 4
+        : 5;
 
   const [openStep, setOpenStep] = useState(null);
   const current = openStep ?? firstOpen;
