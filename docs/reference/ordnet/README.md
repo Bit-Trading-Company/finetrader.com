@@ -39,6 +39,24 @@ tweaked key. The listing transfer (step `0`) is not broadcast at listing
 time: it goes out in the same package as the settlement, so a listed
 inscription stays at the seller's address until it sells.
 
+## Collection membership (how the app tells a wallet item's collection)
+
+ord.net has no lookup from an inscription to its collection, and reading
+`/collection/:slug/inscriptions` in full is far too slow for a large
+collection. But every listing and sale carries `collection.kind`:
+
+- `parent_child`: membership is on chain. The app learns the collection's
+  parent(s) from a few of its listings, then checks a wallet item's parent
+  with ord's recursion endpoint `https://ordinals.com/r/parents/<id>`
+  (CORS `*`, works while ordinals.com's JSON API is off). Parents never
+  change, so answers are cached for good.
+- `gallery`: no on-chain rule. An item counts once ord.net has shown it in
+  the collection: in its listings, in `/sales?collectionSlug=` (internal and
+  external sales, read newest-first every 15 minutes), or bought there by
+  the trader.
+
+See `src/trading/ordnet/ordnetMembership.js` and `src/lib/ordRecursion.js`.
+
 ## What changed at the 2026-10-07 refresh
 
 - `durationDays` on listing submit is optional; omitting it makes a

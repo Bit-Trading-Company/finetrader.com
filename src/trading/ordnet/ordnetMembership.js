@@ -1,36 +1,45 @@
 /*
- * Which inscriptions belong to an ord.net collection.
+ * Which of a wallet's inscriptions belong to an ord.net collection.
  *
- * ord.net has no "is this inscription in that collection" lookup and no
- * holdings-by-owner endpoint, so the only way to tell which of a wallet's
- * inscriptions are in a collection is the collection's own inscription list,
- * 100 per page. That list used to be read 10 pages deep, which silently
- * dropped every wallet item past the first 1,000 inscriptions of a larger
- * collection: the run then said "No items needed processing" while the
- * wallet held items to trade.
+ * ord.net has no "is this inscription in that collection" lookup, and reading
+ * a collection's whole inscription list is far too slow for a large one. But
+ * the question is only ever asked about the handful of inscriptions a proxy
+ * wallet holds, and ord.net says how each collection is defined
+ * (`collection.kind` on every listing and sale):
  *
- * Membership barely changes, so the full list is read once, paced under
- * ord.net's read limit, and kept in localStorage. A scan that is cut short
- * resumes from its cursor. Later refreshes read newest-first only until they
- * reach inscriptions already known, which is usually one page.
+ *   parent_child — the collection is the children of a parent inscription.
+ *                  Membership is on chain: an inscription is in it when its
+ *                  parent is the collection's parent. The collection's
+ *                  parents are learned from a few of its current listings,
+ *                  and every lookup comes from ord's recursion endpoint
+ *                  (lib/ordRecursion), cached for good.
+ *   gallery      — a curated list with no on-chain rule. An inscription is
+ *                  only known to be in it from ord.net itself: seen in the
+ *                  collection's listings or sales, or bought there by the
+ *                  trader.
+ *
+ * Everything ord.net shows in a collection is recorded as a member as it
+ * goes past (listing reads the trader already makes, the collection's sales
+ * feed, its own purchases), so most proxy-wallet items, which were bought
+ * from that collection's listings, are known without any lookup at all.
+ * Nothing is ever treated as a member without one of these.
  */
 
-const STORE_PREFIX = 'fine-trading-ordnet-members:';
-const PAGE_SIZE = 100;
-/** How often to look for newly added inscriptions. */
-export const MEMBERSHIP_REFRESH_MS = 15 * 60 * 1000;
-/** 100,000 inscriptions: a backstop against a cursor that never ends. */
-const MAX_SCAN_PAGES = 1000;
-/** New inscriptions arrive a few at a time; this is plenty. */
-const MAX_REFRESH_PAGES = 20;
-/*
- * ord.net allows 30 reads per profile per minute. A scan reads this many
- * pages straight away, then one per gap (24 a minute), leaving room for the
- * per-wallet reads of the cycle that is waiting on it.
- */
-const READ_BURST = 15;
-const READ_GAP_MS = 2500;
-const PROGRESS_EVERY_PAGES = 10;
+const STORE_PREFIX = 'fine-trading-ordnet-collection:';
+/** The old full-scan cache, removed on first use. */
+const LEGACY_STORE_PREFIX = 'fine-trading-ordnet-members:';
+
+/** How often to read new sales in a collection. */
+export const SALES_REFRESH_MS = 15 * 60 * 1000;
+/** The first sales read goes this deep; later ones stop at a known sale. */
+const FIRST_SALES_PAGES = 3;
+const MAX_SALES_PAGES = 5;
+/** How often to re-check a collection's kind. */
+const KIND_REFRESH_MS = 24 * 60 * 60 * 1000;
+/** Members whose parents are read to learn the collection's parents. */
+const PARENT_SAMPLE_BATCH = 5;
+const MAX_PARENT_SAMPLES = 25;
+const MAX_STORED_MEMBERS = 20000;
 
 const memory = new Map();
 const inFlight = new Map();
@@ -46,24 +55,31 @@ const storage = () => {
 const load = (slug) => {
   if (memory.has(slug)) return memory.get(slug);
   let state = {
-    ids: new Set(),
-    complete: false,
-    cursor: null,
-    checkedAt: 0,
+    kind: null,
+    kindCheckedAt: 0,
+    members: new Set(),
+    parents: new Set(),
+    sampled: new Set(),
+    newestSaleId: null,
+    salesCheckedAt: 0,
   };
   try {
-    const raw = storage()?.getItem(STORE_PREFIX + slug);
-    const saved = raw ? JSON.parse(raw) : null;
-    if (saved?.v === 1 && Array.isArray(saved.ids)) {
+    const store = storage();
+    store?.removeItem(LEGACY_STORE_PREFIX + slug);
+    const saved = JSON.parse(store?.getItem(STORE_PREFIX + slug) || 'null');
+    if (saved?.v === 2) {
       state = {
-        ids: new Set(saved.ids),
-        complete: !!saved.complete,
-        cursor: saved.cursor || null,
-        checkedAt: Number(saved.checkedAt) || 0,
+        kind: saved.kind || null,
+        kindCheckedAt: Number(saved.kindCheckedAt) || 0,
+        members: new Set(saved.members || []),
+        parents: new Set(saved.parents || []),
+        sampled: new Set(saved.sampled || []),
+        newestSaleId: saved.newestSaleId || null,
+        salesCheckedAt: Number(saved.salesCheckedAt) || 0,
       };
     }
   } catch {
-    // Unreadable; start over.
+    // Unreadable; rebuilt from what ord.net shows next.
   }
   memory.set(slug, state);
   return state;
@@ -74,11 +90,14 @@ const save = (slug, state) => {
     storage()?.setItem(
       STORE_PREFIX + slug,
       JSON.stringify({
-        v: 1,
-        ids: [...state.ids],
-        complete: state.complete,
-        cursor: state.cursor,
-        checkedAt: state.checkedAt,
+        v: 2,
+        kind: state.kind,
+        kindCheckedAt: state.kindCheckedAt,
+        members: [...state.members].slice(-MAX_STORED_MEMBERS),
+        parents: [...state.parents],
+        sampled: [...state.sampled],
+        newestSaleId: state.newestSaleId,
+        salesCheckedAt: state.salesCheckedAt,
       })
     );
   } catch {
@@ -86,128 +105,193 @@ const save = (slug, state) => {
   }
 };
 
-const idOf = (row) => row?.inscriptionId || row?.id || null;
+const idOf = (row) =>
+  typeof row === 'string' ? row : row?.inscriptionId || row?.id || null;
 
-/** Reads pages one after another, bursting first and then pacing. */
-const pacedReader = (fetchPage, sleep) => {
-  let pages = 0;
-  return async (query) => {
-    if (pages >= READ_BURST) await sleep(READ_GAP_MS);
-    pages += 1;
-    return fetchPage(query);
-  };
+/** True when a row ord.net returned says it is in another collection. */
+const isOtherCollection = (row, slug) => {
+  const rowSlug = row?.collection?.slug;
+  return (
+    typeof rowSlug === 'string' && rowSlug.toLowerCase() !== slug.toLowerCase()
+  );
 };
 
-const fullScan = async (slug, state, read, log) => {
-  const resumed = state.ids.size > 0;
-  if (log) {
-    log(
-      resumed
-        ? `  Resuming ord.net's list of ${slug} (${state.ids.size} inscriptions so far)…`
-        : `  Reading ord.net's list of ${slug} inscriptions (once; saved for later runs)…`
-    );
-  }
-  for (let page = 0; page < MAX_SCAN_PAGES; page++) {
-    const data = await read({
-      limit: PAGE_SIZE,
-      cursor: state.cursor,
-      sort: 'oldest',
-    });
-    for (const row of data?.items || []) {
-      const id = idOf(row);
-      if (id) state.ids.add(id);
+const absorb = (slug, state, rows) => {
+  let added = false;
+  for (const row of rows || []) {
+    if (isOtherCollection(row, slug)) continue;
+    const kind = row?.collection?.kind;
+    if (kind === 'parent_child' || kind === 'gallery') {
+      state.kind = kind;
+      state.kindCheckedAt = Date.now();
     }
-    const next = data?.pagination?.nextCursor || null;
-    if (!data?.pagination?.hasNext || !next) {
-      state.complete = true;
-      state.cursor = null;
-      break;
-    }
-    state.cursor = next;
-    if (log && (page + 1) % PROGRESS_EVERY_PAGES === 0) {
-      log(`    …${state.ids.size} inscriptions read`);
+    const id = idOf(row);
+    if (id && !state.members.has(id)) {
+      state.members.add(id);
+      added = true;
     }
   }
-  state.checkedAt = Date.now();
-  save(slug, state);
-  if (log) {
-    log(
-      state.complete
-        ? `  ord.net lists ${state.ids.size} inscriptions in ${slug}.`
-        : `  ⚠ Stopped reading ${slug} at ${state.ids.size} inscriptions.`
-    );
-  }
+  return added;
 };
 
-const refreshNewest = async (state, read) => {
+/**
+ * Record inscriptions ord.net has shown in a collection: listing or sale
+ * rows (whose `collection.kind` is kept too), or bare inscription ids the
+ * trader bought there. Rows labelled with another collection are ignored.
+ */
+export const recordCollectionMembers = (slug, rows) => {
+  if (!slug) return;
+  const state = load(slug);
+  if (absorb(slug, state, rows)) save(slug, state);
+};
+
+const refreshSales = async (slug, state, readSales) => {
+  if (Date.now() - state.salesCheckedAt < SALES_REFRESH_MS) return;
+  const firstRead = !state.newestSaleId;
   let cursor = null;
-  for (let page = 0; page < MAX_REFRESH_PAGES; page++) {
-    const data = await read({ limit: PAGE_SIZE, cursor, sort: 'newest' });
+  let newest = null;
+  for (
+    let page = 0;
+    page < (firstRead ? FIRST_SALES_PAGES : MAX_SALES_PAGES);
+    page++
+  ) {
+    const data = await readSales({ limit: 100, cursor });
+    const sales = data?.sales || [];
     let reachedKnown = false;
-    for (const row of data?.items || []) {
-      const id = idOf(row);
-      if (!id) continue;
-      if (state.ids.has(id)) reachedKnown = true;
-      else state.ids.add(id);
+    for (const sale of sales) {
+      if (!newest && sale?.saleId) newest = sale.saleId;
+      if (sale?.saleId && sale.saleId === state.newestSaleId) {
+        reachedKnown = true;
+        break;
+      }
+      absorb(slug, state, [sale]);
     }
     cursor = data?.pagination?.nextCursor || null;
     if (reachedKnown || !data?.pagination?.hasNext || !cursor) break;
   }
-  state.checkedAt = Date.now();
+  if (newest) state.newestSaleId = newest;
+  state.salesCheckedAt = Date.now();
+};
+
+const learnFromListings = async (slug, state, readListings) => {
+  const data = await readListings({ limit: 20, sort: 'price' });
+  absorb(slug, state, data?.listings || []);
+  state.kindCheckedAt = Date.now();
+};
+
+/** Read the parents of a few more known members, widening the parent set. */
+const sampleParents = async (state, fetchParents) => {
+  const unsampled = [...state.members]
+    .filter((id) => !state.sampled.has(id))
+    .slice(0, PARENT_SAMPLE_BATCH);
+  for (const id of unsampled) {
+    if (state.sampled.size >= MAX_PARENT_SAMPLES) break;
+    try {
+      const parents = await fetchParents(id);
+      parents.forEach((p) => state.parents.add(p));
+      state.sampled.add(id);
+    } catch {
+      // ord unreachable; try again next time.
+    }
+  }
+};
+
+const parentMatch = async (id, state, fetchParents) => {
+  try {
+    const parents = await fetchParents(id);
+    return parents.some((p) => state.parents.has(p));
+  } catch {
+    return false;
+  }
 };
 
 /**
- * Every inscription id in a collection, as a Set.
+ * Of `heldIds`, which are in the collection.
  *
  * @param {string} slug
+ * @param {Iterable<string>} heldIds the wallet's inscriptions
  * @param {{
- *   fetchPage: (query: {limit: number, cursor: string|null, sort: string}) => Promise<any>,
- *   log?: (line: string) => void,
- *   sleep?: (ms: number) => Promise<void>,
- * }} deps `fetchPage` reads one page of /collection/:slug/inscriptions.
- * @returns {Promise<Set<string>>}
+ *   readListings: (query: object) => Promise<any>,
+ *   readSales: (query: object) => Promise<any>,
+ *   fetchParents: (inscriptionId: string) => Promise<string[]>,
+ * }} deps reads of /listings and /sales filtered to this collection, and
+ *   an inscription's parents
+ * @returns {Promise<{members: Set<string>, unknown: string[], kind: string|null}>}
+ *   `unknown` are held inscriptions not shown to be in the collection.
  */
-export const getCollectionMembership = async (slug, deps) => {
+export const resolveHeldMembers = async (slug, heldIds, deps) => {
   const state = load(slug);
-  const fresh =
-    state.complete && Date.now() - state.checkedAt < MEMBERSHIP_REFRESH_MS;
-  if (fresh) return state.ids;
+  const held = [...heldIds];
 
-  // Wallets are processed one after another, but never scan twice at once.
-  if (inFlight.has(slug)) return inFlight.get(slug);
-
-  const sleep =
-    deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
-  const read = pacedReader(deps.fetchPage, sleep);
-
-  const task = (async () => {
-    if (!state.complete) {
+  // One refresh at a time per collection; wallets reuse its result.
+  if (!inFlight.has(slug)) {
+    const refresh = (async () => {
       try {
-        await fullScan(slug, state, read, deps.log);
-      } catch (error) {
-        // Keep what was read; the next call resumes from the cursor.
-        save(slug, state);
-        throw new Error(
-          `could not read ord.net's list of ${slug} inscriptions (${state.ids.size} read so far, will resume): ${error.message}`
-        );
+        await refreshSales(slug, state, deps.readSales);
+      } catch {
+        // The sales feed is a bonus; carry on with what is known.
       }
-      return state.ids;
-    }
-    try {
-      await refreshNewest(state, read);
-      save(slug, state);
-    } catch {
-      // A slightly stale list beats none; try again next time.
-    }
-    return state.ids;
-  })();
-
-  inFlight.set(slug, task);
-  try {
-    return await task;
-  } finally {
-    inFlight.delete(slug);
+    })();
+    inFlight.set(slug, refresh);
+    refresh.finally(() => inFlight.delete(slug));
   }
+  await inFlight.get(slug);
+
+  let unknown = held.filter((id) => !state.members.has(id));
+
+  if (unknown.length > 0) {
+    const needKind =
+      !state.kind || Date.now() - state.kindCheckedAt > KIND_REFRESH_MS;
+    if (
+      needKind ||
+      (state.kind === 'parent_child' && state.parents.size === 0)
+    ) {
+      try {
+        await learnFromListings(slug, state, deps.readListings);
+      } catch {
+        // Without the kind nothing more can be shown this time.
+      }
+      unknown = unknown.filter((id) => !state.members.has(id));
+    }
+  }
+
+  if (unknown.length > 0 && state.kind === 'parent_child') {
+    if (state.sampled.size === 0) await sampleParents(state, deps.fetchParents);
+
+    const stillUnknown = [];
+    for (const id of unknown) {
+      if (await parentMatch(id, state, deps.fetchParents)) {
+        state.members.add(id);
+      } else {
+        stillUnknown.push(id);
+      }
+    }
+
+    /*
+     * A collection can have several parents (one per mint phase, say), and
+     * the first few listings may not show them all. Widen the sample a
+     * little each time an item still does not match, up to a limit.
+     */
+    if (stillUnknown.length > 0 && state.sampled.size < MAX_PARENT_SAMPLES) {
+      const before = state.parents.size;
+      await sampleParents(state, deps.fetchParents);
+      if (state.parents.size > before) {
+        for (const id of [...stillUnknown]) {
+          if (await parentMatch(id, state, deps.fetchParents)) {
+            state.members.add(id);
+          }
+        }
+      }
+    }
+    unknown = unknown.filter((id) => !state.members.has(id));
+  }
+
+  save(slug, state);
+  return {
+    members: new Set(held.filter((id) => state.members.has(id))),
+    unknown,
+    kind: state.kind,
+  };
 };
 
 /** Forget everything held for a collection. For tests. */
