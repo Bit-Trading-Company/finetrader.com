@@ -113,14 +113,24 @@ const stubFetch = ({
 
     calls.ordnet.push(target);
 
-    if (target.includes('%2Flistings') || target.includes('path=%2Flistings')) {
+    if (target.includes('path=%2Flistings')) {
       return jsonResponse({ listings, pagination: { hasNext: false } });
     }
-    // Collection membership.
-    return jsonResponse({
-      items: members.map((id) => ({ inscriptionId: id })),
-      pagination: { hasNext: false },
-    });
+    // The collection's sales feed: how these tests make items known members.
+    if (target.includes('path=%2Fsales')) {
+      const slug = new URLSearchParams(target.split('?')[1]).get(
+        'collectionSlug'
+      );
+      return jsonResponse({
+        sales: members.map((id, n) => ({
+          saleId: `sale-${n}`,
+          inscriptionId: id,
+          collection: { slug, kind: 'gallery' },
+        })),
+        pagination: { hasNext: false },
+      });
+    }
+    return jsonResponse({});
   });
 
   return calls;

@@ -14,7 +14,11 @@ import {
 } from '../../lib/mempoolProvider';
 import { getTokenId } from '../ordinals';
 import { inputOwners, withEscrowLeafScripts } from './ordnetEscrow';
-import { getCollectionMembership } from './ordnetMembership';
+import {
+  recordCollectionMembers,
+  resolveHeldMembers,
+} from './ordnetMembership';
+import { fetchInscriptionParents } from '../../lib/ordRecursion';
 import {
   fetchHeldInscriptions,
   isUnconfirmedPostageSized,
@@ -536,6 +540,7 @@ export const fetchCollectionItems = async (
     },
   });
 
+  recordCollectionMembers(collectionSymbol, data.listings);
   return (data.listings || [])
     .map((row) => normalizeListing(row, collectionSymbol))
     .filter(Boolean)
@@ -563,12 +568,24 @@ export const getFloorPrice = async (
 
 const MAX_SELLER_LISTING_PAGES = 10;
 
-/** One page of a collection's inscription list, for ordnetMembership. */
-const collectionPageReader = (collectionSymbol, session) => (query) =>
-  ordNetFetch(
-    `/collection/${encodeURIComponent(collectionSymbol)}/inscriptions`,
-    { token: session.sessionToken, query }
-  );
+/** The ord.net reads ordnetMembership needs, for one collection. */
+const membershipReads = (collectionSymbol, session, network) => ({
+  readListings: (query) =>
+    ordNetFetch('/listings', {
+      token: session.sessionToken,
+      query: { ...query, collectionSlug: collectionSymbol },
+    }),
+  readSales: (query) =>
+    ordNetFetch('/sales', {
+      token: session.sessionToken,
+      query: { ...query, collectionSlug: collectionSymbol },
+    }),
+  fetchParents: (inscriptionId) =>
+    fetchInscriptionParents(inscriptionId, { network }),
+});
+
+/** Wallets already told about unrecognised items, so it is said once. */
+const reportedUnknown = new Set();
 
 /**
  * A wallet's unspent outputs, from mempool.space, keyed `txid:vout`.
@@ -595,13 +612,14 @@ const fetchAddressUtxos = async (address, network = 'mainnet') => {
  * Assembled from three sources rather than one scan, because each answers a
  * different question at a very different price:
  *
- *   membership  — ord.net, cached, rarely changes
+ *   membership  — ordnetMembership: what ord.net has shown in the
+ *                 collection, or the inscription's parent (cached)
  *   ownership   — UniSat, owner-indexed, free of ord.net's rate limit
  *   listings    — ord.net, one exact read filtered to this seller
  *
- * That is one ord.net read per wallet per cycle instead of ten, and the
- * listed half is no longer capped at the first 1000 inscriptions of a
- * collection, which used to hide a listing in anything larger.
+ * That is one ord.net read per wallet per cycle, plus a sales read per
+ * collection every 15 minutes, and no read of the collection's inscription
+ * list at all.
  *
  * Both of those lag the mempool. After a wallet-to-wallet sale, UniSat and
  * ord.net can go on reporting the inscription at the seller until the
@@ -636,6 +654,7 @@ export const fetchWalletOrdinals = async (
         ...(bypassCache ? { _t: Date.now() } : {}),
       },
     });
+    recordCollectionMembers(collectionSymbol, listingsResponse?.listings);
     for (const row of listingsResponse?.listings || []) {
       const normalized = normalizeListing(row, collectionSymbol);
       if (normalized) listed.set(normalized.inscriptionId, normalized);
@@ -644,14 +663,47 @@ export const fetchWalletOrdinals = async (
     if (!listingsResponse?.pagination?.hasNext || !listingsCursor) break;
   }
 
-  const [membership, held, utxos] = await Promise.all([
-    getCollectionMembership(collectionSymbol, {
-      fetchPage: collectionPageReader(collectionSymbol, session),
-      log: options.addConsoleLog,
-    }),
+  const [held, utxos] = await Promise.all([
     fetchHeldInscriptions(ownerAddress),
     fetchAddressUtxos(ownerAddress, options.network),
   ]);
+
+  // Which of the wallet's unlisted inscriptions are in the collection.
+  const unlistedHeld = [...held.keys()].filter((id) => !listed.has(id));
+  const {
+    members: membership,
+    unknown,
+    kind,
+  } = unlistedHeld.length > 0
+    ? await resolveHeldMembers(
+        collectionSymbol,
+        unlistedHeld,
+        membershipReads(collectionSymbol, session, options.network)
+      )
+    : { members: new Set(), unknown: [], kind: null };
+
+  /*
+   * A parent_child item that does not match is simply from elsewhere. A
+   * gallery has no on-chain rule, so its items are only recognised once
+   * ord.net has shown them listed or sold in it; say so once, rather than
+   * leave the wallet looking empty.
+   */
+  const reportKey = `${ownerAddress}:${collectionSymbol}`;
+  if (
+    unknown.length > 0 &&
+    kind !== 'parent_child' &&
+    typeof options.addConsoleLog === 'function' &&
+    !reportedUnknown.has(reportKey)
+  ) {
+    reportedUnknown.add(reportKey);
+    options.addConsoleLog(
+      `  ℹ ${ownerAddress.slice(0, 8)}… holds ${unknown.length} inscription(s) ord.net has not shown in ${collectionSymbol}. ${
+        kind === 'gallery'
+          ? 'It is a curated collection, so they are recognised once one is listed or sold there.'
+          : 'Its collection type could not be read; they will be checked again.'
+      }`
+    );
+  }
 
   /*
    * Where an inscription stands against this wallet's UTXO set: null when
@@ -1193,6 +1245,9 @@ export const completeSecurePurchase = async (
       submit.settlementTxid ||
       submit.listingTransferTxids?.[0] ||
       intentData.preflight.expectedSettlementTxid;
+
+    // Bought from this collection's listings, so it is a member.
+    recordCollectionMembers(intentData.collectionSymbol, [getTokenId(ordinal)]);
 
     if (typeof addConsoleLog === 'function' && txid) {
       addConsoleLog(
