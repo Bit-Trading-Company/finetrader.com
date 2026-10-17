@@ -166,3 +166,49 @@ export const inputOwners = (psbtBase64, indexes = [], network = 'mainnet') => {
   }
   return owners;
 };
+
+/**
+ * ord.net's PSBT as it sent it, plus the signatures from `signedBase64`.
+ *
+ * ord.net checks each signed input field by field against its preflight and
+ * refuses anything else that changed ("Signed PSBT input 0 field
+ * tapLeafScript does not match preflight"). Signing writes more than the
+ * signature: the leaf filled in above, a tapInternalKey, an instructed
+ * sighashType. None of it is needed once signed (a Schnorr signature carries
+ * its sighash byte, and ord.net holds the leaf), so only signatures are
+ * carried back.
+ */
+export const withOnlySignatures = (
+  originalBase64,
+  signedBase64,
+  network = 'mainnet'
+) => {
+  const options = { network: bitcoinNetworkFor(network) };
+  const original = bitcoin.Psbt.fromBase64(originalBase64, options);
+  const signed = bitcoin.Psbt.fromBase64(signedBase64, options);
+  if (original.inputCount !== signed.inputCount) {
+    throw new Error('Signing changed the number of PSBT inputs');
+  }
+  signed.data.inputs.forEach((input, index) => {
+    const before = original.data.inputs[index];
+    const update = {};
+    if (input.tapKeySig && !before.tapKeySig)
+      update.tapKeySig = input.tapKeySig;
+    const sameScriptSig = (a, b) =>
+      Buffer.from(a.pubkey).equals(Buffer.from(b.pubkey)) &&
+      Buffer.from(a.leafHash).equals(Buffer.from(b.leafHash));
+    const newScriptSigs = (input.tapScriptSig || []).filter(
+      (sig) => !(before.tapScriptSig || []).some((b) => sameScriptSig(sig, b))
+    );
+    if (newScriptSigs.length) update.tapScriptSig = newScriptSigs;
+    const newPartialSigs = (input.partialSig || []).filter(
+      (sig) =>
+        !(before.partialSig || []).some((b) =>
+          Buffer.from(b.pubkey).equals(Buffer.from(sig.pubkey))
+        )
+    );
+    if (newPartialSigs.length) update.partialSig = newPartialSigs;
+    if (Object.keys(update).length) original.updateInput(index, update);
+  });
+  return original.toBase64();
+};

@@ -21,6 +21,7 @@ import {
   buildEscrow,
   inputOwners,
   withEscrowLeafScripts,
+  withOnlySignatures,
 } from './ordnetEscrow';
 
 if (!globalThis.crypto?.subtle) globalThis.crypto = webcrypto;
@@ -123,6 +124,49 @@ describe('ord.net escrow rebuild', () => {
         ecc.verifySchnorr(msghash, pubkey, signature)
       )
     ).toBe(true);
+  });
+
+  it("hands back ord.net's PSBT with nothing changed but the signature", async () => {
+    // ord.net refused the first signed escrows at submit: "Signed PSBT input
+    // 0 field tapLeafScript does not match preflight".
+    const privateKey = keyFrom('escrow-submit-seller');
+    const seller = outputKeyOf(privateKey);
+    const preflight = bareEscrowPsbt(buildEscrow(seller, seller).output);
+
+    const result = await signPsbtWithProxyWallet(
+      withEscrowLeafScripts(preflight, privateKey, 'mainnet', [0]),
+      privateKey,
+      'mainnet',
+      {
+        finalize: false,
+        inputSigningInstructions: [{ signingIndexes: [0], sigHash: 131 }],
+      }
+    );
+    const submitted = bitcoin.Psbt.fromBase64(
+      withOnlySignatures(preflight, result.base64)
+    );
+
+    const input = submitted.data.inputs[0];
+    expect(input.tapLeafScript).toBeUndefined();
+    expect(input.tapInternalKey).toBeUndefined();
+    expect(input.sighashType).toBeUndefined();
+    expect(input.tapScriptSig).toHaveLength(1);
+    expect(input.tapScriptSig[0].signature[64]).toBe(131);
+
+    // Every other field is byte for byte what ord.net sent.
+    delete input.tapScriptSig;
+    expect(submitted.toBase64()).toBe(preflight);
+
+    // And the signature still verifies against the escrow leaf.
+    const leafHash = Buffer.from(
+      bitcoin.payments.p2tr({
+        internalPubkey: seller,
+        scriptTree: { output: buildEscrow(seller, seller).leafScript },
+      }).hash
+    );
+    const signed = bitcoin.Psbt.fromBase64(result.base64);
+    const sig = signed.data.inputs[0].tapScriptSig[0];
+    expect(Buffer.from(sig.leafHash)).toEqual(leafHash);
   });
 
   it('keeps a tapInternalKey ord.net already declared', () => {
