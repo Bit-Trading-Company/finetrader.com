@@ -13,7 +13,10 @@ import {
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
 import { getTokenId } from '../ordinals';
-import { buildUnisatProxyUrl } from '../../lib/unisatProxy';
+import {
+  fetchHeldInscriptions,
+  isUnconfirmedPostageSized,
+} from '../../lib/utxoSafety';
 
 const ECPair = ECPairFactory(ecc);
 const ORDNET_SESSION_PREFIX = 'fine-trading-ordnet-session:';
@@ -621,60 +624,6 @@ const getCollectionMembership = async (collectionSymbol, session) => {
 };
 
 /**
- * Inscriptions an address holds, from UniSat's owner-indexed API.
- *
- * ord.net has no holdings-by-owner endpoint, and UniSat's costs nothing
- * against ord.net's rate limit. Returns inscription ids with the outpoint
- * they sit on, so a pending move can be spotted.
- */
-const fetchHeldInscriptions = async (address) => {
-  const held = new Map();
-  let cursor = 0;
-
-  for (let page = 0; page < 20; page++) {
-    const response = await fetch(
-      buildUnisatProxyUrl(
-        `address/${encodeURIComponent(address)}/inscription-utxo-data`,
-        { cursor: String(cursor), size: '100' }
-      ),
-      { headers: { accept: 'application/json' } }
-    );
-    /*
-     * A partial answer is not a smaller answer here: a purchase uses this
-     * to keep inscriptions out of its payment inputs, so an inscription
-     * missing from the list could be spent as money.
-     */
-    if (!response.ok) {
-      throw new Error(
-        `Could not read the inscriptions held by ${address} (HTTP ${response.status})`
-      );
-    }
-
-    const body = await response.json();
-    const data = body?.data;
-    const utxos = Array.isArray(data?.utxo) ? data.utxo : [];
-
-    for (const utxo of utxos) {
-      for (const inscription of utxo.inscriptions || []) {
-        if (!inscription?.inscriptionId) continue;
-        held.set(inscription.inscriptionId, {
-          inscriptionId: inscription.inscriptionId,
-          inscriptionNumber: inscription.inscriptionNumber,
-          txid: utxo.txid,
-          vout: utxo.vout,
-        });
-      }
-    }
-
-    cursor += utxos.length;
-    if (utxos.length === 0) break;
-    if (typeof data?.total === 'number' && cursor >= data.total) break;
-  }
-
-  return held;
-};
-
-/**
  * A wallet's unspent outputs, from mempool.space, keyed `txid:vout`.
  *
  * Esplora merges the mempool into this, so an output already spent by an
@@ -1044,15 +993,6 @@ export const listOrdinalWithProxyWallet = async (
  */
 const POSTAGE_CEILING_SATS = 1000;
 
-/*
- * An unconfirmed output at or below this is treated as an inscription too.
- *
- * A wallet that has just bought holds the new inscription on an unconfirmed
- * output, often 10,000 sats, which the owner index may not have caught up
- * with. Change that small is not worth the risk of guessing wrong.
- */
-const UNCONFIRMED_POSTAGE_CEILING_SATS = 10000;
-
 /** ord.net rejects more than this many candidates in one call. */
 const MAX_SPENDABLE_UTXOS = 1000;
 
@@ -1095,10 +1035,7 @@ const getSpendableUtxos = async (
         (u) =>
           u?.txid &&
           Number(u.value) > POSTAGE_CEILING_SATS &&
-          !(
-            u.status?.confirmed === false &&
-            Number(u.value) <= UNCONFIRMED_POSTAGE_CEILING_SATS
-          ) &&
+          !isUnconfirmedPostageSized(u) &&
           !excluded.has(`${u.txid}:${Number(u.vout)}`)
       )
       .map((u) => ({
