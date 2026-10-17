@@ -20,6 +20,7 @@ import {
 import {
   buildEscrow,
   inputOwners,
+  signEscrowKeyPath,
   withEscrowLeafScripts,
   withOnlySignatures,
 } from './ordnetEscrow';
@@ -203,5 +204,57 @@ describe('ord.net escrow rebuild', () => {
       [0]
     );
     expect(owners.get(0)).toBe(address);
+  });
+});
+
+describe('ord.net recovery PSBT (escrow key path)', () => {
+  // ord.net refused a script-path recovery at submit: "Listing recovery
+  // input must contain only a key-path signature".
+  it('signs the escrow by key path, with only the signature handed back', () => {
+    const privateKey = keyFrom('recovery-seller');
+    const seller = outputKeyOf(privateKey);
+    const escrowOutput = buildEscrow(seller, seller).output;
+    const preflight = bareEscrowPsbt(escrowOutput);
+
+    const { psbtBase64, signed } = signEscrowKeyPath(
+      preflight,
+      privateKey,
+      'mainnet',
+      [{ signingIndexes: [0], sigHash: 1 }]
+    );
+    expect(signed).toEqual([0]);
+
+    const signedPsbt = bitcoin.Psbt.fromBase64(psbtBase64);
+    const input = signedPsbt.data.inputs[0];
+    expect(input.tapScriptSig).toBeUndefined();
+    expect(input.tapKeySig).toHaveLength(65);
+    expect(input.tapKeySig[64]).toBe(1);
+    expect(
+      signedPsbt.validateSignaturesOfInput(
+        0,
+        (pubkey, msghash, signature) =>
+          ecc.verifySchnorr(msghash, pubkey, signature),
+        Buffer.from(escrowOutput).subarray(2, 34)
+      )
+    ).toBe(true);
+
+    const submitted = bitcoin.Psbt.fromBase64(
+      withOnlySignatures(preflight, psbtBase64)
+    );
+    expect(submitted.data.inputs[0].tapKeySig).toHaveLength(65);
+    delete submitted.data.inputs[0].tapKeySig;
+    expect(submitted.toBase64()).toBe(preflight);
+  });
+
+  it("leaves another wallet's escrow for the ordinary signer", () => {
+    const theirs = outputKeyOf(keyFrom('recovery-someone-else'));
+    const preflight = bareEscrowPsbt(buildEscrow(theirs, theirs).output);
+    const { signed } = signEscrowKeyPath(
+      preflight,
+      keyFrom('recovery-seller'),
+      'mainnet',
+      [{ signingIndexes: [0], sigHash: 1 }]
+    );
+    expect(signed).toEqual([]);
   });
 });
