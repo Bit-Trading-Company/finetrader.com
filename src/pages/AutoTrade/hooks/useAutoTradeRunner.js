@@ -23,6 +23,7 @@ import {
   formatMinFunding,
 } from '../../../trading/ordnet/ordnetTrading';
 import { selectActiveWallets } from '../../../features/wallet/walletSelection';
+import { formatAppVersion } from '../../../lib/appVersion';
 import { mergePendingPurchases } from '../../../trading/pendingPurchases';
 import {
   FEE_SETTLEMENT_ON_STOP_SATS,
@@ -197,6 +198,8 @@ export const useAutoTradeRunner = ({
           ? 'Auto-trading started'
           : `Auto-trading started on ${exchangeApi.label}`
       );
+      // So a pasted console names the build it came from.
+      addConsoleLog(formatAppVersion());
 
       if (tradingMode === 'bid-accept-bids') {
         endRun();

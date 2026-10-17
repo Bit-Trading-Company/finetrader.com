@@ -13,6 +13,7 @@ import { OrdConnectProvider } from '@ordzaar/ord-connect';
 import ErrorBoundary from './app/ErrorBoundary';
 import { installRateLimitMonitor } from './lib/rateLimitMonitor';
 import { scrubStoredProxyWalletKey } from './features/wallet/proxyWalletStorage';
+import { logAppVersion } from './lib/appVersion';
 // Global design tokens and fonts (used by every stylesheet).
 import './styles/tokens.css';
 import './styles/fonts.css';
@@ -102,6 +103,8 @@ window.addEventListener('unhandledrejection', function (event) {
   }
 });
 
+// Which build this is, so a bug report can be matched to a commit.
+logAppVersion();
 // Report API rate limits to the trading console (see lib/rateLimitMonitor).
 installRateLimitMonitor(window);
 // Older versions stored a proxy wallet's private key in localStorage.
