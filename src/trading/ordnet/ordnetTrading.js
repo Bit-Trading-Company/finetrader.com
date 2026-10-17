@@ -15,6 +15,7 @@ import {
 import { getTokenId } from '../ordinals';
 import {
   inputOwners,
+  signEscrowKeyPath,
   withEscrowLeafScripts,
   withOnlySignatures,
 } from './ordnetEscrow';
@@ -824,28 +825,55 @@ const signOrdNetStep = async (
   wallet,
   network,
   finalize = false,
-  describe = describeListingStep
+  describe = describeListingStep,
+  { escrowKeyPath = false } = {}
 ) => {
-  // Step 1 and the recovery PSBT spend the escrow; see ordnetEscrow.js.
-  const psbtBase64 = withEscrowLeafScripts(
-    step.psbtBase64,
-    wallet.privateKey,
-    network,
-    signingIndexesOf(step)
-  );
   let signed;
   try {
-    signed = await signPsbtWithProxyWallet(
-      psbtBase64,
-      wallet.privateKey,
-      network,
-      {
-        finalize,
-        extractTx: false,
-        walletAddress: step.signerAddress || wallet.address,
-        inputSigningInstructions: step.inputsToSign || [],
-      }
-    );
+    let psbtBase64 = step.psbtBase64;
+    let instructions = step.inputsToSign || [];
+
+    if (escrowKeyPath) {
+      // The recovery PSBT: ord.net wants the escrow signed by key path.
+      const keyPath = signEscrowKeyPath(
+        psbtBase64,
+        wallet.privateKey,
+        network,
+        instructions
+      );
+      psbtBase64 = keyPath.psbtBase64;
+      instructions = instructions
+        .map((entry) => ({
+          ...entry,
+          signingIndexes: (entry.signingIndexes || []).filter(
+            (index) => !keyPath.signed.includes(index)
+          ),
+        }))
+        .filter((entry) => entry.signingIndexes.length > 0);
+    } else {
+      // Step 1 spends the escrow by script path; see ordnetEscrow.js.
+      psbtBase64 = withEscrowLeafScripts(
+        psbtBase64,
+        wallet.privateKey,
+        network,
+        signingIndexesOf(step)
+      );
+    }
+
+    signed = { base64: psbtBase64 };
+    if (!escrowKeyPath || instructions.length > 0) {
+      signed = await signPsbtWithProxyWallet(
+        psbtBase64,
+        wallet.privateKey,
+        network,
+        {
+          finalize,
+          extractTx: false,
+          walletAddress: step.signerAddress || wallet.address,
+          inputSigningInstructions: instructions,
+        }
+      );
+    }
   } catch (error) {
     throw new Error(`${describe(step)}: ${error.message}`);
   }
@@ -1010,7 +1038,9 @@ export const listOrdinalWithProxyWallet = async (
       preflight.recoveryPsbt,
       wallet,
       network,
-      false
+      false,
+      describeListingStep,
+      { escrowKeyPath: true }
     );
 
     const submit = await withOrdNetSession(wallet, network, (fresh) =>
