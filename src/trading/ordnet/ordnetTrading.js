@@ -13,7 +13,11 @@ import {
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
 import { getTokenId } from '../ordinals';
-import { inputOwners, withEscrowLeafScripts } from './ordnetEscrow';
+import {
+  inputOwners,
+  withEscrowLeafScripts,
+  withOnlySignatures,
+} from './ordnetEscrow';
 import {
   recordCollectionMembers,
   resolveHeldMembers,
@@ -697,11 +701,9 @@ export const fetchWalletOrdinals = async (
   ) {
     reportedUnknown.add(reportKey);
     options.addConsoleLog(
-      `  ℹ ${ownerAddress.slice(0, 8)}… holds ${unknown.length} inscription(s) ord.net has not shown in ${collectionSymbol}. ${
-        kind === 'gallery'
-          ? 'It is a curated collection, so they are recognised once one is listed or sold there.'
-          : 'Its collection type could not be read; they will be checked again.'
-      }`
+      kind === 'gallery'
+        ? `  ℹ ${ownerAddress.slice(0, 8)}… also holds ${unknown.length} inscription(s) ord.net has not shown in ${collectionSymbol}; they are left alone. (A ${collectionSymbol} item is recognised once it has been listed or sold there.)`
+        : `  ℹ ${ownerAddress.slice(0, 8)}… holds ${unknown.length} inscription(s) not yet matched to ${collectionSymbol}: its collection type could not be read. They will be checked again.`
     );
   }
 
@@ -849,7 +851,10 @@ const signOrdNetStep = async (
   }
   return {
     ...step,
-    psbtBase64: signed.base64,
+    // Submit refuses any field that differs from preflight; see ordnetEscrow.
+    psbtBase64: finalize
+      ? signed.base64
+      : withOnlySignatures(step.psbtBase64, signed.base64, network),
   };
 };
 
