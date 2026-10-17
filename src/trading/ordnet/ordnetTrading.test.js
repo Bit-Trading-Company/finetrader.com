@@ -18,6 +18,8 @@ import {
   prepareSecurePurchase,
   setOrdNetProviderSigner,
 } from './ordnetTrading';
+import * as bitcoin from 'bitcoinjs-lib';
+import { hasPendingTransaction } from '../ordinals';
 import { deriveAddressFromPrivateKey } from '../../lib/bitcoinUtils';
 
 /*
@@ -239,7 +241,9 @@ describe('ord.net holdings that are on the move', () => {
     expect(byId['ins-settled'].mempoolTxId).toBe('');
   });
 
-  it('filters nothing when the UTXO set cannot be read', async () => {
+  it('holds back unlisted holdings when the UTXO set cannot be read', async () => {
+    // UniSat may still show a just-sold inscription here; listing it would
+    // get a PSBT for the buyer's address. Count it, but do not list it.
     const slug = nextSlug();
     stubFetch({ members: ['ins-a'], held: ['ins-a'], utxos: null });
 
@@ -247,6 +251,7 @@ describe('ord.net holdings that are on the move', () => {
       wallet: { address: WALLET, publicKey: PUBKEY },
     });
     expect(items.map((i) => i.inscriptionId)).toEqual(['ins-a']);
+    expect(hasPendingTransaction(items[0])).toBe(true);
   });
 });
 
@@ -319,6 +324,62 @@ describe('ord.net trading writes', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/built this listing for bc1pbuyer/);
+  });
+
+  it('says so when ord.net builds the transfer from where the inscription used to be', async () => {
+    // signerAddress is this wallet, but ord.net's index still has the
+    // inscription at its previous owner, so step 0 spends from there.
+    const slug = nextSlug();
+    const previousOwner = deriveAddressFromPrivateKey(
+      createHash('sha256').update('previous-owner').digest('hex')
+    );
+    const transfer = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+    transfer.addInput({
+      hash: '55'.repeat(32),
+      index: 0,
+      witnessUtxo: {
+        script: bitcoin.address.toOutputScript(previousOwner),
+        value: 10000n,
+      },
+    });
+    transfer.addOutput({
+      script: bitcoin.address.toOutputScript(ADDRESS),
+      value: 9000n,
+    });
+    const step = (stepIndex) => ({
+      stepIndex,
+      inscriptionId: 'ins-1',
+      signerAddress: ADDRESS,
+      inputsToSign: [{ address: ADDRESS, signingIndexes: [0] }],
+      psbtBase64: transfer.toBase64(),
+    });
+    const requests = stubWrites({
+      [`/collection/${slug}/listings/preflight`]: () => ({
+        listings: [
+          {
+            inscriptionId: 'ins-1',
+            anchorUtxoId: 'anchor',
+            psbts: [step(0), step(1)],
+          },
+        ],
+        recoveryPsbt: step(undefined),
+      }),
+    });
+
+    const result = await listOrdinalWithProxyWallet(
+      { inscriptionId: 'ins-1' },
+      50000,
+      wallet,
+      'mainnet',
+      { collectionSymbol: slug }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain(`spends it from ${previousOwner}`);
+    expect(result.error).toMatch(/index has not caught up/);
+    expect(requests.map((r) => r.path)).not.toContain(
+      `/collection/${slug}/listings/submit`
+    );
   });
 
   it('takes the old listing down before re-pricing', async () => {

@@ -66,6 +66,8 @@ export const useAutoTradeRunner = ({
   // Incremented on every Start and Stop so an older run that is still awaiting
   // network calls cannot keep trading (or flip isTrading) after Stop -> Start.
   const tradingRunIdRef = useRef(0);
+  // Addresses that passed ord.net's funding check at run start; null = all.
+  const eligibleAddressesRef = useRef(null);
   const pendingPurchasesRef = useRef([]); // Ref to track latest pending purchases for interval callback
   /*
    * Engine calls still running. Stop only sets a flag, so a purchase can be
@@ -113,9 +115,17 @@ export const useAutoTradeRunner = ({
       selectedIndices: selectedWalletIndices,
     });
 
-    // Randomize wallet order if randomizer is enabled
+    // Randomize wallet order if randomizer is enabled. Fisher–Yates:
+    // sorting on a random comparator does not give every order equal odds.
     if (walletRandomizer && activeWallets.length > 1) {
-      activeWallets = [...activeWallets].sort(() => Math.random() - 0.5);
+      activeWallets = [...activeWallets];
+      for (let i = activeWallets.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activeWallets[i], activeWallets[j]] = [
+          activeWallets[j],
+          activeWallets[i],
+        ];
+      }
     }
 
     return activeWallets;
@@ -197,6 +207,7 @@ export const useAutoTradeRunner = ({
       }
 
       // Get active wallets based on settings
+      eligibleAddressesRef.current = null;
       let activeWallets = getActiveWallets();
 
       // Validate
@@ -254,6 +265,8 @@ export const useAutoTradeRunner = ({
           );
         }
         activeWallets = eligible;
+        // Every later cycle re-reads the wallet list, so keep the skip.
+        eligibleAddressesRef.current = new Set(eligible.map((w) => w.address));
       }
 
       // Buy X per wallet: floor purchases only, then stop (no auto-trader)
@@ -607,7 +620,11 @@ export const useAutoTradeRunner = ({
         tradingIntervalRef.current = setTimeout(async function runCycle() {
           tradingIntervalRef.current = null;
           if (isStopped()) return;
-          const currentActiveWallets = getActiveWallets();
+          const currentActiveWallets = getActiveWallets().filter(
+            (w) =>
+              !eligibleAddressesRef.current ||
+              eligibleAddressesRef.current.has(w.address)
+          );
 
           let currentTradePriceSats = null;
           if (tradingMode === 'range-trading') {
