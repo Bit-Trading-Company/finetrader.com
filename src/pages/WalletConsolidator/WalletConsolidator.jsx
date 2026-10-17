@@ -21,6 +21,7 @@ import {
   TextInput,
 } from '../../ui';
 import { useActivityLog } from '../../lib/useActivityLog';
+import { getOwedSats } from '../../trading/feeLedger';
 import { formatSatsAsBtc, shortenAddress } from '../../lib/format';
 import { useWalletConnection } from '../../features/wallet/useWalletConnection';
 import { useWalletSession } from '../../features/wallet/WalletSession';
@@ -102,12 +103,18 @@ const WalletConsolidator = () => {
       }
 
       const fee = estimateConsolidationFee(totalUtxos, totalUtxos, feeRate);
+      // App fees the auto-trader still owes are paid out of this sweep.
+      const owedSats = activeWallets.reduce(
+        (sum, wallet) => sum + getOwedSats(wallet.address),
+        0
+      );
       setPreview({
         totalSats,
         totalUtxos,
         funded,
         fee,
-        spendable: Math.max(0, totalSats - fee),
+        owedSats,
+        spendable: Math.max(0, totalSats - fee - owedSats),
       });
     } finally {
       setIsPreviewing(false);
@@ -125,6 +132,7 @@ const WalletConsolidator = () => {
       wallets: activeWallets,
       destinationAddress: destination,
       network,
+      feeRate,
       addLog: log,
       onWalletComplete: () => {},
       isStopRequested: () => stopRequested.current,
@@ -250,6 +258,12 @@ const WalletConsolidator = () => {
                   <dt>Estimated fee</dt>
                   <dd>{formatSatsAsBtc(preview.fee)}</dd>
                 </div>
+                {preview.owedSats > 0 && (
+                  <div>
+                    <dt>App fees owed</dt>
+                    <dd>{formatSatsAsBtc(preview.owedSats)}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Arrives</dt>
                   <dd>{formatSatsAsBtc(preview.spendable)}</dd>

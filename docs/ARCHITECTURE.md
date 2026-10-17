@@ -125,8 +125,10 @@ trading/autoTradeEngine.js       strategies: processWalletItems, buyItemsFromFlo
       ├─ trading/pendingPurchases.js pending purchase bookkeeping
       ├─ trading/ordinals.js     token / inscription id helpers
       ├─ trading/chain.js        confirmations, mempool presence, balances
-      ├─ trading/fees.js         trading fee amounts and cost estimates
-      └─ trading/feeTransaction.js  builds and broadcasts the trading fee tx
+      ├─ trading/fees.js         app fee amounts and cost estimates
+      ├─ trading/feeLedger.js    app fees each wallet owes, per purchase txid
+      ├─ trading/feeSettlement.js  pays a wallet's owed fees in one transaction
+      └─ trading/feeTransaction.js  builds and broadcasts that payment
 ```
 
 **Marketplace adapters.** The engine never calls a marketplace directly. Each
@@ -137,9 +139,19 @@ purchase, purchase confirmation).
 **A trading cycle** (`processWalletItems`, used by delta-neutral and range
 trading): check pending purchases for confirmation, list each wallet's ready
 items, then have another proxy wallet buy them (prepare, then complete and
-broadcast), send the trading fee, and record the purchase as pending until the
-buyer owns the item. `useAutoTradeRunner` repeats cycles on a timer; each Start
-gets a run id so a stopped run cannot keep trading.
+broadcast), record the app fee the purchase owes, and record the purchase as
+pending until the buyer owns the item. `useAutoTradeRunner` repeats cycles on a
+timer; each Start gets a run id so a stopped run cannot keep trading.
+
+**App fees** (1% of each purchase) are not paid per purchase: one transaction
+per purchase cost more in miner fees than the fee was worth on cheap items. The
+buyer's ledger (`feeLedger.js`, localStorage, keyed by purchase txid) records
+what is owed, and `feeSettlement.js` pays a wallet's total in one transaction —
+after a cycle once a wallet owes 20,000 sats, at Stop or the end of a run once
+it owes 5,000, and as an extra output of any Consolidator sweep. Settlements
+spend confirmed, inscription-free outputs only, and the ledger marks entries
+"settling" with the txid before broadcast so an interrupted payment is never
+made twice. A buyer's balance check includes what it already owes.
 
 **Satflow purchases** use the secure-purchase flow: the buyer signs a payment
 prep PSBT, then purchase and transfer PSBTs, and all are broadcast together via
