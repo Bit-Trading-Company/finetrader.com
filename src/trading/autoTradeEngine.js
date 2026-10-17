@@ -602,7 +602,10 @@ export const processWalletItems = async ({
     updatedPendingPurchases.length === 0 &&
     itemsListed === 0 &&
     itemsBought === 0 &&
-    itemsDelisted === 0
+    itemsDelisted === 0 &&
+    // A listing that failed leaves the item unlisted too; that is a reason
+    // to try again next cycle, not to end the run.
+    errors.length === 0
   ) {
     // Also check if all items are delisted even if we didn't delist any this cycle
     let allItemsDelisted = true;

@@ -175,6 +175,43 @@ describe('processWalletItems with unreadable balances', () => {
   });
 });
 
+describe('processWalletItems after a failed listing', () => {
+  it('keeps the run going to retry, rather than stopping', async () => {
+    // One ord.net submit error used to end the run: the item was left
+    // unlisted, which read as "all items have been delisted".
+    const unlisted = {
+      inscriptionId: 'ins-1',
+      listed: false,
+      listedPrice: null,
+      listingId: null,
+      mempoolTxId: '',
+    };
+    const api = fakeApi({
+      fetchWalletOrdinals: jest.fn(async (address) =>
+        address === wallets[0].address ? [unlisted] : []
+      ),
+      listOrdinalWithProxyWallet: jest.fn(async () => ({
+        success: false,
+        error: 'submit refused',
+      })),
+    });
+    requireTradingApi.mockReturnValue(api);
+    fetchWalletBalance.mockResolvedValue(10000000);
+
+    const result = await processWalletItems({
+      wallets,
+      selectedCollection: collection,
+      network: 'mainnet',
+      addConsoleLog: jest.fn(),
+      exchange: 'test',
+      useFees: false,
+    });
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.shouldStopTrading).toBe(false);
+  });
+});
+
 describe('sellXFromEachWallet', () => {
   it('lists nothing once Stop has been pressed', async () => {
     const api = fakeApi({
