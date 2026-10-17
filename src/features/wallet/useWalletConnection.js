@@ -1,6 +1,7 @@
 import { useOrdConnect } from '@ordzaar/ord-connect';
 import { useBitprint } from './bitprint.tsx';
 import { useConnect } from './useConnect.ts';
+import { clearSelectedProxyWallet } from './proxyWalletStorage';
 
 const CONNECT_TIMEOUT_MS = 5000;
 
@@ -61,6 +62,8 @@ export const useWalletConnection = ({ onError = logConnectionError } = {}) => {
 
   const disconnect = () => {
     if (bitprint?.disconnect) bitprint.disconnect();
+    // Before the reload below, which would otherwise skip every cleanup.
+    clearSelectedProxyWallet();
     localStorage.setItem(WALLET_DISCONNECTED_KEY, 'true');
     ordConnect.disconnectWallet();
     window.location.reload();

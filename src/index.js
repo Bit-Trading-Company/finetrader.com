@@ -12,6 +12,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { OrdConnectProvider } from '@ordzaar/ord-connect';
 import ErrorBoundary from './app/ErrorBoundary';
 import { installRateLimitMonitor } from './lib/rateLimitMonitor';
+import { scrubStoredProxyWalletKey } from './features/wallet/proxyWalletStorage';
 // Global design tokens and fonts (used by every stylesheet).
 import './styles/tokens.css';
 import './styles/fonts.css';
@@ -103,6 +104,8 @@ window.addEventListener('unhandledrejection', function (event) {
 
 // Report API rate limits to the trading console (see lib/rateLimitMonitor).
 installRateLimitMonitor(window);
+// Older versions stored a proxy wallet's private key in localStorage.
+scrubStoredProxyWalletKey();
 
 const rootElement = document.getElementById('root');
 
