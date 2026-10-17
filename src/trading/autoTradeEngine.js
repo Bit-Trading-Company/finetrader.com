@@ -20,12 +20,40 @@ import { getBuyerCandidates } from './buyerSelection';
 import { checkTransactionConfirmed, fetchWalletBalance } from './chain';
 import { requireTradingApi, getItemLink, getExchangeLabel } from './exchanges';
 import { estimateAutoTradePurchaseCost } from './fees';
-import { sendTradingFee } from './feeTransaction';
+import { getOwedSats, recordFeeOwed } from './feeLedger';
 import {
   hasPendingTransaction,
   getTokenId,
   getInscriptionId,
 } from './ordinals';
+
+/**
+ * Put a purchase's app fee on the buyer's ledger (./feeLedger). Nothing is
+ * sent here: the run settles each wallet's total in one transaction once it
+ * is worth sending (./feeSettlement).
+ */
+const recordAppFee = (buyerWallet, itemPrice, purchaseTxid, addConsoleLog) => {
+  const { recorded, feeSats } = recordFeeOwed(buyerWallet.address, {
+    purchaseTxid,
+    priceSats: itemPrice,
+  });
+  if (recorded && typeof addConsoleLog === 'function') {
+    const owed = getOwedSats(buyerWallet.address);
+    addConsoleLog(
+      `  App fee owed: ${feeSats} sats (wallet #${buyerWallet.index + 1} owes ${owed} sats in total, paid in one transaction later)`
+    );
+  }
+};
+
+/**
+ * What a buyer must hold for this purchase, counting app fees it already owes.
+ */
+const purchaseCostFor = (wallet, itemPrice, useFees) =>
+  estimateAutoTradePurchaseCost(
+    itemPrice,
+    useFees,
+    getOwedSats(wallet.address)
+  );
 
 /**
  * Process all wallet items: list if needed, buy from next wallet
@@ -411,11 +439,10 @@ export const processWalletItems = async ({
           mempoolLink
         );
         if (useFees && itemPrice > 0 && completeResult.txid) {
-          await sendTradingFee(
+          recordAppFee(
             buyerWallet,
             itemPrice,
             completeResult.txid,
-            network,
             addConsoleLog
           );
         }
@@ -707,11 +734,11 @@ const getFirstEligibleBuyerAddress = async (
   useFees = true
 ) => {
   const itemPrice = item.listedPrice || 0;
-  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
 
   for (const buyerWallet of getBuyerCandidates(wallets, sellerWallet)) {
     const balance = await fetchWalletBalance(buyerWallet.address, network);
-    if (balance >= totalCost && buyerWallet?.address) {
+    const totalCost = purchaseCostFor(buyerWallet, itemPrice, useFees);
+    if (balance !== null && balance >= totalCost && buyerWallet?.address) {
       return String(buyerWallet.address).toLowerCase();
     }
   }
@@ -736,11 +763,12 @@ const tryPreparePurchaseForItem = async (
 ) => {
   const api = requireTradingApi(exchange);
   const itemPrice = item.listedPrice || 0;
-  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   const tokenId = getTokenId(item);
   const itemId = item.inscriptionNumber || tokenId?.slice(0, 8) || 'Unknown';
   let lastError = '';
   let hadAnyWithBalance = false;
+  /** A wallet whose balance could not be read might well afford this. */
+  let hadUnknownBalance = false;
 
   for (const buyerWallet of getBuyerCandidates(wallets, sellerWallet)) {
     if (typeof isStopRequested === 'function' && isStopRequested()) {
@@ -748,7 +776,12 @@ const tryPreparePurchaseForItem = async (
     }
 
     const balance = await fetchWalletBalance(buyerWallet.address, network);
-    if (balance < totalCost) continue;
+    if (balance === null) {
+      hadUnknownBalance = true;
+      lastError = lastError || 'Could not read buyer wallet balances';
+      continue;
+    }
+    if (balance < purchaseCostFor(buyerWallet, itemPrice, useFees)) continue;
     hadAnyWithBalance = true;
 
     addConsoleLog(
@@ -813,7 +846,9 @@ const tryPreparePurchaseForItem = async (
 
   return {
     success: false,
-    allInsufficientBalance: !hadAnyWithBalance,
+    // Only a known shortfall on every wallet justifies delisting; an
+    // unreadable balance is not one.
+    allInsufficientBalance: !hadAnyWithBalance && !hadUnknownBalance,
     error: lastError || 'All wallets tried but prepare failed',
   };
 };
@@ -835,7 +870,7 @@ const tryPreparePurchaseFromFloorForBuyer = async (
 ) => {
   const api = requireTradingApi(exchange);
   const itemPrice = item.listedPrice || 0;
-  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
+  const totalCost = purchaseCostFor(buyerWallet, itemPrice, useFees);
   const tokenId = getTokenId(item);
   const itemId = item.inscriptionNumber || tokenId?.slice(0, 8) || 'Unknown';
   let lastError = '';
@@ -845,6 +880,13 @@ const tryPreparePurchaseFromFloorForBuyer = async (
   }
 
   const balance = await fetchWalletBalance(buyerWallet.address, network);
+  if (balance === null) {
+    return {
+      success: false,
+      balanceUnknown: true,
+      error: `Could not read wallet #${buyerWallet.index + 1}'s balance`,
+    };
+  }
   if (balance < totalCost) {
     return {
       success: false,
@@ -931,9 +973,9 @@ const tryPreparePurchaseFromFloor = async (
   selectedCollection = null
 ) => {
   const itemPrice = item.listedPrice || 0;
-  const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
   let lastError = '';
   let hadAnyWithBalance = false;
+  let hadUnknownBalance = false;
 
   for (const buyerWallet of wallets) {
     if (typeof isStopRequested === 'function' && isStopRequested()) {
@@ -941,7 +983,12 @@ const tryPreparePurchaseFromFloor = async (
     }
 
     const balance = await fetchWalletBalance(buyerWallet.address, network);
-    if (balance < totalCost) continue;
+    if (balance === null) {
+      hadUnknownBalance = true;
+      lastError = lastError || 'Could not read buyer wallet balances';
+      continue;
+    }
+    if (balance < purchaseCostFor(buyerWallet, itemPrice, useFees)) continue;
     hadAnyWithBalance = true;
 
     const one = await tryPreparePurchaseFromFloorForBuyer(
@@ -968,7 +1015,7 @@ const tryPreparePurchaseFromFloor = async (
 
   return {
     success: false,
-    allInsufficientBalance: !hadAnyWithBalance,
+    allInsufficientBalance: !hadAnyWithBalance && !hadUnknownBalance,
     error: lastError || 'All wallets tried but prepare failed',
   };
 };
@@ -1138,11 +1185,10 @@ export const buyItemsFromFloor = async ({
     );
 
     if (lastSuccessfulBuyerAddress) {
-      const totalCost = estimateAutoTradePurchaseCost(itemPrice, useFees);
       let nextGuess = null;
       for (const w of wallets) {
         const bal = await fetchWalletBalance(w.address, network);
-        if (bal >= totalCost) {
+        if (bal !== null && bal >= purchaseCostFor(w, itemPrice, useFees)) {
           nextGuess = String(w.address).toLowerCase();
           break;
         }
@@ -1243,11 +1289,10 @@ export const buyItemsFromFloor = async ({
           });
 
           if (useFees && itemPrice > 0 && completeResult.txid) {
-            await sendTradingFee(
+            recordAppFee(
               buyerWallet,
               itemPrice,
               completeResult.txid,
-              network,
               addConsoleLog
             );
           }
@@ -1451,6 +1496,13 @@ export const buyXFromEachWallet = async ({
             );
             break;
           }
+          if (prepareResult.balanceUnknown) {
+            // Leave the listing for the next wallet rather than skip it.
+            addConsoleLog(
+              `  ⚠ ${prepareResult.error}; skipping this wallet for now.`
+            );
+            break;
+          }
           const errorMsg =
             prepareResult.error ||
             `Prepare failed for item ${tokenId.slice(0, 8)}`;
@@ -1513,11 +1565,10 @@ export const buyXFromEachWallet = async ({
           });
 
           if (useFees && itemPrice > 0 && completeResult.txid) {
-            await sendTradingFee(
+            recordAppFee(
               buyerWallet,
               itemPrice,
               completeResult.txid,
-              network,
               addConsoleLog
             );
           }
@@ -1570,6 +1621,7 @@ export const buyXFromEachWallet = async ({
  * @param {Function} params.addConsoleLog - Logging function
  * @param {boolean} params.useCustomPrice - Whether to use custom price (default: false)
  * @param {number} params.customPrice - Custom price in sats (only used if useCustomPrice is true)
+ * @param {Function} [params.isStopRequested] - Returns true once the user has pressed Stop
  * @returns {Promise<Object>} Result with itemsListed and errors
  */
 export const sellXFromEachWallet = async ({
@@ -1581,7 +1633,10 @@ export const sellXFromEachWallet = async ({
   useCustomPrice = false,
   customPrice = 0,
   exchange,
+  isStopRequested = null,
 }) => {
+  const stopRequested = () =>
+    typeof isStopRequested === 'function' && isStopRequested();
   const api = requireTradingApi(exchange);
   const collectionSymbol =
     selectedCollection.collectionSymbol ||
@@ -1625,6 +1680,10 @@ export const sellXFromEachWallet = async ({
 
   // Process each wallet
   for (const wallet of wallets) {
+    if (stopRequested()) {
+      addConsoleLog('Listing stopped by user.');
+      break;
+    }
     try {
       // Fetch items owned by this wallet
       const items = await api.fetchWalletOrdinals(
@@ -1659,6 +1718,7 @@ export const sellXFromEachWallet = async ({
 
       // List items
       for (let i = 0; i < itemsToList; i++) {
+        if (stopRequested()) break;
         const item = unlistedItems[i];
         const tokenId = getTokenId(item);
 

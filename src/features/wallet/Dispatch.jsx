@@ -9,6 +9,11 @@ import {
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
 import { fetchAddressUtxos } from '../../lib/addressUtxos';
+import {
+  checkOutpointIsPlain,
+  fetchInscriptionOutpoints,
+  outpointKey,
+} from '../../lib/utxoSafety';
 import { shortenAddress } from '../../lib/format';
 import FeeRateField from '../fees/FeeRateField';
 import { useFeeRates } from '../fees/useFeeRates';
@@ -109,13 +114,24 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
 
     setUtxosLoading(true);
     try {
-      const data = await fetchAddressUtxos(
-        paymentsAddress,
-        connectedNetwork || 'mainnet'
-      );
-      // Sort by value descending and filter confirmed UTXOs
+      const [data, inscriptionOutpoints] = await Promise.all([
+        fetchAddressUtxos(paymentsAddress, connectedNetwork || 'mainnet'),
+        /*
+         * For wallets like UniSat the payment address is also the ordinals
+         * address, so its UTXOs include inscriptions. Picking one as input
+         * would split it across the proxy wallets. If they cannot be told
+         * apart, nothing is offered (fail closed).
+         */
+        fetchInscriptionOutpoints(paymentsAddress),
+      ]);
+      // Confirmed, inscription-free UTXOs, largest first.
       const sortedUtxos = data
-        .filter((utxo) => utxo.status?.confirmed)
+        .filter(
+          (utxo) =>
+            utxo.status?.confirmed &&
+            !(Number(utxo.inscriptionsCount) > 0) &&
+            !inscriptionOutpoints.has(outpointKey(utxo.txid, utxo.vout))
+        )
         .sort((a, b) => b.value - a.value);
       setUtxos(sortedUtxos);
 
@@ -444,6 +460,18 @@ const Dispatch = ({ isOpen, onClose, proxyWallets }) => {
 
       if (totalInputValue < totalOutputValue + estimatedFee) {
         throw new Error('Insufficient input value to cover outputs and fee');
+      }
+
+      /*
+       * Last check on the inputs actually being spent, one lookup each:
+       * this catches runes, and anything the address-wide list missed.
+       */
+      for (const utxo of selectedUtxos) {
+        if (!(await checkOutpointIsPlain(utxo.txid, utxo.vout))) {
+          throw new Error(
+            `UTXO ${utxo.txid.slice(0, 8)}…:${utxo.vout} holds an inscription or runes; it was not spent. Pick other UTXOs.`
+          );
+        }
       }
 
       // Create PSBT

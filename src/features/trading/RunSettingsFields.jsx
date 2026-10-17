@@ -55,7 +55,7 @@ const RunSettingsFields = ({ settings, isTrading }) => {
 
       <Checkbox
         label="Pay the app fee"
-        hint="Adds the Fine Trader fee output to trades."
+        hint="1% of each purchase, added up per wallet and paid in one transaction once it is worth sending."
         checked={useFees}
         disabled={isTrading}
         onChange={(e) => setUseFees(e.target.checked)}

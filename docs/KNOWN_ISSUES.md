@@ -31,6 +31,12 @@ are in the git history.
   returns one; only the per-UTXO fallback checks rune balances. A proxy wallet
   holding runes could spend a rune UTXO as a fee input. It still fails closed
   when no inscription source is reachable.
+- **Unconfirmed inscriptions above 10,000 sats.** A just-bought inscription
+  that no index has seen yet looks exactly like change. Fee inputs and ord.net
+  payment candidates never include unconfirmed outputs of 10,000 sats or
+  less (`src/lib/utxoSafety.js`), which covers ord.net's
+  usual postage, but an inscription on a larger unconfirmed output could
+  still be picked until UniSat indexes it.
 - **Collection offers use the wrong address.** `CollectionOfferModal` reads
   `connectedAddress.payment` (the field is `payments`) and signs with the
   ordinals address. Fixing it needs payment-input signing and testing with

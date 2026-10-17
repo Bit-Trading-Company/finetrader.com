@@ -73,25 +73,39 @@ export const verifyTxInMempool = async (
 };
 
 /**
- * Fetch wallet balance (confirmed)
+ * What a wallet can spend, in sats — or null when that cannot be read.
+ *
+ * Null is not zero. This drives buyer selection, and a mempool.space hiccup
+ * or 429 used to read as an empty wallet: every buyer looked broke, the
+ * engine delisted the seller's items and could stop the run outright.
+ * Callers treat null as "skip this wallet for now", never as "broke".
+ *
+ * The confirmed balance, less anything already flowing out in the mempool.
+ * A purchase spends confirmed coin straight away; counting only confirmed
+ * funds let the same wallet be picked again for money it had just spent.
+ * Incoming unconfirmed funds are not counted.
+ *
  * @param {string} address - Wallet address
  * @param {string} network - Network type
- * @returns {Promise<number>} Balance in satoshis
+ * @returns {Promise<number|null>} Spendable balance in sats, or null if unknown
  */
 export const fetchWalletBalance = async (address, network = 'mainnet') => {
   try {
     const response = await fetch(
       getMempoolAddressUrl(address, network || 'mainnet')
     );
-    if (response.ok) {
-      const data = await response.json();
-      const confirmedBalance = data.chain_stats?.funded_txo_sum || 0;
-      const spentBalance = data.chain_stats?.spent_txo_sum || 0;
-      return confirmedBalance - spentBalance;
-    }
-    return 0;
+    if (!response.ok) return null;
+    const data = await response.json();
+    const chain = data?.chain_stats;
+    if (!chain) return null;
+    const confirmed =
+      Number(chain.funded_txo_sum || 0) - Number(chain.spent_txo_sum || 0);
+    const mempool = data.mempool_stats || {};
+    const pendingNet =
+      Number(mempool.funded_txo_sum || 0) - Number(mempool.spent_txo_sum || 0);
+    return Math.max(0, confirmed + Math.min(0, pendingNet));
   } catch (err) {
     console.error('Error fetching wallet balance:', err);
-    return 0;
+    return null;
   }
 };

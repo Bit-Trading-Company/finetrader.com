@@ -65,7 +65,8 @@ transaction are exchange-independent. Import them from `ordinals.js`,
    `needsWalletForReads: true` on the adapter and the page will wait for a
    proxy wallet before asking for floor prices.
 6. **Test.** Start with a small amount on one proxy wallet: floor price →
-   list → delist → buy one item → confirmation → trading fee.
+   list → delist → buy one item → confirmation → app fee owed (console) →
+   app fee paid when the run stops or the wallet is swept.
 
 ## Current gaps
 

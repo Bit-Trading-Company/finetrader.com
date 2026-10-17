@@ -23,7 +23,13 @@ import {
   formatMinFunding,
 } from '../../../trading/ordnet/ordnetTrading';
 import { selectActiveWallets } from '../../../features/wallet/walletSelection';
+import { formatAppVersion } from '../../../lib/appVersion';
 import { mergePendingPurchases } from '../../../trading/pendingPurchases';
+import {
+  FEE_SETTLEMENT_ON_STOP_SATS,
+  FEE_SETTLEMENT_THRESHOLD_SATS,
+  settleOwedFees,
+} from '../../../trading/feeSettlement';
 
 export const useAutoTradeRunner = ({
   settings,
@@ -61,7 +67,21 @@ export const useAutoTradeRunner = ({
   // Incremented on every Start and Stop so an older run that is still awaiting
   // network calls cannot keep trading (or flip isTrading) after Stop -> Start.
   const tradingRunIdRef = useRef(0);
+  // Addresses that passed ord.net's funding check at run start; null = all.
+  const eligibleAddressesRef = useRef(null);
   const pendingPurchasesRef = useRef([]); // Ref to track latest pending purchases for interval callback
+  /*
+   * Engine calls still running. Stop only sets a flag, so a purchase can be
+   * mid-flight after it; the end-of-run fee settlement waits for this to
+   * reach zero rather than race that purchase for the same coins.
+   */
+  const engineCallsInFlightRef = useRef(0);
+  const tracked = (promise) => {
+    engineCallsInFlightRef.current += 1;
+    return Promise.resolve(promise).finally(() => {
+      engineCallsInFlightRef.current -= 1;
+    });
+  };
   // Refs for range trading state (to avoid stale closures in interval)
   const usePriceRangeRef = useRef(false);
   const lowerTradePriceRef = useRef(0);
@@ -96,13 +116,51 @@ export const useAutoTradeRunner = ({
       selectedIndices: selectedWalletIndices,
     });
 
-    // Randomize wallet order if randomizer is enabled
+    // Randomize wallet order if randomizer is enabled. Fisher–Yates:
+    // sorting on a random comparator does not give every order equal odds.
     if (walletRandomizer && activeWallets.length > 1) {
-      activeWallets = [...activeWallets].sort(() => Math.random() - 0.5);
+      activeWallets = [...activeWallets];
+      for (let i = activeWallets.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activeWallets[i], activeWallets[j]] = [
+          activeWallets[j],
+          activeWallets[i],
+        ];
+      }
     }
 
     return activeWallets;
   }, [wallets, useCustomWalletSubset, selectedWalletIndices, walletRandomizer]);
+
+  /*
+   * App fees are owed per purchase and paid per wallet in one transaction
+   * (trading/feeSettlement). At the end of a run, pay any wallet that owes
+   * enough to be worth a transaction; the rest carries over.
+   */
+  const settleFeesAtEnd = async () => {
+    const runIdAtEnd = tradingRunIdRef.current;
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (engineCallsInFlightRef.current > 0 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    // A new run started meanwhile: it settles its own wallets.
+    if (tradingRunIdRef.current !== runIdAtEnd) return;
+    try {
+      const { stillOwedSats } = await settleOwedFees({
+        wallets,
+        network,
+        minimumSats: FEE_SETTLEMENT_ON_STOP_SATS,
+        addConsoleLog,
+      });
+      if (stillOwedSats > 0) {
+        addConsoleLog(
+          `App fees still owed: ${(stillOwedSats / 100000000).toFixed(8)} BTC. Carried over: paid once a wallet owes ${(FEE_SETTLEMENT_THRESHOLD_SATS / 100000000).toFixed(8)} BTC during a run, ${(FEE_SETTLEMENT_ON_STOP_SATS / 100000000).toFixed(8)} BTC when one ends, or with your next Consolidator withdrawal.`
+        );
+      }
+    } catch (err) {
+      addConsoleLog(`⚠ Could not settle app fees: ${err.message}`);
+    }
+  };
 
   // Start/Stop trading (SIMPLIFIED VERSION)
   const handleStartTrading = async () => {
@@ -116,6 +174,7 @@ export const useAutoTradeRunner = ({
       }
       setIsTrading(false);
       addConsoleLog('Auto-trading stopped');
+      settleFeesAtEnd();
       // Note: We keep pendingPurchases state so they can be checked if trading resumes
     } else {
       // Start trading
@@ -126,7 +185,9 @@ export const useAutoTradeRunner = ({
         tradingStopRequestedRef.current || runId !== tradingRunIdRef.current;
       // Only the current run may switch the Start/Stop button back.
       const endRun = () => {
-        if (runId === tradingRunIdRef.current) setIsTrading(false);
+        if (runId !== tradingRunIdRef.current) return;
+        setIsTrading(false);
+        settleFeesAtEnd();
       };
       setIsTrading(true);
       // Initialize pending purchases ref
@@ -137,6 +198,8 @@ export const useAutoTradeRunner = ({
           ? 'Auto-trading started'
           : `Auto-trading started on ${exchangeApi.label}`
       );
+      // So a pasted console names the build it came from.
+      addConsoleLog(formatAppVersion());
 
       if (tradingMode === 'bid-accept-bids') {
         endRun();
@@ -147,6 +210,7 @@ export const useAutoTradeRunner = ({
       }
 
       // Get active wallets based on settings
+      eligibleAddressesRef.current = null;
       let activeWallets = getActiveWallets();
 
       // Validate
@@ -204,6 +268,8 @@ export const useAutoTradeRunner = ({
           );
         }
         activeWallets = eligible;
+        // Every later cycle re-reads the wallet list, so keep the skip.
+        eligibleAddressesRef.current = new Set(eligible.map((w) => w.address));
       }
 
       // Buy X per wallet: floor purchases only, then stop (no auto-trader)
@@ -222,17 +288,19 @@ export const useAutoTradeRunner = ({
         );
 
         try {
-          const buyEachResult = await buyXFromEachWallet({
-            wallets: activeWallets,
-            selectedCollection,
-            network,
-            itemsPerWallet: buyXEachAmount,
-            addConsoleLog,
-            useFees,
-            prepDelay,
-            exchange: tradingExchange,
-            isStopRequested: isStopped,
-          });
+          const buyEachResult = await tracked(
+            buyXFromEachWallet({
+              wallets: activeWallets,
+              selectedCollection,
+              network,
+              itemsPerWallet: buyXEachAmount,
+              addConsoleLog,
+              useFees,
+              prepDelay,
+              exchange: tradingExchange,
+              isStopRequested: isStopped,
+            })
+          );
 
           const itemsBought = buyEachResult.itemsBought || 0;
           if (
@@ -307,17 +375,19 @@ export const useAutoTradeRunner = ({
         );
 
         try {
-          const floorPurchaseResult = await buyItemsFromFloor({
-            wallets: activeWallets,
-            selectedCollection,
-            network,
-            purchaseAmount,
-            addConsoleLog,
-            useFees,
-            prepDelay,
-            exchange: tradingExchange,
-            isStopRequested: isStopped,
-          });
+          const floorPurchaseResult = await tracked(
+            buyItemsFromFloor({
+              wallets: activeWallets,
+              selectedCollection,
+              network,
+              purchaseAmount,
+              addConsoleLog,
+              useFees,
+              prepDelay,
+              exchange: tradingExchange,
+              isStopRequested: isStopped,
+            })
+          );
 
           const itemsBought = floorPurchaseResult.itemsBought || 0;
 
@@ -367,16 +437,19 @@ export const useAutoTradeRunner = ({
           : 0;
 
         try {
-          const sellResult = await sellXFromEachWallet({
-            wallets: activeWallets,
-            selectedCollection,
-            network,
-            sellXAmount,
-            addConsoleLog,
-            useCustomPrice: useCustomSellPrice,
-            customPrice: customPriceSats,
-            exchange: tradingExchange,
-          });
+          const sellResult = await tracked(
+            sellXFromEachWallet({
+              wallets: activeWallets,
+              selectedCollection,
+              network,
+              sellXAmount,
+              addConsoleLog,
+              useCustomPrice: useCustomSellPrice,
+              customPrice: customPriceSats,
+              exchange: tradingExchange,
+              isStopRequested: isStopped,
+            })
+          );
 
           const itemsListed = sellResult.itemsListed || 0;
 
@@ -444,17 +517,19 @@ export const useAutoTradeRunner = ({
           `\n🛒 Purchasing ${purchaseAmount} item(s) from floor (startup tick)...`
         );
         try {
-          const floorPurchaseResult = await buyItemsFromFloor({
-            wallets: activeWallets,
-            selectedCollection,
-            network,
-            purchaseAmount,
-            addConsoleLog,
-            useFees,
-            prepDelay,
-            exchange: tradingExchange,
-            isStopRequested: isStopped,
-          });
+          const floorPurchaseResult = await tracked(
+            buyItemsFromFloor({
+              wallets: activeWallets,
+              selectedCollection,
+              network,
+              purchaseAmount,
+              addConsoleLog,
+              useFees,
+              prepDelay,
+              exchange: tradingExchange,
+              isStopRequested: isStopped,
+            })
+          );
 
           const itemsBought = floorPurchaseResult.itemsBought || 0;
           if (
@@ -499,22 +574,24 @@ export const useAutoTradeRunner = ({
       // Delta neutral + range trading: same processWalletItems (listing fix, delays, sequential buys)
       let initialResult;
       try {
-        initialResult = await processWalletItems({
-          wallets: activeWallets,
-          selectedCollection,
-          network,
-          addConsoleLog,
-          pendingPurchases: pendingPurchasesRef.current,
-          useFees,
-          tradePrice: tradePriceSats,
-          prepDelay,
-          exchange: tradingExchange,
-          updatePendingPurchases: (newPending) => {
-            setPendingPurchases(newPending);
-            pendingPurchasesRef.current = newPending;
-          },
-          isStopRequested: isStopped,
-        });
+        initialResult = await tracked(
+          processWalletItems({
+            wallets: activeWallets,
+            selectedCollection,
+            network,
+            addConsoleLog,
+            pendingPurchases: pendingPurchasesRef.current,
+            useFees,
+            tradePrice: tradePriceSats,
+            prepDelay,
+            exchange: tradingExchange,
+            updatePendingPurchases: (newPending) => {
+              setPendingPurchases(newPending);
+              pendingPurchasesRef.current = newPending;
+            },
+            isStopRequested: isStopped,
+          })
+        );
       } catch (err) {
         addConsoleLog(`✗ Auto-trading stopped after an error: ${err.message}`);
         endRun();
@@ -546,7 +623,11 @@ export const useAutoTradeRunner = ({
         tradingIntervalRef.current = setTimeout(async function runCycle() {
           tradingIntervalRef.current = null;
           if (isStopped()) return;
-          const currentActiveWallets = getActiveWallets();
+          const currentActiveWallets = getActiveWallets().filter(
+            (w) =>
+              !eligibleAddressesRef.current ||
+              eligibleAddressesRef.current.has(w.address)
+          );
 
           let currentTradePriceSats = null;
           if (tradingMode === 'range-trading') {
@@ -591,17 +672,19 @@ export const useAutoTradeRunner = ({
               `\n🛒 Purchasing ${purchaseAmount} item(s) from floor (tick)...`
             );
             try {
-              const floorPurchaseResult = await buyItemsFromFloor({
-                wallets: currentActiveWallets,
-                selectedCollection,
-                network,
-                purchaseAmount,
-                addConsoleLog,
-                useFees,
-                prepDelay,
-                exchange: tradingExchange,
-                isStopRequested: isStopped,
-              });
+              const floorPurchaseResult = await tracked(
+                buyItemsFromFloor({
+                  wallets: currentActiveWallets,
+                  selectedCollection,
+                  network,
+                  purchaseAmount,
+                  addConsoleLog,
+                  useFees,
+                  prepDelay,
+                  exchange: tradingExchange,
+                  isStopRequested: isStopped,
+                })
+              );
 
               const itemsBought = floorPurchaseResult.itemsBought || 0;
               if (
@@ -638,23 +721,25 @@ export const useAutoTradeRunner = ({
 
           let result;
           try {
-            result = await processWalletItems({
-              wallets: currentActiveWallets,
-              selectedCollection,
-              network,
-              addConsoleLog,
-              pendingPurchases: pendingPurchasesRef.current,
-              useFees,
-              // null for delta neutral (floor); range trading sets random/fixed sats each tick
-              tradePrice: currentTradePriceSats,
-              prepDelay,
-              exchange: tradingExchange,
-              updatePendingPurchases: (newPending) => {
-                setPendingPurchases(newPending);
-                pendingPurchasesRef.current = newPending;
-              },
-              isStopRequested: isStopped,
-            });
+            result = await tracked(
+              processWalletItems({
+                wallets: currentActiveWallets,
+                selectedCollection,
+                network,
+                addConsoleLog,
+                pendingPurchases: pendingPurchasesRef.current,
+                useFees,
+                // null for delta neutral (floor); range trading sets random/fixed sats each tick
+                tradePrice: currentTradePriceSats,
+                prepDelay,
+                exchange: tradingExchange,
+                updatePendingPurchases: (newPending) => {
+                  setPendingPurchases(newPending);
+                  pendingPurchasesRef.current = newPending;
+                },
+                isStopRequested: isStopped,
+              })
+            );
           } catch (err) {
             addConsoleLog(
               `✗ Auto-trading stopped after an error: ${err.message}`
@@ -671,6 +756,16 @@ export const useAutoTradeRunner = ({
             endRun();
             return;
           }
+
+          // Pay app fees for any wallet that now owes enough to be worth it.
+          await tracked(
+            settleOwedFees({
+              wallets: currentActiveWallets,
+              network,
+              addConsoleLog,
+            })
+          );
+          if (isStopped()) return;
           scheduleNext();
         }, timerIntervalSeconds * 1000);
       };

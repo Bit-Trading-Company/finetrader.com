@@ -13,7 +13,11 @@ import {
   getMempoolTxUrl,
 } from '../../lib/mempoolProvider';
 import { getTokenId } from '../ordinals';
-import { buildUnisatProxyUrl } from '../../lib/unisatProxy';
+import { inputOwners, withEscrowLeafScripts } from './ordnetEscrow';
+import {
+  fetchHeldInscriptions,
+  isUnconfirmedPostageSized,
+} from '../../lib/utxoSafety';
 
 const ECPair = ECPairFactory(ecc);
 const ORDNET_SESSION_PREFIX = 'fine-trading-ordnet-session:';
@@ -253,16 +257,20 @@ export const ensureOrdNetSession = async (wallet, network = 'mainnet') => {
     throw error;
   }
 
-  const binding =
-    (verified.walletBindings || []).find(
-      (b) =>
-        String(b.ordinalsAddress).toLowerCase() === address.toLowerCase() ||
-        String(b.paymentAddress).toLowerCase() === address.toLowerCase()
-    ) || verified.walletBindings?.[0];
+  const binding = (verified.walletBindings || []).find(
+    (b) =>
+      String(b.ordinalsAddress).toLowerCase() === address.toLowerCase() ||
+      String(b.paymentAddress).toLowerCase() === address.toLowerCase()
+  );
 
+  /*
+   * No fallback to another binding: a profile can hold several, and
+   * listing under someone else's walletBindingId builds PSBTs this wallet
+   * cannot sign. The session would also be cached against this address.
+   */
   if (!verified.sessionToken || !binding?.walletBindingId) {
     throw new Error(
-      'ord.net auth did not return a session token and wallet binding'
+      `ord.net auth did not return a session token and a wallet binding for ${address}`
     );
   }
 
@@ -621,60 +629,6 @@ const getCollectionMembership = async (collectionSymbol, session) => {
 };
 
 /**
- * Inscriptions an address holds, from UniSat's owner-indexed API.
- *
- * ord.net has no holdings-by-owner endpoint, and UniSat's costs nothing
- * against ord.net's rate limit. Returns inscription ids with the outpoint
- * they sit on, so a pending move can be spotted.
- */
-const fetchHeldInscriptions = async (address) => {
-  const held = new Map();
-  let cursor = 0;
-
-  for (let page = 0; page < 20; page++) {
-    const response = await fetch(
-      buildUnisatProxyUrl(
-        `address/${encodeURIComponent(address)}/inscription-utxo-data`,
-        { cursor: String(cursor), size: '100' }
-      ),
-      { headers: { accept: 'application/json' } }
-    );
-    /*
-     * A partial answer is not a smaller answer here: a purchase uses this
-     * to keep inscriptions out of its payment inputs, so an inscription
-     * missing from the list could be spent as money.
-     */
-    if (!response.ok) {
-      throw new Error(
-        `Could not read the inscriptions held by ${address} (HTTP ${response.status})`
-      );
-    }
-
-    const body = await response.json();
-    const data = body?.data;
-    const utxos = Array.isArray(data?.utxo) ? data.utxo : [];
-
-    for (const utxo of utxos) {
-      for (const inscription of utxo.inscriptions || []) {
-        if (!inscription?.inscriptionId) continue;
-        held.set(inscription.inscriptionId, {
-          inscriptionId: inscription.inscriptionId,
-          inscriptionNumber: inscription.inscriptionNumber,
-          txid: utxo.txid,
-          vout: utxo.vout,
-        });
-      }
-    }
-
-    cursor += utxos.length;
-    if (utxos.length === 0) break;
-    if (typeof data?.total === 'number' && cursor >= data.total) break;
-  }
-
-  return held;
-};
-
-/**
  * A wallet's unspent outputs, from mempool.space, keyed `txid:vout`.
  *
  * Esplora merges the mempool into this, so an output already spent by an
@@ -750,7 +704,8 @@ export const fetchWalletOrdinals = async (
   /*
    * Where an inscription stands against this wallet's UTXO set: null when
    * it is still here and settled, otherwise why it is not tradeable now.
-   * With no UTXO set to check against, nothing is filtered.
+   * With no UTXO set to check against, nothing is filtered here; the
+   * held-but-unlisted loop below holds those items back instead.
    */
   const locationState = (txid, vout) => {
     if (!utxos || !txid || vout === undefined || vout === null) return null;
@@ -778,7 +733,16 @@ export const fetchWalletOrdinals = async (
   for (const [inscriptionId, utxo] of held) {
     if (listed.has(inscriptionId)) continue;
     if (!membership.has(inscriptionId)) continue;
-    const state = locationState(utxo.txid, utxo.vout);
+    /*
+     * Without the UTXO set (mempool.space down or rate-limited) UniSat's
+     * word cannot be checked, and it may be a just-sold inscription, which
+     * ord.net would build a listing for at the buyer's address ("input 0
+     * belongs to …"). It is still reported as held, but held back as
+     * pending so nothing lists it this cycle.
+     */
+    const state = utxos
+      ? locationState(utxo.txid, utxo.vout)
+      : { pendingTxid: 'unverified' };
     if (state?.gone) continue;
     results.push({
       inscriptionId,
@@ -857,18 +821,49 @@ const fetchListingForItem = async (item, collectionSymbol, wallet, network) => {
   };
 };
 
-const signOrdNetStep = async (step, wallet, network, finalize = false) => {
-  const signed = await signPsbtWithProxyWallet(
+const signingIndexesOf = (step) =>
+  (step?.inputsToSign || []).flatMap((entry) => entry.signingIndexes || []);
+
+/** Which PSBT of a listing this is, in words, for errors. */
+const describeListingStep = (step) => {
+  if (step?.stepIndex === 0) return 'step 0 (transfer into escrow)';
+  if (step?.stepIndex === 1) return 'step 1 (settlement leg)';
+  return 'the recovery PSBT';
+};
+
+const describePurchaseStep = (step) =>
+  `purchase step ${step?.stepIndex ?? '?'}`;
+
+const signOrdNetStep = async (
+  step,
+  wallet,
+  network,
+  finalize = false,
+  describe = describeListingStep
+) => {
+  // Step 1 and the recovery PSBT spend the escrow; see ordnetEscrow.js.
+  const psbtBase64 = withEscrowLeafScripts(
     step.psbtBase64,
     wallet.privateKey,
     network,
-    {
-      finalize,
-      extractTx: false,
-      walletAddress: step.signerAddress || wallet.address,
-      inputSigningInstructions: step.inputsToSign || [],
-    }
+    signingIndexesOf(step)
   );
+  let signed;
+  try {
+    signed = await signPsbtWithProxyWallet(
+      psbtBase64,
+      wallet.privateKey,
+      network,
+      {
+        finalize,
+        extractTx: false,
+        walletAddress: step.signerAddress || wallet.address,
+        inputSigningInstructions: step.inputsToSign || [],
+      }
+    );
+  } catch (error) {
+    throw new Error(`${describe(step)}: ${error.message}`);
+  }
   return {
     ...step,
     psbtBase64: signed.base64,
@@ -894,6 +889,32 @@ const assertListingIsForWallet = (preflight, address) => {
     throw new Error(
       `ord.net built this listing for ${foreign.signerAddress}, not this wallet (${address}). The inscription has most likely moved; it will be picked up from its new wallet once that settles.`
     );
+  }
+};
+
+/**
+ * Step 0 spends the inscription from wherever ord.net's index places it,
+ * while `signerAddress` is simply the wallet asking. So the check above
+ * passes even when ord.net still has the inscription at its previous owner,
+ * typically one just bought from another wallet, and the PSBT asks this wallet
+ * to sign for an output it does not hold. Say that, instead of letting the
+ * signer report a bare "input 0 belongs to …".
+ */
+const assertTransferSpendsFromWallet = (preflight, address, network) => {
+  for (const entry of preflight?.listings || []) {
+    const transfer = (entry.psbts || []).find((step) => step.stepIndex === 0);
+    if (!transfer?.psbtBase64) continue;
+    const owners = inputOwners(
+      transfer.psbtBase64,
+      signingIndexesOf(transfer),
+      network
+    );
+    for (const owner of owners.values()) {
+      if (owner.toLowerCase() === address.toLowerCase()) continue;
+      throw new Error(
+        `ord.net's listing for ${entry.inscriptionId} spends it from ${owner}, not this wallet (${address}). Either ord.net's index has not caught up with the inscription arriving here, or it has already left this wallet. It will be retried on a later cycle.`
+      );
+    }
   }
 };
 
@@ -978,6 +999,7 @@ export const listOrdinalWithProxyWallet = async (
     }
 
     assertListingIsForWallet(preflight, address);
+    assertTransferSpendsFromWallet(preflight, address, network);
 
     const signedEntries = [];
     const anchors = [];
@@ -1044,15 +1066,6 @@ export const listOrdinalWithProxyWallet = async (
  */
 const POSTAGE_CEILING_SATS = 1000;
 
-/*
- * An unconfirmed output at or below this is treated as an inscription too.
- *
- * A wallet that has just bought holds the new inscription on an unconfirmed
- * output, often 10,000 sats, which the owner index may not have caught up
- * with. Change that small is not worth the risk of guessing wrong.
- */
-const UNCONFIRMED_POSTAGE_CEILING_SATS = 10000;
-
 /** ord.net rejects more than this many candidates in one call. */
 const MAX_SPENDABLE_UTXOS = 1000;
 
@@ -1095,10 +1108,7 @@ const getSpendableUtxos = async (
         (u) =>
           u?.txid &&
           Number(u.value) > POSTAGE_CEILING_SATS &&
-          !(
-            u.status?.confirmed === false &&
-            Number(u.value) <= UNCONFIRMED_POSTAGE_CEILING_SATS
-          ) &&
+          !isUnconfirmedPostageSized(u) &&
           !excluded.has(`${u.txid}:${Number(u.vout)}`)
       )
       .map((u) => ({
@@ -1176,7 +1186,9 @@ export const prepareSecurePurchase = async (
 
     const signedSteps = [];
     for (const step of preflight.steps || []) {
-      signedSteps.push(await signOrdNetStep(step, wallet, network, false));
+      signedSteps.push(
+        await signOrdNetStep(step, wallet, network, false, describePurchaseStep)
+      );
     }
 
     if (typeof addConsoleLog === 'function') {

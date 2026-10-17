@@ -1,6 +1,8 @@
 /**
- * Builds, signs and broadcasts the auto-trade trading-fee transaction from a
- * proxy wallet. Fee amounts and the receiver address come from ./fees.
+ * Builds, signs and broadcasts an app-fee payment from a proxy wallet: one
+ * output of `amountSats` to the fee receiver, plus change. Called by
+ * ./feeSettlement with everything a wallet owes; the receiver address comes
+ * from ./fees.
  */
 
 import * as bitcoin from 'bitcoinjs-lib';
@@ -10,7 +12,11 @@ import {
   getTaprootInternalPubkeyBytes,
   signPsbtWithProxyWallet,
 } from '../lib/bitcoinUtils';
-import { fetchFeeRates, unattendedRate } from '../lib/feeRates';
+import {
+  fetchFeeRates,
+  rateForTier,
+  UNATTENDED_MIN_FEE_RATE,
+} from '../lib/feeRates';
 import {
   getMempoolTxApiUrl,
   getMempoolAddressUtxoUrl,
@@ -20,48 +26,49 @@ import {
 } from '../lib/mempoolProvider';
 import { buildUnisatProxyUrl } from '../lib/unisatProxy';
 import {
-  calculateTradingFeeAmount,
+  MIN_TRADING_FEE_OUTPUT_SATS,
   TRADING_FEE_RECEIVER_ADDRESS,
 } from './fees';
 
 /**
- * Send trading fee (1% of purchase price, rounded up to dust if below relay threshold)
- * to fee receiver address. Uses non-ordinal UTXOs from the purchase tx and/or wallet.
- * @param {Object} wallet - Proxy wallet object
- * @param {number} purchasePrice - Purchase price in satoshis
- * @param {string} purchaseTxid - Purchase transaction ID
- * @param {string} network - Network type
- * @param {Function|null} _addConsoleLog - Unused; fee payments are silent in the trading console.
- * @returns {Promise<Object>} Result with success, txid, error
+ * Pay `amountSats` of app fees from a proxy wallet, in one transaction.
+ *
+ * Spends confirmed outputs only. A settlement is never urgent, and an
+ * unconfirmed output may be an inscription bought moments ago that no index
+ * has seen yet; a wallet whose funds are all unconfirmed simply settles on a
+ * later attempt.
+ *
+ * @param {Object} params
+ * @param {Object} params.wallet - Proxy wallet ({ address, publicKey, privateKey })
+ * @param {number} params.amountSats - Fee output value
+ * @param {string} [params.network]
+ * @param {Function|null} [params.addConsoleLog]
+ * @param {(txid: string) => void} [params.onSigned] - Called with the txid
+ *   after signing and before broadcast, so the caller can record the payment
+ *   before it can happen.
+ * @returns {Promise<{ success: boolean, txid?: string, feeAmount?: number,
+ *   error?: string, broadcastRejected?: boolean }>} broadcastRejected is true
+ *   only when the explorer answered and refused the transaction — a network
+ *   failure mid-broadcast leaves it unknown.
  */
-export const sendTradingFee = async (
+export const sendFeePayment = async ({
   wallet,
-  purchasePrice,
-  purchaseTxid,
+  amountSats,
   network = 'mainnet',
-  addConsoleLog = null
-) => {
+  addConsoleLog = null,
+  onSigned = null,
+}) => {
   const log = (message) => {
     if (typeof addConsoleLog === 'function') addConsoleLog(message);
   };
+  let signedTxid = null;
 
   try {
-    // Nominal fee: 1% of purchase (sats). If below dust, send the minimum relay-safe output.
-    const feeAmount = calculateTradingFeeAmount(purchasePrice);
-
-    if (feeAmount <= 0) {
-      const errorMsg = 'Fee amount is zero or negative';
+    const feeAmount = Math.floor(Number(amountSats) || 0);
+    if (feeAmount < MIN_TRADING_FEE_OUTPUT_SATS) {
       return {
         success: false,
-        error: errorMsg,
-      };
-    }
-
-    if (!purchaseTxid) {
-      const errorMsg = 'Purchase transaction ID is required';
-      return {
-        success: false,
-        error: errorMsg,
+        error: `Fee payment of ${feeAmount} sats is below the ${MIN_TRADING_FEE_OUTPUT_SATS}-sat minimum output`,
       };
     }
 
@@ -347,19 +354,13 @@ export const sendTradingFee = async (
     };
 
     /*
-     * This used to ask for `fastestFee` first, which on a busy day is 40+
-     * sat/vB — the fee transaction then cost several times what the user had
-     * been quoted anywhere else in the app. It takes the same middle tier
-     * every other flow defaults to.
-     *
-     * Not the same fallback, though. Nobody sees this transaction or can
-     * raise its rate after the fact, so an unreachable explorer keeps the
-     * floor this function has always had rather than dropping to the 1 sat/vB
-     * the on-screen controls fall back to.
+     * The low tier. Nobody waits on a settlement and it carries no deadline,
+     * so there is no reason to pay for speed. An unreachable explorer keeps
+     * the unattended floor rather than the 1 sat/vB on-screen fallback.
      */
     const getFeeRateSatVb = async () => {
       const rates = await fetchFeeRates(network);
-      return unattendedRate(rates);
+      return rates ? rateForTier(rates, 'low') : UNATTENDED_MIN_FEE_RATE;
     };
 
     const estimateFee = (inputsCount, outputsCount, feeRateSatVb) => {
@@ -424,27 +425,6 @@ export const sendTradingFee = async (
 
     const feeRate = await getFeeRateSatVb();
 
-    const btcJsNetwork =
-      network === 'mainnet'
-        ? bitcoin.networks.bitcoin
-        : bitcoin.networks.testnet;
-
-    /** True iff vout pays exactly to our wallet address (decode script; do not trust labels alone). */
-    const outputPaysToOurAddress = (v) => {
-      const spkHex = v?.scriptpubkey;
-      if (!spkHex || typeof spkHex !== 'string') return false;
-      try {
-        const script = Buffer.from(spkHex, 'hex');
-        const decoded = bitcoin.address.fromOutputScript(script, btcJsNetwork);
-        return (
-          decoded &&
-          String(decoded).toLowerCase() === String(address).toLowerCase()
-        );
-      } catch {
-        return false;
-      }
-    };
-
     const selectedUtxos = [];
     const selectedOutpoints = new Set();
 
@@ -456,63 +436,6 @@ export const sendTradingFee = async (
       selectedUtxos.push(u);
     };
 
-    const fetchPurchaseTxWithBackoff = async () => {
-      if (!purchaseTxid) return null;
-      const delaysMs = [0, 10000, 30000];
-
-      for (let attempt = 0; attempt < delaysMs.length; attempt++) {
-        if (delaysMs[attempt] > 0) await sleep(delaysMs[attempt]);
-        try {
-          return await safeFetchJson(getMempoolTxApiUrl(purchaseTxid, network));
-        } catch (e) {
-          if (e?.status === 404 && attempt < delaysMs.length - 1) continue;
-          if (e?.status === 404) return null;
-          throw new Error(
-            `Failed to fetch purchase tx from mempool explorer: ${e?.message || e}`
-          );
-        }
-      }
-      return null;
-    };
-
-    const tryAddPurchaseOutput = async () => {
-      const purchaseTx = await fetchPurchaseTxWithBackoff();
-      if (
-        !purchaseTx ||
-        !Array.isArray(purchaseTx.vout) ||
-        purchaseTx.vout.length === 0
-      ) {
-        return false;
-      }
-
-      // Candidate UTXOs from purchase tx: ONLY outputs that decode to our address.
-      // Never fall back to "largest vout" — vout :1 is often seller/marketplace, not buyer change.
-      const purchaseCandidates = purchaseTx.vout
-        .map((v, idx) => ({ ...v, _vout: idx }))
-        .filter(outputPaysToOurAddress)
-        .sort((a, b) => (b.value || 0) - (a.value || 0));
-
-      for (const out of purchaseCandidates) {
-        const vout = out._vout;
-        const isSafe = await isOutpointSafeNonOrdinal(purchaseTxid, vout, {
-          allowAddressExclusion: false,
-        });
-        if (!isSafe) continue;
-        addUtxo({
-          txid: purchaseTxid,
-          vout,
-          value: out.value,
-          scriptpubkey: out.scriptpubkey,
-          scriptpubkey_address: out.scriptpubkey_address,
-          status: purchaseTx.status || { confirmed: false },
-        });
-        return true;
-      }
-      return false;
-    };
-
-    // Prefer existing confirmed wallet UTXOs. Only fall back to purchase change if needed,
-    // because purchase txs can take time to appear in public explorers/indexers.
     const loadWalletUtxos = async () => {
       const list = await safeFetchJson(
         getMempoolAddressUtxoUrl(address, network)
@@ -564,7 +487,7 @@ export const sendTradingFee = async (
       return { totalIn, feeEst: feeWith1Out, change: change1, outputs: 1 };
     };
 
-    let mempoolSpentOutpoints = await loadMempoolSpentOutpoints();
+    const mempoolSpentOutpoints = await loadMempoolSpentOutpoints();
 
     const addSpendableWalletUtxos = async (list) => {
       const sorted = Array.isArray(list) ? [...list] : [];
@@ -575,6 +498,8 @@ export const sendTradingFee = async (
         if (selectedOutpoints.has(key)) continue;
         if (mempoolSpentOutpoints.has(key)) continue;
         if (u?.value == null || u.value <= 0) continue;
+        // Confirmed only: see sendFeePayment.
+        if (u.status?.confirmed !== true) continue;
 
         const safe = await isOutpointSafeNonOrdinal(u.txid, u.vout);
         if (!safe) continue;
@@ -594,22 +519,7 @@ export const sendTradingFee = async (
     };
 
     await addSpendableWalletUtxos(await loadWalletUtxos());
-
-    let totals = calcTotals(feeAmount, selectedUtxos);
-    const UTXO_REFRESH_ROUNDS = 2;
-    const UTXO_REFRESH_MS = 5000;
-    for (let r = 0; r < UTXO_REFRESH_ROUNDS && totals.change < 0; r++) {
-      await sleep(UTXO_REFRESH_MS);
-      mempoolSpentOutpoints = await loadMempoolSpentOutpoints();
-      await addSpendableWalletUtxos(await loadWalletUtxos());
-      totals = calcTotals(feeAmount, selectedUtxos);
-    }
-
-    if (totals.change < 0) {
-      log('  Waiting for purchase change to become indexer-safe for fee...');
-      await tryAddPurchaseOutput();
-      totals = calcTotals(feeAmount, selectedUtxos);
-    }
+    const totals = calcTotals(feeAmount, selectedUtxos);
 
     if (selectedUtxos.length === 0) {
       if (inscriptionSetUnavailableError) {
@@ -618,7 +528,7 @@ export const sendTradingFee = async (
         );
       }
       throw new Error(
-        'No spendable non-ordinal UTXOs available for fee payment'
+        'No confirmed, inscription-free UTXOs available for the fee payment yet'
       );
     }
     if (totals.change < 0) {
@@ -795,34 +705,40 @@ export const sendTradingFee = async (
       throw new Error('Failed to sign fee transaction PSBT');
     }
 
+    // Known before broadcast, so the caller can record it first.
+    signedTxid = bitcoin.Transaction.fromHex(signResult.hex).getId();
+    if (typeof onSigned === 'function') onSigned(signedTxid);
+
     const broadcastResponse = await fetch(getMempoolBroadcastUrl(network), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: signResult.hex,
     });
     if (!broadcastResponse.ok) {
-      const errorText = await broadcastResponse.text();
-      throw new Error(
-        `Failed to broadcast fee transaction: ${broadcastResponse.status} - ${errorText}`
-      );
+      const errorText = await broadcastResponse.text().catch(() => '');
+      return {
+        success: false,
+        txid: signedTxid,
+        broadcastRejected: true,
+        error:
+          `Fee payment was refused: ${broadcastResponse.status} ${errorText}`.trim(),
+      };
     }
 
-    const txId = (await broadcastResponse.text()).trim();
-    log(`  Fee sent: ${feeAmount} sats (${txId.slice(0, 16)}...)`);
-
+    const txId = (await broadcastResponse.text()).trim() || signedTxid;
     return {
       success: true,
       txid: txId,
       feeAmount,
-      purchasePrice,
       feeReceiver: TRADING_FEE_RECEIVER_ADDRESS,
     };
   } catch (err) {
-    const errorMsg = err.message || 'Failed to send trading fee';
-    console.error('Error sending trading fee:', err);
-    log(`  Fee pending: ${errorMsg}`);
+    const errorMsg = err.message || 'Failed to send the app fee payment';
+    console.error('Error sending app fee payment:', err);
+    log(`  Fee payment not sent: ${errorMsg}`);
     return {
       success: false,
+      txid: signedTxid || undefined,
       error: errorMsg,
     };
   }

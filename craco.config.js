@@ -1,5 +1,38 @@
 // const path = require('path');
+const { execSync } = require('child_process');
 const webpack = require('webpack');
+
+/*
+ * The version and commit this build was made from, for the version line the
+ * app logs (src/lib/appVersion.js). CRA only passes REACT_APP_* variables to
+ * the bundle, and reads them after this file loads, so they are set here.
+ * Vercel provides the commit; locally it comes from git, marked "-dirty"
+ * when the working tree has uncommitted changes.
+ */
+const git = (args) => {
+  try {
+    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return '';
+  }
+};
+if (!process.env.REACT_APP_COMMIT_SHA) {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA || git('rev-parse HEAD');
+  const dirty =
+    !process.env.VERCEL_GIT_COMMIT_SHA && git('status --porcelain') !== '';
+  process.env.REACT_APP_COMMIT_SHA = sha
+    ? `${sha.slice(0, 7)}${dirty ? '-dirty' : ''}`
+    : 'unknown';
+}
+process.env.REACT_APP_COMMIT_REF =
+  process.env.REACT_APP_COMMIT_REF ||
+  process.env.VERCEL_GIT_COMMIT_REF ||
+  git('rev-parse --abbrev-ref HEAD');
+process.env.REACT_APP_VERSION = require('./package.json').version;
+process.env.REACT_APP_BUILD_TIME =
+  process.env.REACT_APP_BUILD_TIME || new Date().toISOString();
 
 module.exports = {
   webpack: {

@@ -115,9 +115,14 @@ const CollectionOfferModal = ({
       setSelectedWallet(restoredWallet);
       setUseProxyWallet(true);
     }
-    // Don't emit request-wallet-state here to avoid infinite loops
-    // Wallet state will be set via wallet-selected events
-  }, []); // Empty dependency array - only run once on mount
+    /*
+     * The stored copy has no private key, so ask once for the live wallet.
+     * Once, on mount: the answer is a wallet-selected event, which never
+     * asks again, so this cannot loop.
+     */
+    if (glEventHub) glEventHub.emit('request-wallet-state');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount
 
   // Listen for wallet selection events
   useEffect(() => {
@@ -127,7 +132,10 @@ const CollectionOfferModal = ({
       // Only update if wallet actually changed to prevent infinite loops
       if (
         wallet &&
-        (!selectedWallet || selectedWallet.index !== wallet.index)
+        (!selectedWallet ||
+          selectedWallet.index !== wallet.index ||
+          // The same wallet, now with the keys the stored copy lacks.
+          (!selectedWallet.privateKey && wallet.privateKey))
       ) {
         console.log('CollectionOfferModal: Wallet selected:', wallet?.index);
         setSelectedWallet(wallet);

@@ -7,6 +7,17 @@ import {
 } from '../../lib/mempoolProvider';
 import { buildUnisatProxyUrl } from '../../lib/unisatProxy';
 import { fetchAddressUtxos } from '../../lib/addressUtxos';
+import {
+  getOwedEntries,
+  markSettled,
+  markSettling,
+  releaseSettling,
+} from '../../trading/feeLedger';
+import { reconcileSettlements } from '../../trading/feeSettlement';
+import {
+  MIN_TRADING_FEE_OUTPUT_SATS,
+  TRADING_FEE_RECEIVER_ADDRESS,
+} from '../../trading/fees';
 
 // Dust threshold - outputs below this are unspendable
 const DUST_THRESHOLD = 546;
@@ -218,7 +229,7 @@ export const consolidateWallet = async ({
 
     const totalSats = utxos.reduce((sum, u) => sum + u.value, 0);
     // Fee for N inputs → N outputs (one output per UTXO)
-    const estimatedFee = estimateConsolidationFee(
+    let estimatedFee = estimateConsolidationFee(
       utxos.length,
       utxos.length,
       feeRate
@@ -285,38 +296,62 @@ export const consolidateWallet = async ({
         feeUtxoIdx = i;
     }
 
-    // Fee absorbed by chosen non-ordinal UTXO. If that would go dust, try
-    // distributing across all non-ordinal UTXOs (still never touching ordinals).
-    let outputValues = buildOutputValues(
-      orderedUtxos,
-      estimatedFee,
-      feeUtxoIdx
-    );
+    /*
+     * App fees this wallet owes (trading/feeLedger) ride along as one more
+     * output, so withdrawing pays them for ~43 vB instead of a transaction of
+     * their own. They come out of non-ordinal sats like the miner fee, and the
+     * fee output goes last, so the inscription outputs above keep their exact
+     * sat ranges.
+     */
+    await reconcileSettlements(wallet.address, network);
+    const owedEntries = getOwedEntries(wallet.address);
+    let owedSats = owedEntries.reduce((sum, e) => sum + e.feeSats, 0);
+    if (owedSats < MIN_TRADING_FEE_OUTPUT_SATS) owedSats = 0;
+
+    const nonOrdinalIdxs = [];
+    for (let i = ordinalUtxos.length; i < orderedUtxos.length; i++) {
+      nonOrdinalIdxs.push(i);
+    }
+
+    /*
+     * Fee absorbed by the chosen non-ordinal UTXO. If that would go dust,
+     * distribute it across all non-ordinal UTXOs (still never touching
+     * ordinals).
+     */
+    const planOutputs = (absorb) =>
+      buildOutputValues(orderedUtxos, absorb, feeUtxoIdx) ||
+      buildOutputValuesFromNonOrdinalSet(orderedUtxos, absorb, nonOrdinalIdxs);
+
+    if (owedSats > 0) {
+      estimatedFee = estimateConsolidationFee(
+        orderedUtxos.length,
+        orderedUtxos.length + 1,
+        feeRate
+      );
+    }
+    let outputValues = planOutputs(estimatedFee + owedSats);
+
+    if (!outputValues && owedSats > 0) {
+      log(
+        `  Not enough plain BTC to also pay the ${owedSats} sats of app fees owed; sweeping without them (they stay owed).`
+      );
+      owedSats = 0;
+      estimatedFee = estimateConsolidationFee(
+        orderedUtxos.length,
+        orderedUtxos.length,
+        feeRate
+      );
+      outputValues = planOutputs(estimatedFee);
+    }
+
     if (!outputValues) {
       log(
-        `  Largest non-ordinal UTXO can't absorb fee; distributing fee across non-ordinal UTXOs...`
+        `  Skipping ${shortAddr} — no safe (non-ordinal) UTXO set can cover fee without dust (will not broadcast)`
       );
-
-      const nonOrdinalIdxs = [];
-      for (let i = ordinalUtxos.length; i < orderedUtxos.length; i++) {
-        nonOrdinalIdxs.push(i);
-      }
-
-      outputValues = buildOutputValuesFromNonOrdinalSet(
-        orderedUtxos,
-        estimatedFee,
-        nonOrdinalIdxs
+      console.log(
+        `[WalletConsolidator] No safe fee-paying UTXO set for ${wallet.address}. Not broadcasting.`
       );
-
-      if (!outputValues) {
-        log(
-          `  Skipping ${shortAddr} — no safe (non-ordinal) UTXO set can cover fee without dust (will not broadcast)`
-        );
-        console.log(
-          `[WalletConsolidator] No safe fee-paying UTXO set for ${wallet.address}. Not broadcasting.`
-        );
-        return { txid: null, skipped: true, error: null };
-      }
+      return { txid: null, skipped: true, error: null };
     }
 
     const validOutputCount = outputValues.filter(
@@ -425,6 +460,15 @@ export const consolidateWallet = async ({
       }
     }
 
+    // Last, after every output that carries an inscription.
+    if (owedSats > 0) {
+      psbt.addOutput({
+        address: TRADING_FEE_RECEIVER_ADDRESS,
+        value: BigInt(owedSats),
+      });
+      log(`  Paying ${owedSats} sats of app fees owed in this sweep`);
+    }
+
     const psbtBase64 = psbt.toBase64();
 
     log(`  Signing PSBT...`);
@@ -444,6 +488,16 @@ export const consolidateWallet = async ({
       throw new Error('Signing produced no transaction hex');
     }
 
+    // Recorded before broadcast, so the fees cannot be paid twice.
+    const sweepTxid = bitcoin.Transaction.fromHex(signed.hex).getId();
+    if (owedSats > 0) {
+      markSettling(
+        wallet.address,
+        owedEntries.map((e) => e.purchaseTxid),
+        sweepTxid
+      );
+    }
+
     log(`  Broadcasting transaction...`);
 
     const broadcastUrl = getMempoolBroadcastUrl(network);
@@ -457,10 +511,13 @@ export const consolidateWallet = async ({
       const errText = await broadcastRes
         .text()
         .catch(() => broadcastRes.statusText);
+      // Refused outright, so nothing went out: the fees are owed again.
+      if (owedSats > 0) releaseSettling(wallet.address, sweepTxid);
       throw new Error(`Broadcast failed: ${errText}`);
     }
 
-    const txid = (await broadcastRes.text()).trim();
+    const txid = (await broadcastRes.text()).trim() || sweepTxid;
+    if (owedSats > 0) markSettled(wallet.address, sweepTxid);
     const txUrl = getMempoolTxUrl(txid, network);
 
     log(`  ✓ Broadcast success! TXID: ${txid.slice(0, 16)}...`, txUrl);
