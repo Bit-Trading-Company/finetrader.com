@@ -14,6 +14,7 @@ import {
 } from '../../lib/mempoolProvider';
 import { getTokenId } from '../ordinals';
 import { inputOwners, withEscrowLeafScripts } from './ordnetEscrow';
+import { getCollectionMembership } from './ordnetMembership';
 import {
   fetchHeldInscriptions,
   isUnconfirmedPostageSized,
@@ -22,7 +23,6 @@ import {
 const ECPair = ECPairFactory(ecc);
 const ORDNET_SESSION_PREFIX = 'fine-trading-ordnet-session:';
 const DEFAULT_LISTING_DURATION_DAYS = 30;
-const MAX_COLLECTION_SCAN_PAGES = 10;
 
 const hexToBytes = (hex) => {
   const clean = String(hex || '').trim();
@@ -500,28 +500,6 @@ const normalizeListing = (row, fallbackCollectionSlug) => {
   };
 };
 
-const normalizeCollectionInscription = (row, fallbackCollectionSlug) => {
-  if (!row?.inscriptionId && !row?.id) return null;
-  const inscriptionId = row.inscriptionId || row.id;
-  return {
-    inscriptionId,
-    id: inscriptionId,
-    tokenId: inscriptionId,
-    listingId: row.listingId || null,
-    inscriptionNumber: row.inscription || row.inscriptionNumber,
-    contentURI: row.image || null,
-    contentPreviewURI: row.image || null,
-    contentType: row.contentType || row.rawContentType || null,
-    listed: row.listingState === 'buyable' && !!row.priceSats,
-    listedPrice: row.priceSats ? Number(row.priceSats) : null,
-    collectionSymbol: row.collection || fallbackCollectionSlug,
-    owner: row.owner || null,
-    mempoolTxId: '',
-    meta: row.name ? { name: row.name } : undefined,
-    _ordNetRaw: row,
-  };
-};
-
 export const fetchCollectionItems = async (
   collectionSymbol,
   bypassCache = false,
@@ -583,50 +561,14 @@ export const getFloorPrice = async (
   return entry?.floor ? Number(entry.floor) : null;
 };
 
-/*
- * Collection membership cache.
- *
- * Which inscriptions belong to a collection barely changes, but who owns them
- * and what they cost change constantly. Reading all three together meant
- * re-scanning the whole collection every cycle, for every wallet — 10 reads
- * per wallet per tick against a 30-per-minute budget, which 429s almost
- * immediately with more than a couple of wallets.
- *
- * So membership is read once and reused, and the volatile halves come from
- * the two cheap sources below.
- */
-const MEMBERSHIP_TTL_MS = 15 * 60 * 1000;
-const membershipCache = new Map();
+const MAX_SELLER_LISTING_PAGES = 10;
 
-/** Every inscription id in a collection, as a Set. Cached. */
-const getCollectionMembership = async (collectionSymbol, session) => {
-  const cached = membershipCache.get(collectionSymbol);
-  if (cached && Date.now() - cached.at < MEMBERSHIP_TTL_MS) return cached.ids;
-
-  const ids = new Set();
-  let cursor = null;
-
-  for (let page = 0; page < MAX_COLLECTION_SCAN_PAGES; page++) {
-    const data = await ordNetFetch(
-      `/collection/${encodeURIComponent(collectionSymbol)}/inscriptions`,
-      {
-        token: session.sessionToken,
-        query: { limit: 100, cursor, sort: 'oldest' },
-      }
-    );
-
-    for (const row of data.items || []) {
-      const id = row.inscriptionId || row.id;
-      if (id) ids.add(id);
-    }
-
-    cursor = data.pagination?.nextCursor || null;
-    if (!data.pagination?.hasNext || !cursor) break;
-  }
-
-  membershipCache.set(collectionSymbol, { at: Date.now(), ids });
-  return ids;
-};
+/** One page of a collection's inscription list, for ordnetMembership. */
+const collectionPageReader = (collectionSymbol, session) => (query) =>
+  ordNetFetch(
+    `/collection/${encodeURIComponent(collectionSymbol)}/inscriptions`,
+    { token: session.sessionToken, query }
+  );
 
 /**
  * A wallet's unspent outputs, from mempool.space, keyed `txid:vout`.
@@ -678,25 +620,35 @@ export const fetchWalletOrdinals = async (
   if (!ownerAddress || !collectionSymbol) return [];
   const session = await getReadSession(options);
 
-  // The seller's live listings: exact, and the authority on price.
-  const listingsResponse = await ordNetFetch('/listings', {
-    token: session.sessionToken,
-    query: {
-      sellerAddress: ownerAddress,
-      collectionSlug: collectionSymbol,
-      limit: 100,
-      ...(bypassCache ? { _t: Date.now() } : {}),
-    },
-  });
-
+  // The seller's live listings: exact, and the authority on price. Usually
+  // one page; past 100, an unread page would look unlisted and be listed
+  // again.
   const listed = new Map();
-  for (const row of listingsResponse?.listings || []) {
-    const normalized = normalizeListing(row, collectionSymbol);
-    if (normalized) listed.set(normalized.inscriptionId, normalized);
+  let listingsCursor = null;
+  for (let page = 0; page < MAX_SELLER_LISTING_PAGES; page++) {
+    const listingsResponse = await ordNetFetch('/listings', {
+      token: session.sessionToken,
+      query: {
+        sellerAddress: ownerAddress,
+        collectionSlug: collectionSymbol,
+        limit: 100,
+        cursor: listingsCursor,
+        ...(bypassCache ? { _t: Date.now() } : {}),
+      },
+    });
+    for (const row of listingsResponse?.listings || []) {
+      const normalized = normalizeListing(row, collectionSymbol);
+      if (normalized) listed.set(normalized.inscriptionId, normalized);
+    }
+    listingsCursor = listingsResponse?.pagination?.nextCursor || null;
+    if (!listingsResponse?.pagination?.hasNext || !listingsCursor) break;
   }
 
   const [membership, held, utxos] = await Promise.all([
-    getCollectionMembership(collectionSymbol, session),
+    getCollectionMembership(collectionSymbol, {
+      fetchPage: collectionPageReader(collectionSymbol, session),
+      log: options.addConsoleLog,
+    }),
     fetchHeldInscriptions(ownerAddress),
     fetchAddressUtxos(ownerAddress, options.network),
   ]);
@@ -765,41 +717,20 @@ export const fetchWalletOrdinals = async (
   return results;
 };
 
-export const fetchTokenById = async (tokenId, options = {}) => {
-  const collectionSymbol = options.collectionSymbol;
-  if (!tokenId || !collectionSymbol) return null;
-  const session = await getReadSession(options);
-  let cursor = null;
-
-  for (let page = 0; page < MAX_COLLECTION_SCAN_PAGES; page++) {
-    const data = await ordNetFetch(
-      `/collection/${encodeURIComponent(collectionSymbol)}/inscriptions`,
-      {
-        token: session.sessionToken,
-        query: { limit: 100, cursor, sort: 'newest' },
-      }
-    );
-    const match = (data.items || []).find(
-      (row) => (row.inscriptionId || row.id) === tokenId
-    );
-    if (match) return normalizeCollectionInscription(match, collectionSymbol);
-    cursor = data.pagination?.nextCursor || null;
-    if (!data.pagination?.hasNext || !cursor) break;
-  }
-  return null;
-};
-
-export const checkPurchaseConfirmed = async (
-  tokenId,
-  expectedOwner,
-  options = {}
-) => {
-  const token = await fetchTokenById(tokenId, options);
-  return !!(
-    token?.owner &&
-    expectedOwner &&
-    String(token.owner).toLowerCase() === String(expectedOwner).toLowerCase()
-  );
+/**
+ * Whether the buyer now holds the inscription, from UniSat's owner index.
+ *
+ * This used to look the inscription up in ord.net's collection list, newest
+ * first and 10 pages deep: ten reads per pending purchase per cycle, and an
+ * older inscription in a large collection was never found, so its purchase
+ * stayed pending for good. The buyer's own holdings answer it in one read
+ * that does not count against ord.net's limit. The engine only asks once
+ * the purchase transaction has confirmed.
+ */
+export const checkPurchaseConfirmed = async (tokenId, expectedOwner) => {
+  if (!tokenId || !expectedOwner) return false;
+  const held = await fetchHeldInscriptions(expectedOwner);
+  return held.has(tokenId);
 };
 
 const fetchListingForItem = async (item, collectionSymbol, wallet, network) => {

@@ -19,8 +19,9 @@ import { ordnetAdapter } from './ordnet/ordnetAdapter';
  * `mempoolTxId` ('' when nothing is pending) and `owner`.
  *
  * The engine passes a trailing `options` object to every method, typically
- * `{ wallet, wallets, network, collectionSymbol, selectedCollection }`.
- * Adapters that do not need it ignore it.
+ * `{ wallet, wallets, network, collectionSymbol, selectedCollection }`, and
+ * `addConsoleLog` where a slow first read (ord.net's collection list) is worth
+ * reporting. Adapters that do not need it ignore it.
  *
  * @typedef {Object} MarketplaceAdapter
  * @property {string} id Value stored in AutoTrade settings (see TRADING_EXCHANGES).

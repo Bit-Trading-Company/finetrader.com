@@ -180,7 +180,7 @@ export const processWalletItems = async ({
         wallet.address,
         collectionSymbol,
         true, // bypass cache
-        { wallet, wallets, network }
+        { wallet, wallets, network, addConsoleLog }
       );
 
       if (items.length === 0) {
@@ -1690,7 +1690,7 @@ export const sellXFromEachWallet = async ({
         wallet.address,
         collectionSymbol,
         true, // bypass cache
-        { wallet, wallets, network }
+        { wallet, wallets, network, addConsoleLog }
       );
 
       if (items.length === 0) {

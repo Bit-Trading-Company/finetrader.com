@@ -11,6 +11,7 @@ import { webcrypto } from 'crypto';
 import { TextEncoder } from 'util';
 import { createHash } from 'crypto';
 import {
+  checkPurchaseConfirmed,
   fetchWalletOrdinals,
   formatMinFunding,
   listOrdinalWithProxyWallet,
@@ -239,6 +240,16 @@ describe('ord.net holdings that are on the move', () => {
     expect(Object.keys(byId).sort()).toEqual(['ins-arriving', 'ins-settled']);
     expect(byId['ins-arriving'].mempoolTxId).toBe(heldTxid(1));
     expect(byId['ins-settled'].mempoolTxId).toBe('');
+  });
+
+  it("confirms a purchase from the buyer's own holdings", async () => {
+    stubFetch({ held: ['ins-bought'] });
+    await expect(checkPurchaseConfirmed('ins-bought', WALLET)).resolves.toBe(
+      true
+    );
+    await expect(checkPurchaseConfirmed('ins-other', WALLET)).resolves.toBe(
+      false
+    );
   });
 
   it('holds back unlisted holdings when the UTXO set cannot be read', async () => {
